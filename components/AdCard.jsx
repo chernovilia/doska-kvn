@@ -2,7 +2,8 @@
 
 import { motion } from 'framer-motion';
 import { BadgeCheck, Clock, Heart, MapPin, Calendar, Flame, Crown, ExternalLink } from 'lucide-react';
-import { cityName, formatPrice } from '@/data/mock';
+import { cityName } from '@/lib/api';
+import { formatPrice, formatRelative, formatEventDate } from '@/lib/format';
 import { useState } from 'react';
 
 // Единый стиль карточки: одинаковые внешние/внутренние отступы,
@@ -104,9 +105,12 @@ export default function AdCard({ ad, onOpen }) {
           ) : (
             <span className="text-[10px] text-ink-300">·</span>
           )}
-          <span className="ml-auto inline-flex items-center gap-0.5 whitespace-nowrap text-[10px] text-ink-500 md:text-[11px]">
+          <span
+            className="ml-auto inline-flex items-center gap-0.5 whitespace-nowrap text-[10px] text-ink-500 md:text-[11px]"
+            suppressHydrationWarning
+          >
             <Clock className="h-3 w-3" />
-            {isEvent ? ad.eventDate : ad.date}
+            {isEvent ? formatEventDate(ad.eventDate) : formatRelative(ad.createdAt)}
           </span>
         </div>
       </div>

@@ -3,14 +3,14 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { LayoutGrid, List, SlidersHorizontal, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { CHIPS } from '@/data/mock';
+import { getChipsForSection } from '@/lib/api';
 
 // Кнопка-иконка «Фильтры» с выпадающей панелью:
 // внутри — быстрые чипсы категорий и переключатель вида (плитка/список).
 export default function FilterButton({ section, value, onChange, view, onViewChange }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
-  const list = CHIPS[section] || [];
+  const list = getChipsForSection(section);
   const hasSelection = !!value;
 
   useEffect(() => {

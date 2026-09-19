@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import Header from '@/components/Header';
 import HeroBanner from '@/components/HeroBanner';
@@ -12,7 +12,12 @@ import PostAdModal from '@/components/PostAdModal';
 import PricingModal from '@/components/PricingModal';
 import Footer from '@/components/Footer';
 import BottomNav from '@/components/BottomNav';
-import { ADS, SECTIONS, countBySection } from '@/data/mock';
+import {
+  SECTIONS,
+  getAd,
+  getAds,
+  getCountsBySection
+} from '@/lib/api';
 
 export default function HomePage() {
   const [city, setCity] = useState('all');
@@ -20,21 +25,37 @@ export default function HomePage() {
   const [chip, setChip] = useState(null);
   const [view, setView] = useState('grid');
 
+  const [ads, setAds] = useState([]);
+  const [counts, setCounts] = useState({});
+
   const [openAd, setOpenAd] = useState(null);
   const [postOpen, setPostOpen] = useState(false);
   const [pricingOpen, setPricingOpen] = useState(false);
 
-  const counts = useMemo(() => countBySection(city), [city]);
+  // Динамические данные — через lib/api. Позже подменится на fetch без правок компонентов.
+  useEffect(() => {
+    let cancelled = false;
+    getAds({ city, section, chip }).then((list) => {
+      if (!cancelled) setAds(list);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [city, section, chip]);
 
-  const filtered = useMemo(() => {
-    return ADS.filter((a) => a.section === section)
-      .filter((a) => (city === 'all' ? true : a.city === city))
-      .sort((a, b) => (b.top ? 1 : 0) - (a.top ? 1 : 0));
-  }, [section, city]);
+  useEffect(() => {
+    let cancelled = false;
+    getCountsBySection(city).then((c) => {
+      if (!cancelled) setCounts(c);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [city]);
 
-  function onSearchSelect(sel) {
+  async function onSearchSelect(sel) {
     if (sel.kind === 'ad') {
-      const ad = ADS.find((a) => a.id === sel.id);
+      const ad = await getAd(sel.id);
       if (ad) {
         setSection(ad.section);
         setOpenAd(ad);
@@ -43,6 +64,11 @@ export default function HomePage() {
       setSection(sel.id);
     }
   }
+
+  const sectionName = useMemo(
+    () => SECTIONS.find((s) => s.id === section)?.name,
+    [section]
+  );
 
   return (
     <div className="min-h-screen pb-24 md:pb-0">
@@ -55,7 +81,6 @@ export default function HomePage() {
           onPostAd={() => setPostOpen(true)}
         />
 
-        {/* Разделы */}
         <section className="space-y-2">
           <div className="px-0.5">
             <div className="text-[11px] uppercase tracking-wide text-ink-500 font-bold">
@@ -68,15 +93,14 @@ export default function HomePage() {
           <SectionTabs value={section} onChange={setSection} counts={counts} />
         </section>
 
-        {/* Лента + фильтр справа */}
         <section className="space-y-3">
           <div className="flex items-end justify-between gap-3 px-0.5">
             <div className="min-w-0">
               <div className="text-[11px] uppercase tracking-wide text-ink-500 font-bold">
-                {SECTIONS.find((s) => s.id === section)?.name}
+                {sectionName}
               </div>
               <div className="text-base md:text-lg font-extrabold text-ink-900 leading-tight">
-                Найдено {filtered.length} объявлен{plural(filtered.length)}
+                Найдено {ads.length} объявлен{plural(ads.length)}
                 {chip ? <span className="text-brand-700"> · {chip}</span> : null}
               </div>
             </div>
@@ -98,7 +122,7 @@ export default function HomePage() {
             }
           >
             <AnimatePresence mode="popLayout">
-              {filtered.map((ad) => (
+              {ads.map((ad) => (
                 <motion.div
                   layout
                   key={ad.id}
@@ -112,7 +136,7 @@ export default function HomePage() {
                 </motion.div>
               ))}
             </AnimatePresence>
-            {filtered.length === 0 && (
+            {ads.length === 0 && (
               <div className="col-span-full rounded-2xl bg-white ring-1 ring-black/5 p-8 text-center">
                 <div className="text-2xl">🤷‍♂️</div>
                 <div className="mt-2 font-extrabold text-ink-900">Пока пусто</div>
@@ -130,7 +154,6 @@ export default function HomePage() {
           </motion.div>
         </section>
 
-        {/* Промо для бизнеса */}
         <section className="rounded-2xl bg-gradient-to-r from-amber-100 to-orange-100 ring-1 ring-amber-200 p-4 md:p-6 flex flex-col md:flex-row items-start md:items-center gap-3 md:gap-4">
           <div className="flex-1 min-w-0">
             <div className="text-[11px] uppercase tracking-wide text-amber-800 font-bold">

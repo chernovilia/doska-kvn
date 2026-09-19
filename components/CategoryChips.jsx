@@ -1,9 +1,9 @@
 'use client';
 
-import { CHIPS } from '@/data/mock';
+import { getChipsForSection } from '@/lib/api';
 
 export default function CategoryChips({ section, value, onChange }) {
-  const list = CHIPS[section] || [];
+  const list = getChipsForSection(section);
   return (
     <div className="flex gap-2 overflow-x-auto no-scrollbar">
       <button

@@ -1,6 +1,6 @@
 'use client';
 
-import { SECTIONS } from '@/data/mock';
+import { SECTIONS } from '@/lib/api';
 import { motion } from 'framer-motion';
 
 // 3 колонки на мобильном → 2 ряда (3+2), 5 колонок на десктопе.

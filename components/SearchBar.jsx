@@ -1,8 +1,8 @@
 'use client';
 
 import { Search } from 'lucide-react';
-import { useMemo, useState } from 'react';
-import { ADS, SECTIONS } from '@/data/mock';
+import { useEffect, useMemo, useState } from 'react';
+import { SECTIONS, search as searchApi } from '@/lib/api';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const HINTS = [
@@ -20,17 +20,26 @@ export default function SearchBar({ onSelect }) {
   const [q, setQ] = useState('');
   const [focused, setFocused] = useState(false);
 
-  const suggestions = useMemo(() => {
-    const query = q.trim().toLowerCase();
-    if (!query) return HINTS.slice(0, 6).map((h) => ({ kind: 'hint', text: h }));
-    const bySection = SECTIONS
-      .filter((s) => s.name.toLowerCase().includes(query))
-      .map((s) => ({ kind: 'section', id: s.id, text: s.name, emoji: s.emoji }));
-    const byAd = ADS
-      .filter((a) => a.title.toLowerCase().includes(query))
-      .slice(0, 5)
-      .map((a) => ({ kind: 'ad', id: a.id, text: a.title }));
-    return [...bySection, ...byAd].slice(0, 8);
+  const [suggestions, setSuggestions] = useState(() =>
+    HINTS.slice(0, 6).map((h) => ({ kind: 'hint', text: h }))
+  );
+
+  useEffect(() => {
+    const query = q.trim();
+    if (!query) {
+      setSuggestions(HINTS.slice(0, 6).map((h) => ({ kind: 'hint', text: h })));
+      return;
+    }
+    let cancelled = false;
+    searchApi(query).then((r) => {
+      if (cancelled) return;
+      const bySection = r.sections.map((s) => ({
+        kind: 'section', id: s.id, text: s.name, emoji: s.emoji
+      }));
+      const byAd = r.ads.map((a) => ({ kind: 'ad', id: a.id, text: a.title }));
+      setSuggestions([...bySection, ...byAd].slice(0, 8));
+    });
+    return () => { cancelled = true; };
   }, [q]);
 
   return (

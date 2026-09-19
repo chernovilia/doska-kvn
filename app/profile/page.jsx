@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -27,8 +27,15 @@ import AdModal from '@/components/AdModal';
 import PostAdModal from '@/components/PostAdModal';
 import AuthModal from '@/components/AuthModal';
 
-import { ADS } from '@/data/mock';
-import { MOCK_USER, MY_AD_IDS, MOCK_CHATS, MOCK_MESSAGES, MOCK_REVIEWS } from '@/data/profile';
+import {
+  getMe,
+  getMyAds,
+  getChats,
+  getMessages,
+  getReviews,
+  sendMessage
+} from '@/lib/api';
+import { formatRelative } from '@/lib/format';
 
 const TABS = [
   { id: 'ads', name: 'Объявления', icon: ShoppingBag },
@@ -49,27 +56,35 @@ function ProfileContent() {
   const search = useSearchParams();
   const initialTab = search.get('tab') || 'ads';
   const [tab, setTab] = useState(initialTab);
-  const [type, setType] = useState(MOCK_USER.type); // personal | shop
+
+  const [me, setMe] = useState(null);
+  const [type, setType] = useState('shop');
+  const [myAds, setMyAds] = useState([]);
 
   const [openAd, setOpenAd] = useState(null);
   const [postOpen, setPostOpen] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
 
   useEffect(() => {
-    // синхронизируем таб при переходе с бесконечно нижней навигации
+    getMe().then((u) => {
+      setMe(u);
+      setType(u.type);
+    });
+    getMyAds().then(setMyAds);
+  }, []);
+
+  useEffect(() => {
     const t = search.get('tab');
     if (t && t !== tab) setTab(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search]);
 
-  const myAds = useMemo(
-    () => MY_AD_IDS.map((id) => ADS.find((a) => a.id === id)).filter(Boolean),
-    []
-  );
+  if (!me) {
+    return <div className="min-h-screen" />;
+  }
 
   return (
     <div className="min-h-screen pb-24 md:pb-0">
-      {/* Мини-хедер */}
       <div className="hero-gradient border-b border-black/5">
         <div className="max-w-4xl mx-auto px-4 md:px-6 pt-4 pb-3 flex items-center gap-3">
           <Link
@@ -106,38 +121,37 @@ function ProfileContent() {
           <div className="p-4 md:p-5">
             <div className="flex items-start gap-3 md:gap-4">
               <img
-                src={MOCK_USER.avatar}
-                alt={MOCK_USER.name}
+                src={me.avatar}
+                alt={me.name}
                 className="w-16 h-16 md:w-20 md:h-20 rounded-2xl object-cover ring-2 ring-white shadow-card"
               />
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <div className="text-lg md:text-xl font-extrabold text-ink-900 truncate">
-                    {type === 'shop' ? MOCK_USER.shop.name : MOCK_USER.name}
+                    {type === 'shop' ? me.shop.name : me.name}
                   </div>
-                  {MOCK_USER.verified && (
+                  {me.verified && (
                     <BadgeCheck className="w-4.5 h-4.5 text-brand-600 shrink-0" />
                   )}
                 </div>
                 <div className="text-[12px] text-ink-500 flex items-center gap-1.5 mt-0.5">
                   <MapPin className="w-3.5 h-3.5 text-brand-600" />
-                  {MOCK_USER.cityName}
+                  {me.cityName}
                   <span className="text-ink-300">·</span>
-                  {MOCK_USER.registeredAt}
+                  {me.registeredAt}
                 </div>
                 <a
-                  href={MOCK_USER.vkUrl}
+                  href={me.vkUrl}
                   target="_blank"
                   rel="noreferrer"
                   className="mt-2 inline-flex items-center gap-1.5 text-[12px] font-semibold text-[#0077FF] hover:underline"
                 >
                   <VkIcon className="w-4 h-4" />
-                  {MOCK_USER.name} · ВКонтакте
+                  {me.name} · ВКонтакте
                 </a>
               </div>
             </div>
 
-            {/* Переключатель типа аккаунта */}
             <div className="mt-4">
               <div className="text-[11px] uppercase tracking-wide text-ink-500 font-bold mb-1.5">
                 Тип аккаунта
@@ -163,12 +177,11 @@ function ProfileContent() {
               </div>
             </div>
 
-            {/* Бизнес-инфо */}
-            {type === 'shop' && (
+            {type === 'shop' && me.shop && (
               <div className="mt-4 rounded-xl bg-slate-50 ring-1 ring-black/5 p-3 text-sm text-ink-700 space-y-1">
-                <div>{MOCK_USER.shop.description}</div>
+                <div>{me.shop.description}</div>
                 <div className="flex flex-wrap gap-1.5 mt-2">
-                  {MOCK_USER.shop.categories.map((c) => (
+                  {me.shop.categories.map((c) => (
                     <span
                       key={c}
                       className="text-[11px] font-semibold text-brand-700 bg-brand-50 ring-1 ring-brand-200 px-2 py-0.5 rounded-full"
@@ -179,30 +192,28 @@ function ProfileContent() {
                 </div>
                 <div className="text-[12px] text-ink-500 mt-2 flex flex-wrap gap-x-3 gap-y-1">
                   <span className="inline-flex items-center gap-1">
-                    <Clock className="w-3.5 h-3.5" /> {MOCK_USER.shop.hours}
+                    <Clock className="w-3.5 h-3.5" /> {me.shop.hours}
                   </span>
                   <span className="inline-flex items-center gap-1">
-                    <MapPin className="w-3.5 h-3.5" /> {MOCK_USER.shop.address}
+                    <MapPin className="w-3.5 h-3.5" /> {me.shop.address}
                   </span>
                 </div>
               </div>
             )}
           </div>
 
-          {/* Метрики */}
           <div className="grid grid-cols-4 border-t border-black/5 text-center">
             <Metric
-              value={MOCK_USER.rating.toFixed(1)}
+              value={me.rating.toFixed(1)}
               label="Рейтинг"
               icon={<Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />}
             />
-            <Metric value={MOCK_USER.reviewsCount} label="Отзывы" />
-            <Metric value={MOCK_USER.dealsCount} label="Сделки" />
-            <Metric value={MOCK_USER.activeAdsCount} label="Активных" />
+            <Metric value={me.reviewsCount} label="Отзывы" />
+            <Metric value={me.dealsCount} label="Сделки" />
+            <Metric value={me.activeAdsCount} label="Активных" />
           </div>
         </section>
 
-        {/* Табы */}
         <section>
           <div className="flex gap-1 md:gap-2 overflow-x-auto no-scrollbar">
             {TABS.map((t) => {
@@ -226,7 +237,7 @@ function ProfileContent() {
                         active ? 'bg-white text-brand-700' : 'bg-accent-500 text-white'
                       }`}
                     >
-                      3
+                      4
                     </span>
                   )}
                 </button>
@@ -235,7 +246,6 @@ function ProfileContent() {
           </div>
         </section>
 
-        {/* Контент */}
         <AnimatePresence mode="wait">
           <motion.section
             key={tab}
@@ -248,8 +258,8 @@ function ProfileContent() {
               <MyAdsTab ads={myAds} onOpen={setOpenAd} onPost={() => setPostOpen(true)} />
             )}
             {tab === 'messages' && <MessagesTab />}
-            {tab === 'reviews' && <ReviewsTab />}
-            {tab === 'settings' && <SettingsTab type={type} />}
+            {tab === 'reviews' && <ReviewsTab me={me} />}
+            {tab === 'settings' && <SettingsTab me={me} type={type} />}
           </motion.section>
         </AnimatePresence>
       </main>
@@ -312,19 +322,41 @@ function MyAdsTab({ ads, onOpen, onPost }) {
 }
 
 function MessagesTab() {
+  const [chats, setChats] = useState([]);
   const [openChat, setOpenChat] = useState(null);
-  const active = MOCK_CHATS.find((c) => c.id === openChat);
-  const msgs = active ? MOCK_MESSAGES[active.id] || [] : [];
+  const [msgs, setMsgs] = useState([]);
+  const [draft, setDraft] = useState('');
+
+  useEffect(() => {
+    getChats().then(setChats);
+  }, []);
+
+  useEffect(() => {
+    if (!openChat) {
+      setMsgs([]);
+      return;
+    }
+    getMessages(openChat).then(setMsgs);
+  }, [openChat]);
+
+  const active = chats.find((c) => c.id === openChat);
+
+  async function onSend(e) {
+    e.preventDefault();
+    if (!draft.trim() || !openChat) return;
+    const msg = await sendMessage(openChat, draft.trim());
+    setMsgs((prev) => [...prev, msg]);
+    setDraft('');
+  }
 
   return (
     <div className="grid md:grid-cols-[320px_1fr] gap-3">
-      {/* Список чатов */}
       <div className="rounded-2xl bg-white ring-1 ring-black/5 shadow-card overflow-hidden">
         <div className="px-4 py-3 border-b border-black/5 text-sm font-bold text-ink-900">
-          Чаты
+          Чаты · {chats.length}
         </div>
         <ul className="max-h-[60vh] overflow-y-auto">
-          {MOCK_CHATS.map((c) => (
+          {chats.map((c) => (
             <li key={c.id}>
               <button
                 onClick={() => setOpenChat(c.id)}
@@ -333,21 +365,24 @@ function MessagesTab() {
                 }`}
               >
                 <img
-                  src={c.avatar}
+                  src={c.peerAvatar}
                   alt=""
                   className="w-10 h-10 rounded-full object-cover ring-1 ring-black/5"
                 />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <div className="text-sm font-semibold text-ink-900 truncate">
-                      {c.name}
+                      {c.peerName}
                     </div>
-                    <div className="ml-auto text-[11px] text-ink-500 shrink-0">
-                      {c.time}
+                    <div
+                      className="ml-auto text-[11px] text-ink-500 shrink-0"
+                      suppressHydrationWarning
+                    >
+                      {formatRelative(c.lastAt)}
                     </div>
                   </div>
                   <div className="text-[12px] text-ink-500 truncate">
-                    <span className="text-brand-700">{c.ad}</span> · {c.last}
+                    <span className="text-brand-700">{c.adTitle}</span> · {c.lastText}
                   </div>
                 </div>
                 {c.unread > 0 && (
@@ -361,22 +396,21 @@ function MessagesTab() {
         </ul>
       </div>
 
-      {/* Окно переписки */}
       <div className="rounded-2xl bg-white ring-1 ring-black/5 shadow-card overflow-hidden min-h-[60vh] flex flex-col">
         {active ? (
           <>
             <div className="px-4 py-3 border-b border-black/5 flex items-center gap-3">
               <img
-                src={active.avatar}
+                src={active.peerAvatar}
                 alt=""
                 className="w-9 h-9 rounded-full object-cover ring-1 ring-black/5"
               />
               <div className="min-w-0">
                 <div className="text-sm font-semibold text-ink-900 truncate">
-                  {active.name}
+                  {active.peerName}
                 </div>
                 <div className="text-[11px] text-ink-500 truncate">
-                  По объявлению: <span className="text-brand-700">{active.ad}</span>
+                  По объявлению: <span className="text-brand-700">{active.adTitle}</span>
                 </div>
               </div>
             </div>
@@ -399,8 +433,9 @@ function MessagesTab() {
                         className={`text-[10px] mt-0.5 ${
                           m.from === 'me' ? 'text-white/70' : 'text-ink-500'
                         }`}
+                        suppressHydrationWarning
                       >
-                        {m.time}
+                        {formatRelative(m.at)}
                       </div>
                     </div>
                   </div>
@@ -412,13 +447,12 @@ function MessagesTab() {
               )}
             </div>
             <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                alert('Демо: отправка сообщения');
-              }}
+              onSubmit={onSend}
               className="p-3 border-t border-black/5 flex items-center gap-2"
             >
               <input
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
                 placeholder="Напишите сообщение…"
                 className="flex-1 rounded-full bg-slate-100 focus:bg-white ring-1 ring-transparent focus:ring-brand-400 outline-none px-4 py-2.5 text-sm"
               />
@@ -447,12 +481,17 @@ function MessagesTab() {
   );
 }
 
-function ReviewsTab() {
+function ReviewsTab({ me }) {
+  const [reviews, setReviews] = useState([]);
+  useEffect(() => {
+    getReviews().then(setReviews);
+  }, []);
+
   return (
     <div className="space-y-3">
       <div className="rounded-2xl bg-white ring-1 ring-black/5 shadow-card p-4 flex items-center gap-4">
         <div className="text-3xl md:text-4xl font-black text-ink-900">
-          {MOCK_USER.rating.toFixed(1)}
+          {me.rating.toFixed(1)}
           <span className="text-lg md:text-xl text-ink-500">/5</span>
         </div>
         <div className="flex-1">
@@ -462,7 +501,7 @@ function ReviewsTab() {
             ))}
           </div>
           <div className="text-[12px] text-ink-500 mt-0.5">
-            На основе {MOCK_USER.reviewsCount} отзывов от покупателей
+            На основе {me.reviewsCount} отзывов от покупателей
           </div>
         </div>
         <button className="rounded-full bg-white ring-1 ring-black/10 hover:bg-brand-50 text-sm font-semibold text-ink-800 px-3 py-2">
@@ -471,15 +510,16 @@ function ReviewsTab() {
       </div>
 
       <ul className="space-y-2">
-        {MOCK_REVIEWS.map((r) => (
+        {reviews.map((r) => (
           <li key={r.id} className="rounded-2xl bg-white ring-1 ring-black/5 shadow-card p-4">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-full bg-brand-600 text-white grid place-items-center text-xs font-bold">
-                {r.from[0]}
+                {r.fromName[0]}
               </div>
               <div className="min-w-0">
                 <div className="text-sm font-semibold text-ink-900 truncate">
-                  {r.from} · <span className="text-ink-500 font-normal">{r.fromCity}</span>
+                  {r.fromName}{' '}
+                  <span className="text-ink-500 font-normal">· {r.fromCity}</span>
                 </div>
                 <div className="flex items-center gap-1 text-amber-500">
                   {Array.from({ length: r.rating }).map((_, i) => (
@@ -487,7 +527,12 @@ function ReviewsTab() {
                   ))}
                 </div>
               </div>
-              <div className="ml-auto text-[11px] text-ink-500">{r.time}</div>
+              <div
+                className="ml-auto text-[11px] text-ink-500"
+                suppressHydrationWarning
+              >
+                {formatRelative(r.at)}
+              </div>
             </div>
             <div className="mt-2 text-sm text-ink-800">{r.text}</div>
             <div className="mt-1 text-[11px] text-ink-500">
@@ -500,11 +545,11 @@ function ReviewsTab() {
   );
 }
 
-function SettingsTab({ type }) {
+function SettingsTab({ me, type }) {
   const rows = [
-    { label: 'Личные данные', hint: MOCK_USER.name },
-    { label: 'Телефон', hint: MOCK_USER.phone },
-    { label: 'Город по умолчанию', hint: MOCK_USER.cityName },
+    { label: 'Личные данные', hint: me.name },
+    { label: 'Телефон', hint: me.phone },
+    { label: 'Город по умолчанию', hint: me.cityName },
     {
       label: 'Тип аккаунта',
       hint: type === 'shop' ? 'Магазин (публичный)' : 'Пользователь (приватный)'

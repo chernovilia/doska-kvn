@@ -1,7 +1,7 @@
 'use client';
 
 import { AnimatePresence, motion } from 'framer-motion';
-import { CITIES, SECTIONS } from '@/data/mock';
+import { CITIES, SECTIONS } from '@/lib/api';
 import { CheckCircle2, Camera, Sparkles, ArrowLeft, ArrowRight, Download } from 'lucide-react';
 import { useState } from 'react';
 import Modal from './Modal';

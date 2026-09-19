@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ChevronDown, Check } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { CITIES } from '@/data/mock';
+import { CITIES } from '@/lib/api';
 
 // Логотип с интегрированным выбором города после слэша.
 // "доска/<город>" — где <город> кликабелен и имеет тот же цвет, что и "доска".

@@ -1,6 +1,6 @@
 'use client';
 
-import { CITIES } from '@/data/mock';
+import { CITIES } from '@/lib/api';
 import { MapPin } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useEffect, useRef, useState } from 'react';

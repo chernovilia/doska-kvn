@@ -1,7 +1,8 @@
 'use client';
 
 import { BadgeCheck, MapPin, Phone, MessageCircle, Star, Shield, Share2, Crown, Flame, ExternalLink } from 'lucide-react';
-import { cityName, formatPrice } from '@/data/mock';
+import { cityName } from '@/lib/api';
+import { formatPrice, formatRelative, formatEventDate } from '@/lib/format';
 import Modal from './Modal';
 import { useState } from 'react';
 
@@ -47,9 +48,9 @@ export default function AdModal({ ad, onClose }) {
 
         {/* Контент */}
         <div className="p-5 md:p-6">
-          <div className="flex items-center gap-2 text-[12px] text-ink-500">
+          <div className="flex items-center gap-2 text-[12px] text-ink-500" suppressHydrationWarning>
             <MapPin className="w-3.5 h-3.5 text-brand-600" />
-            {ad.address || cityName(ad.city)} • {ad.date}
+            {ad.address || cityName(ad.city)} • {ad.section === 'events' ? formatEventDate(ad.eventDate) : formatRelative(ad.createdAt)}
           </div>
           <h2 className="mt-1 text-xl md:text-2xl font-extrabold text-ink-900 leading-tight">
             {ad.title}

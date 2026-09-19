@@ -1,0 +1,49 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #f6f7fb;
+}
+
+html, body {
+  background: var(--bg);
+  color: #0f172a;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Красивый скроллбар */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 8px; }
+::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+/* Хайд-скролл для горизонтальных чипсов */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Плавный акцентный градиент шапки */
+.hero-gradient {
+  background:
+    radial-gradient(1200px 400px at 10% 0%, rgba(99,102,241,0.20), transparent 60%),
+    radial-gradient(900px 400px at 90% 10%, rgba(249,115,22,0.18), transparent 60%),
+    linear-gradient(180deg, #ffffff 0%, #f6f7fb 100%);
+}
+
+.brand-slash {
+  color: #f97316;
+  font-weight: 900;
+  margin: 0 1px;
+}
+
+/* Мерцающий бейдж TOP */
+@keyframes shine {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.top-badge {
+  background: linear-gradient(90deg, #f59e0b, #fbbf24, #f59e0b);
+  background-size: 200% 100%;
+  animation: shine 2.4s linear infinite;
+  color: #422006;
+}

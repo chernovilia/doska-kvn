@@ -2,16 +2,14 @@
 
 import { motion } from 'framer-motion';
 import { Sparkles, Plus, TrendingUp } from 'lucide-react';
+import { resolvePlace, DEFAULT_REGION_ID } from '@/lib/api';
 
-export default function HeroBanner({ city, onPricing, onPostAd }) {
-  const cityLine =
-    city === 'all'
-      ? 'Кулебаки • Выкса • Навашино'
-      : city === 'kulebaki'
-      ? 'Кулебаки'
-      : city === 'vyksa'
-      ? 'Выкса'
-      : 'Навашино';
+export default function HeroBanner({ place = DEFAULT_REGION_ID, onPricing, onPostAd }) {
+  const resolved = resolvePlace(place) || resolvePlace(DEFAULT_REGION_ID);
+  const line =
+    resolved.kind === 'region'
+      ? resolved.region.name
+      : `${resolved.city.name} · ${resolved.region.shortName}`;
 
   return (
     <section className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-brand-600 to-brand-800 text-white shadow-card">
@@ -19,7 +17,6 @@ export default function HeroBanner({ city, onPricing, onPostAd }) {
       <div className="absolute -left-10 -bottom-14 w-52 h-52 rounded-full bg-accent-500/30 blur-3xl" />
 
       <div className="relative flex flex-col md:flex-row md:items-center gap-3 p-4 md:px-6 md:py-4">
-        {/* Левая часть — заголовок */}
         <div className="flex items-center gap-3 min-w-0">
           <div className="hidden sm:grid place-items-center w-10 h-10 rounded-xl bg-white/10 ring-1 ring-white/20">
             <Sparkles className="w-5 h-5 text-amber-300" />
@@ -33,13 +30,12 @@ export default function HeroBanner({ city, onPricing, onPostAd }) {
               animate={{ opacity: 1, y: 0 }}
               className="text-base md:text-lg font-extrabold truncate"
             >
-              {cityLine}{' '}
+              {line}{' '}
               <span className="text-amber-300 font-black">· Доска/КВН</span>
             </motion.div>
           </div>
         </div>
 
-        {/* Правая часть — CTA */}
         <div className="md:ml-auto flex items-center gap-2">
           <button
             onClick={onPostAd}

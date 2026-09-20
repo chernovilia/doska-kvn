@@ -1,13 +1,8 @@
 // Мок-данные для демо-прототипа "Доска/КВН"
-// Регион: Кулебаки • Выкса • Навашино
 // Структура полей совпадает с будущей схемой Postgres — см. lib/types.js
+// Справочник городов и регионов вынесен в data/regions.js.
 
-export const CITIES = [
-  { id: 'all', name: 'Все города', short: 'КВН' },
-  { id: 'kulebaki', name: 'Кулебаки', short: 'Кул' },
-  { id: 'vyksa', name: 'Выкса', short: 'Вкс' },
-  { id: 'navashino', name: 'Навашино', short: 'Нав' }
-];
+export { CITIES, REGIONS, cityName, resolvePlace } from '@/data/regions';
 
 export const SECTIONS = [
   { id: 'market', name: 'Барахолка', emoji: '🛒', hint: 'Товары новые и б/у' },
@@ -662,19 +657,93 @@ export const ADS = [
     createdAt: daysAgo(5), eventDate: daysAhead(13, 6, 0),
     image: IMG.fair, gallery: [IMG.fair, IMG.garden],
     verified: true, author: AUTHORS.gorPark
+  }),
+
+  // === СОСЕДНИЕ РЕГИОНЫ (для «в соседних городах») ===
+  ad({
+    id: 'm-tv-murom', section: 'market',
+    title: 'Телевизор LG 43", Smart TV',
+    price: 18000, city: 'murom', address: 'Муром, ул. Ленина',
+    createdAt: daysAgo(2),
+    image: IMG.laptop2, gallery: [IMG.laptop2],
+    verified: true, author: AUTHORS.pavel
+  }),
+  ad({
+    id: 's-plumb-murom', section: 'services',
+    title: 'Сантехник Муром, все работы',
+    price: 500, priceSuffix: 'от, ₽', city: 'murom', address: 'Муром',
+    createdAt: hoursAgo(8),
+    image: IMG.plumb, gallery: [IMG.plumb],
+    verified: true, author: AUTHORS.nikolay
+  }),
+  ad({
+    id: 'r-2k-murom', section: 'realty',
+    title: 'Сдам 2-к квартиру Муром, центр',
+    price: 20000, priceSuffix: '₽/мес', city: 'murom', address: 'Муром, ул. Московская',
+    createdAt: daysAgo(3),
+    image: IMG.flat1, gallery: [IMG.flat1],
+    verified: true, author: AUTHORS.agencyDom
+  }),
+  ad({
+    id: 'a-kia-murom', section: 'auto',
+    title: 'Kia Rio 2018, АКПП',
+    price: 850000, city: 'murom', address: 'Муром',
+    createdAt: daysAgo(4),
+    image: IMG.car2, gallery: [IMG.car2],
+    verified: true, author: AUTHORS.maxim
+  }),
+  ad({
+    id: 'e-concert-murom', section: 'events',
+    title: 'Джазовый фестиваль в Муроме',
+    price: 700, priceSuffix: '₽/билет',
+    city: 'murom', address: 'Муром, ДК 1100-летия',
+    createdAt: daysAgo(1), eventDate: daysAhead(12, 17, 0),
+    image: IMG.concert2, gallery: [IMG.concert2],
+    verified: true, author: AUTHORS.dkKul
+  }),
+  ad({
+    id: 'm-cam-murom', section: 'market',
+    title: 'Canon EOS 200D + объектив 18-55',
+    price: 26000, city: 'murom', address: 'Муром',
+    createdAt: daysAgo(5),
+    image: IMG.camera, gallery: [IMG.camera],
+    verified: false, author: AUTHORS.ekaterina
+  }),
+  ad({
+    id: 's-elec-arz', section: 'services',
+    title: 'Электрик Арзамас — быстро и без предоплаты',
+    price: 500, priceSuffix: 'от, ₽',
+    city: 'arzamas', address: 'Арзамас',
+    createdAt: hoursAgo(12),
+    image: IMG.electric, gallery: [IMG.electric],
+    verified: true, author: AUTHORS.roman
+  }),
+  ad({
+    id: 'r-1k-arz', section: 'realty',
+    title: 'Сдам 1-к квартиру Арзамас, ремонт',
+    price: 15000, priceSuffix: '₽/мес',
+    city: 'arzamas', address: 'Арзамас, мкр. Ивановский',
+    createdAt: daysAgo(2),
+    image: IMG.flat3, gallery: [IMG.flat3],
+    verified: true, author: AUTHORS.natalia
+  }),
+  ad({
+    id: 'm-phone-arz', section: 'market',
+    title: 'Samsung Galaxy A54, 128 Gb',
+    price: 21000, city: 'arzamas', address: 'Арзамас, центр',
+    createdAt: daysAgo(3),
+    image: IMG.phone2, gallery: [IMG.phone2],
+    verified: false, author: AUTHORS.igor
+  }),
+  ad({
+    id: 's-tutor-pav', section: 'services',
+    title: 'Репетитор по английскому — Павлово',
+    price: 700, priceSuffix: '₽/час',
+    city: 'pavlovo', address: 'Павлово, онлайн',
+    createdAt: daysAgo(1),
+    image: IMG.tutor, gallery: [IMG.tutor],
+    verified: true, author: AUTHORS.tatyana
   })
 ];
 
-// Быстрый счётчик — теперь возвращаем результат через api.js (см. lib/api.js).
-export function countBySection(city = 'all') {
-  const map = {};
-  for (const s of SECTIONS) map[s.id] = 0;
-  for (const a of ADS) {
-    if (city === 'all' || a.city === city) map[a.section] += 1;
-  }
-  return map;
-}
-
-export function cityName(id) {
-  return CITIES.find((c) => c.id === id)?.name || '';
-}
+// countBySection и cityName живут в lib/api.js — там же async-обёртки.

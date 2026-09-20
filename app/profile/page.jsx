@@ -10,7 +10,6 @@ import {
   Bell,
   ChevronRight,
   LogOut,
-  MessageCircle,
   Settings,
   Star,
   Store,
@@ -27,19 +26,11 @@ import AdModal from '@/components/AdModal';
 import PostAdModal from '@/components/PostAdModal';
 import AuthModal from '@/components/AuthModal';
 
-import {
-  getMe,
-  getMyAds,
-  getChats,
-  getMessages,
-  getReviews,
-  sendMessage
-} from '@/lib/api';
+import { getMe, getMyAds, getReviews } from '@/lib/api';
 import { formatRelative } from '@/lib/format';
 
 const TABS = [
   { id: 'ads', name: 'Объявления', icon: ShoppingBag },
-  { id: 'messages', name: 'Сообщения', icon: MessageCircle },
   { id: 'reviews', name: 'Отзывы', icon: Star },
   { id: 'settings', name: 'Настройки', icon: Settings }
 ];
@@ -231,15 +222,6 @@ function ProfileContent() {
                 >
                   <Icon className="w-4 h-4" />
                   {t.name}
-                  {t.id === 'messages' && (
-                    <span
-                      className={`min-w-[18px] h-[18px] px-1 grid place-items-center rounded-full text-[10px] font-bold ${
-                        active ? 'bg-white text-brand-700' : 'bg-accent-500 text-white'
-                      }`}
-                    >
-                      4
-                    </span>
-                  )}
                 </button>
               );
             })}
@@ -257,7 +239,6 @@ function ProfileContent() {
             {tab === 'ads' && (
               <MyAdsTab ads={myAds} onOpen={setOpenAd} onPost={() => setPostOpen(true)} />
             )}
-            {tab === 'messages' && <MessagesTab />}
             {tab === 'reviews' && <ReviewsTab me={me} />}
             {tab === 'settings' && <SettingsTab me={me} type={type} />}
           </motion.section>
@@ -321,165 +302,6 @@ function MyAdsTab({ ads, onOpen, onPost }) {
   );
 }
 
-function MessagesTab() {
-  const [chats, setChats] = useState([]);
-  const [openChat, setOpenChat] = useState(null);
-  const [msgs, setMsgs] = useState([]);
-  const [draft, setDraft] = useState('');
-
-  useEffect(() => {
-    getChats().then(setChats);
-  }, []);
-
-  useEffect(() => {
-    if (!openChat) {
-      setMsgs([]);
-      return;
-    }
-    getMessages(openChat).then(setMsgs);
-  }, [openChat]);
-
-  const active = chats.find((c) => c.id === openChat);
-
-  async function onSend(e) {
-    e.preventDefault();
-    if (!draft.trim() || !openChat) return;
-    const msg = await sendMessage(openChat, draft.trim());
-    setMsgs((prev) => [...prev, msg]);
-    setDraft('');
-  }
-
-  return (
-    <div className="grid md:grid-cols-[320px_1fr] gap-3">
-      <div className="rounded-2xl bg-white ring-1 ring-black/5 shadow-card overflow-hidden">
-        <div className="px-4 py-3 border-b border-black/5 text-sm font-bold text-ink-900">
-          Чаты · {chats.length}
-        </div>
-        <ul className="max-h-[60vh] overflow-y-auto">
-          {chats.map((c) => (
-            <li key={c.id}>
-              <button
-                onClick={() => setOpenChat(c.id)}
-                className={`w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-brand-50 ${
-                  openChat === c.id ? 'bg-brand-50' : ''
-                }`}
-              >
-                <img
-                  src={c.peerAvatar}
-                  alt=""
-                  className="w-10 h-10 rounded-full object-cover ring-1 ring-black/5"
-                />
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <div className="text-sm font-semibold text-ink-900 truncate">
-                      {c.peerName}
-                    </div>
-                    <div
-                      className="ml-auto text-[11px] text-ink-500 shrink-0"
-                      suppressHydrationWarning
-                    >
-                      {formatRelative(c.lastAt)}
-                    </div>
-                  </div>
-                  <div className="text-[12px] text-ink-500 truncate">
-                    <span className="text-brand-700">{c.adTitle}</span> · {c.lastText}
-                  </div>
-                </div>
-                {c.unread > 0 && (
-                  <span className="min-w-[18px] h-[18px] px-1 grid place-items-center rounded-full bg-accent-500 text-white text-[10px] font-bold">
-                    {c.unread}
-                  </span>
-                )}
-              </button>
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      <div className="rounded-2xl bg-white ring-1 ring-black/5 shadow-card overflow-hidden min-h-[60vh] flex flex-col">
-        {active ? (
-          <>
-            <div className="px-4 py-3 border-b border-black/5 flex items-center gap-3">
-              <img
-                src={active.peerAvatar}
-                alt=""
-                className="w-9 h-9 rounded-full object-cover ring-1 ring-black/5"
-              />
-              <div className="min-w-0">
-                <div className="text-sm font-semibold text-ink-900 truncate">
-                  {active.peerName}
-                </div>
-                <div className="text-[11px] text-ink-500 truncate">
-                  По объявлению: <span className="text-brand-700">{active.adTitle}</span>
-                </div>
-              </div>
-            </div>
-            <div className="flex-1 p-4 space-y-2 overflow-y-auto bg-slate-50">
-              {msgs.length ? (
-                msgs.map((m) => (
-                  <div
-                    key={m.id}
-                    className={`flex ${m.from === 'me' ? 'justify-end' : 'justify-start'}`}
-                  >
-                    <div
-                      className={`max-w-[80%] rounded-2xl px-3 py-2 text-sm ${
-                        m.from === 'me'
-                          ? 'bg-brand-600 text-white rounded-br-sm'
-                          : 'bg-white ring-1 ring-black/5 text-ink-900 rounded-bl-sm'
-                      }`}
-                    >
-                      <div>{m.text}</div>
-                      <div
-                        className={`text-[10px] mt-0.5 ${
-                          m.from === 'me' ? 'text-white/70' : 'text-ink-500'
-                        }`}
-                        suppressHydrationWarning
-                      >
-                        {formatRelative(m.at)}
-                      </div>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="text-center text-sm text-ink-500 py-10">
-                  Пока нет сообщений — начните переписку
-                </div>
-              )}
-            </div>
-            <form
-              onSubmit={onSend}
-              className="p-3 border-t border-black/5 flex items-center gap-2"
-            >
-              <input
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                placeholder="Напишите сообщение…"
-                className="flex-1 rounded-full bg-slate-100 focus:bg-white ring-1 ring-transparent focus:ring-brand-400 outline-none px-4 py-2.5 text-sm"
-              />
-              <button
-                type="submit"
-                className="rounded-full bg-brand-600 hover:bg-brand-700 text-white font-semibold text-sm px-4 py-2.5"
-              >
-                Отправить
-              </button>
-            </form>
-          </>
-        ) : (
-          <div className="flex-1 grid place-items-center text-center p-8">
-            <div>
-              <div className="text-4xl">💬</div>
-              <div className="mt-2 font-extrabold text-ink-900">Выберите чат</div>
-              <div className="text-sm text-ink-500 max-w-xs mx-auto">
-                Общайтесь с покупателями и мастерами прямо в приложении — без обмена
-                телефонами
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
 
 function ReviewsTab({ me }) {
   const [reviews, setReviews] = useState([]);

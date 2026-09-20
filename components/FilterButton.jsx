@@ -3,14 +3,14 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { LayoutGrid, List, SlidersHorizontal, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { getChipsForSection } from '@/lib/api';
+import { getCategoryGroups } from '@/lib/api';
 
-// Кнопка-иконка «Фильтры» с выпадающей панелью:
-// внутри — быстрые чипсы категорий и переключатель вида (плитка/список).
+// Кнопка «Фильтры» с выпадающей панелью:
+// категории сгруппированы (Электроника → Смартфоны/Ноутбуки/...) + вид (плитка/список).
 export default function FilterButton({ section, value, onChange, view, onViewChange }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
-  const list = getChipsForSection(section);
+  const groups = getCategoryGroups(section);
   const hasSelection = !!value;
 
   useEffect(() => {
@@ -47,7 +47,7 @@ export default function FilterButton({ section, value, onChange, view, onViewCha
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -6 }}
             transition={{ duration: 0.15 }}
-            className="absolute right-0 mt-2 w-[300px] max-w-[92vw] rounded-2xl bg-white shadow-soft ring-1 ring-black/5 z-40 overflow-hidden"
+            className="absolute right-0 mt-2 w-[360px] max-w-[92vw] rounded-2xl bg-white shadow-soft ring-1 ring-black/5 z-40 overflow-hidden"
           >
             <div className="px-4 py-3 border-b border-black/5 flex items-center">
               <div className="font-extrabold text-ink-900 text-sm">Фильтры</div>
@@ -60,7 +60,7 @@ export default function FilterButton({ section, value, onChange, view, onViewCha
               </button>
             </div>
 
-            <div className="p-4 space-y-4">
+            <div className="p-4 space-y-4 max-h-[65vh] overflow-y-auto">
               {/* Вид */}
               <div>
                 <div className="text-[11px] uppercase tracking-wide text-ink-500 font-bold mb-1.5">
@@ -88,36 +88,41 @@ export default function FilterButton({ section, value, onChange, view, onViewCha
                 </div>
               </div>
 
-              {/* Категории */}
               <div>
                 <div className="text-[11px] uppercase tracking-wide text-ink-500 font-bold mb-1.5">
                   Категории
                 </div>
-                <div className="flex flex-wrap gap-1.5">
-                  <button
-                    onClick={() => onChange(null)}
-                    className={`rounded-full px-3 py-1.5 text-xs font-semibold ring-1 transition ${
-                      !value
-                        ? 'bg-brand-600 text-white ring-brand-600'
-                        : 'bg-white text-ink-700 ring-black/10 hover:bg-brand-50'
-                    }`}
-                  >
-                    Все
-                  </button>
-                  {list.map((c) => (
-                    <button
-                      key={c}
-                      onClick={() => onChange(c === value ? null : c)}
-                      className={`rounded-full px-3 py-1.5 text-xs font-semibold ring-1 transition ${
-                        value === c
-                          ? 'bg-brand-600 text-white ring-brand-600'
-                          : 'bg-white text-ink-700 ring-black/10 hover:bg-brand-50'
-                      }`}
-                    >
-                      {c}
-                    </button>
-                  ))}
-                </div>
+                <button
+                  onClick={() => onChange(null)}
+                  className={`mb-2 rounded-full px-3 py-1.5 text-xs font-semibold ring-1 transition ${
+                    !value
+                      ? 'bg-brand-600 text-white ring-brand-600'
+                      : 'bg-white text-ink-700 ring-black/10 hover:bg-brand-50'
+                  }`}
+                >
+                  Все
+                </button>
+
+                {groups.map((g) => (
+                  <div key={g.name} className="mt-3">
+                    <div className="text-[11px] font-bold text-ink-700 mb-1.5">{g.name}</div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {g.items.map((c) => (
+                        <button
+                          key={c}
+                          onClick={() => onChange(c === value ? null : c)}
+                          className={`rounded-full px-3 py-1.5 text-xs font-semibold ring-1 transition ${
+                            value === c
+                              ? 'bg-brand-600 text-white ring-brand-600'
+                              : 'bg-white text-ink-700 ring-black/10 hover:bg-brand-50'
+                          }`}
+                        >
+                          {c}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
 

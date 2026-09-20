@@ -47,10 +47,10 @@ export default function BottomNav({ onPost }) {
         </button>
 
         <Item
-          href="/profile?tab=messages"
+          href="/messages"
           icon={MessageCircle}
           label="Сообщения"
-          active={path === '/profile'}
+          active={path?.startsWith('/messages')}
         />
         <Item
           href="/profile"

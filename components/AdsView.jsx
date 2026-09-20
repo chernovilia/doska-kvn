@@ -186,26 +186,6 @@ export default function AdsView({ place = DEFAULT_REGION_ID }) {
             />
           )}
         </section>
-
-        <section className="rounded-2xl bg-gradient-to-r from-amber-100 to-orange-100 ring-1 ring-amber-200 p-4 md:p-6 flex flex-col md:flex-row items-start md:items-center gap-3 md:gap-4">
-          <div className="flex-1 min-w-0">
-            <div className="text-[11px] uppercase tracking-wide text-amber-800 font-bold">
-              Для местного бизнеса
-            </div>
-            <div className="text-base md:text-lg font-extrabold text-ink-900 leading-tight">
-              Станьте «Проверенным мастером» — получайте заявки со всей агломерации
-            </div>
-            <div className="text-xs md:text-sm text-ink-700 mt-1">
-              От 500 ₽/мес — приоритет в поиске, значок доверия и аналитика.
-            </div>
-          </div>
-          <button
-            onClick={() => setPricingOpen(true)}
-            className="rounded-full bg-ink-900 hover:bg-black text-white font-semibold text-sm px-4 py-2.5 shadow-card shrink-0"
-          >
-            Смотреть тарифы
-          </button>
-        </section>
       </main>
 
       <Footer />
@@ -221,13 +201,11 @@ export default function AdsView({ place = DEFAULT_REGION_ID }) {
 
 function NearbyBlock({ cityName, nearby, onOpen, onExpand, regionName }) {
   return (
-    <div className="mt-6 rounded-2xl bg-slate-50/70 ring-1 ring-black/5 p-3 md:p-4">
+    <div className="mt-6 rounded-2xl bg-slate-50/70 ring-1 ring-black/5 p-3 md:p-4 relative">
       <div className="flex items-center gap-2 mb-3 px-0.5">
         <MapPin className="w-4 h-4 text-brand-600" />
         <div className="min-w-0">
-          <div className="text-sm font-bold text-ink-900">
-            В соседних городах
-          </div>
+          <div className="text-sm font-bold text-ink-900">В соседних городах</div>
           <div className="text-[11px] text-ink-500">
             Помимо {cityName} — из региона {regionName} и рядом
           </div>
@@ -240,12 +218,30 @@ function NearbyBlock({ cityName, nearby, onOpen, onExpand, regionName }) {
           Показать все
         </button>
       </div>
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 auto-rows-fr">
-        {nearby.map((ad) => (
-          <div key={ad.id} className="h-full opacity-70 hover:opacity-100 transition">
-            <AdCard ad={ad} onOpen={onOpen} />
-          </div>
-        ))}
+      {/* Обёртка с градиентом-затуханием снизу — намёк «есть ещё, кликните «Показать все» */}
+      <div className="relative max-h-[520px] overflow-hidden">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 auto-rows-fr">
+          {nearby.map((ad) => (
+            <div key={ad.id} className="h-full opacity-70 hover:opacity-100 transition">
+              <AdCard ad={ad} onOpen={onOpen} />
+            </div>
+          ))}
+        </div>
+        <div
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-32"
+          style={{
+            background:
+              'linear-gradient(180deg, rgba(246,247,251,0) 0%, rgba(246,247,251,0.85) 60%, rgba(246,247,251,1) 100%)'
+          }}
+        />
+      </div>
+      <div className="mt-2 flex justify-center relative z-10">
+        <button
+          onClick={onExpand}
+          className="rounded-full bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold px-4 py-2 shadow-card"
+        >
+          Показать все объявления региона
+        </button>
       </div>
     </div>
   );

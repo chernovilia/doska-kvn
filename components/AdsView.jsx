@@ -104,12 +104,14 @@ export default function AdsView({ place = DEFAULT_REGION_ID }) {
         />
 
         <section className="space-y-2">
-          <div className="px-0.5">
-            <div className="text-[11px] uppercase tracking-wide text-ink-500 font-bold">
-              Разделы
-            </div>
-            <div className="text-base md:text-lg font-extrabold text-ink-900 leading-tight">
-              Куда сегодня заглянуть?
+          <div className="px-0.5 flex items-end gap-3">
+            <div className="min-w-0">
+              <div className="text-[11px] uppercase tracking-wide text-ink-500 font-bold">
+                Категории
+              </div>
+              <div className="text-base md:text-lg font-extrabold text-ink-900 leading-tight">
+                Выберите, что ищете
+              </div>
             </div>
           </div>
           <SectionTabs value={section} onChange={setSection} counts={counts} />

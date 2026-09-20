@@ -1,12 +1,12 @@
 'use client';
 
 import { AnimatePresence, motion } from 'framer-motion';
-import { CITIES, SECTIONS } from '@/lib/api';
-import { CheckCircle2, Camera, Sparkles, ArrowLeft, ArrowRight, Download } from 'lucide-react';
-import { useState } from 'react';
+import { CITIES, SECTIONS, getCategoryGroups } from '@/lib/api';
+import { CheckCircle2, Camera, Sparkles, ArrowLeft, ArrowRight, Download, ChevronRight } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import Modal from './Modal';
 
-const STEPS = ['Город', 'Категория', 'Описание', 'Фото', 'Проверка'];
+const STEPS = ['Город', 'Раздел', 'Категория', 'Описание', 'Фото', 'Проверка'];
 
 function isAvitoLink(text) {
   if (!text) return false;
@@ -18,6 +18,8 @@ export default function PostAdModal({ open, onClose }) {
   const [form, setForm] = useState({
     city: 'vyksa',
     section: 'market',
+    group: null,
+    category: null,
     title: '',
     price: '',
     description: '',
@@ -26,9 +28,25 @@ export default function PostAdModal({ open, onClose }) {
   const [checking, setChecking] = useState(false);
   const [done, setDone] = useState(false);
 
+  const groups = getCategoryGroups(form.section);
+
+  // При смене раздела — сбрасываем выбор подкатегории.
+  useEffect(() => {
+    setForm((f) => ({ ...f, group: null, category: null }));
+  }, [form.section]);
+
   function reset() {
     setStep(0);
-    setForm({ city: 'vyksa', section: 'market', title: '', price: '', description: '', photos: 0 });
+    setForm({
+      city: 'vyksa',
+      section: 'market',
+      group: null,
+      category: null,
+      title: '',
+      price: '',
+      description: '',
+      photos: 0
+    });
     setChecking(false);
     setDone(false);
   }
@@ -52,9 +70,10 @@ export default function PostAdModal({ open, onClose }) {
   const canNext =
     (step === 0 && form.city) ||
     (step === 1 && form.section) ||
-    (step === 2 && form.title.trim().length > 3) ||
-    (step === 3) ||
-    step === 4;
+    (step === 2 && form.category) ||
+    (step === 3 && form.title.trim().length > 3) ||
+    step === 4 ||
+    step === 5;
 
   return (
     <Modal
@@ -74,28 +93,28 @@ export default function PostAdModal({ open, onClose }) {
         </h3>
 
         {/* Steps */}
-        <div className="mt-4 flex items-center gap-2">
+        <div className="mt-4 flex items-center gap-1 overflow-x-auto no-scrollbar">
           {STEPS.map((s, i) => (
-            <div key={s} className="flex items-center gap-2">
+            <div key={s} className="flex items-center gap-1 shrink-0">
               <div
-                className={`w-7 h-7 grid place-items-center rounded-full text-xs font-bold ${
+                className={`w-7 h-7 grid place-items-center rounded-full text-xs font-bold shrink-0 ${
                   i <= step ? 'bg-brand-600 text-white' : 'bg-slate-100 text-ink-500'
                 }`}
               >
                 {i + 1}
               </div>
               {i < STEPS.length - 1 && (
-                <div className={`w-6 h-[2px] rounded ${i < step ? 'bg-brand-600' : 'bg-slate-200'}`} />
+                <div className={`w-4 h-[2px] rounded shrink-0 ${i < step ? 'bg-brand-600' : 'bg-slate-200'}`} />
               )}
             </div>
           ))}
-          <div className="ml-auto text-xs text-ink-500">
-            Шаг {step + 1} / {STEPS.length}
+          <div className="ml-auto text-xs text-ink-500 shrink-0 pl-2">
+            {step + 1} / {STEPS.length}
           </div>
         </div>
 
         {/* Body */}
-        <div className="mt-5 min-h-[260px]">
+        <div className="mt-5 min-h-[280px]">
           <AnimatePresence mode="wait">
             <motion.div
               key={step + (done ? 'done' : '') + (checking ? 'chk' : '')}
@@ -150,7 +169,7 @@ export default function PostAdModal({ open, onClose }) {
                 </div>
               ) : step === 1 ? (
                 <div>
-                  <div className="text-sm font-semibold text-ink-700 mb-2">Категория</div>
+                  <div className="text-sm font-semibold text-ink-700 mb-2">Раздел</div>
                   <div className="grid grid-cols-1 gap-2">
                     {SECTIONS.map((s) => (
                       <button
@@ -172,9 +191,68 @@ export default function PostAdModal({ open, onClose }) {
                   </div>
                 </div>
               ) : step === 2 ? (
+                <div>
+                  <div className="text-sm font-semibold text-ink-700 mb-2">
+                    Категория
+                    {form.category && (
+                      <span className="ml-2 text-brand-700">
+                        {form.group} → {form.category}
+                      </span>
+                    )}
+                  </div>
+
+                  {!form.group ? (
+                    <div className="grid grid-cols-1 gap-1.5">
+                      {groups.map((g) => (
+                        <button
+                          key={g.name}
+                          onClick={() => setForm((f) => ({ ...f, group: g.name }))}
+                          className="flex items-center justify-between gap-2 rounded-2xl px-4 py-3 text-left ring-1 ring-black/10 bg-white hover:bg-brand-50 transition"
+                        >
+                          <div className="min-w-0">
+                            <div className="font-semibold text-ink-900">{g.name}</div>
+                            <div className="text-[12px] text-ink-500 truncate">
+                              {g.items.slice(0, 3).join(' · ')}
+                              {g.items.length > 3 && ` и ещё ${g.items.length - 3}`}
+                            </div>
+                          </div>
+                          <ChevronRight className="w-4 h-4 text-ink-500 shrink-0" />
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div>
+                      <button
+                        onClick={() => setForm((f) => ({ ...f, group: null, category: null }))}
+                        className="mb-2 inline-flex items-center gap-1 text-xs font-semibold text-ink-500 hover:text-ink-800"
+                      >
+                        <ArrowLeft className="w-3 h-3" />
+                        Все группы
+                      </button>
+                      <div className="text-[12px] uppercase tracking-wide text-ink-500 font-bold mb-1.5">
+                        {form.group}
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {(groups.find((g) => g.name === form.group)?.items || []).map((c) => (
+                          <button
+                            key={c}
+                            onClick={() => setForm((f) => ({ ...f, category: c }))}
+                            className={`rounded-full px-3 py-1.5 text-sm font-semibold ring-1 transition ${
+                              form.category === c
+                                ? 'bg-brand-600 text-white ring-brand-600'
+                                : 'bg-white text-ink-700 ring-black/10 hover:bg-brand-50'
+                            }`}
+                          >
+                            {c}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : step === 3 ? (
                 <div className="space-y-3">
-                  {/* Автодетект ссылки Авито */}
-                  {isAvitoLink(form.title) || isAvitoLink(form.description) ? (
+                  {(isAvitoLink(form.title) || isAvitoLink(form.description)) && (
                     <div className="rounded-2xl bg-emerald-50 ring-1 ring-emerald-200 p-3 flex items-start gap-3">
                       <Download className="w-5 h-5 text-emerald-700 mt-0.5" />
                       <div className="min-w-0 flex-1">
@@ -202,14 +280,14 @@ export default function PostAdModal({ open, onClose }) {
                         Импортировать
                       </button>
                     </div>
-                  ) : null}
+                  )}
 
                   <div>
                     <label className="text-sm font-semibold text-ink-700">Заголовок</label>
                     <input
                       value={form.title}
                       onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-                      placeholder="Например: Сдам 2-к квартиру в центре Выксы или вставьте ссылку с avito.ru"
+                      placeholder="Например: Сдам 2-к квартиру в центре Выксы"
                       className="mt-1 w-full rounded-2xl bg-white ring-1 ring-black/10 focus:ring-brand-400 outline-none px-4 py-3 text-sm"
                     />
                   </div>
@@ -229,12 +307,12 @@ export default function PostAdModal({ open, onClose }) {
                       rows={4}
                       value={form.description}
                       onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-                      placeholder="Опишите товар или услугу, состояние, условия…"
+                      placeholder="Опишите товар или услугу, состояние, условия… Можно вставить ссылку с avito.ru — мы подтянем данные."
                       className="mt-1 w-full rounded-2xl bg-white ring-1 ring-black/10 focus:ring-brand-400 outline-none px-4 py-3 text-sm"
                     />
                   </div>
                 </div>
-              ) : step === 3 ? (
+              ) : step === 4 ? (
                 <div>
                   <div className="text-sm font-semibold text-ink-700 mb-2">Фотографии (демо)</div>
                   <div className="grid grid-cols-3 gap-2">
@@ -265,9 +343,10 @@ export default function PostAdModal({ open, onClose }) {
               ) : (
                 <div className="space-y-2">
                   <div className="text-sm font-semibold text-ink-700">Проверьте объявление</div>
-                  <div className="rounded-2xl bg-slate-50 ring-1 ring-black/10 p-4 text-sm">
+                  <div className="rounded-2xl bg-slate-50 ring-1 ring-black/10 p-4 text-sm space-y-0.5">
                     <div><b>Город:</b> {CITIES.find((c) => c.id === form.city)?.name}</div>
                     <div><b>Раздел:</b> {SECTIONS.find((s) => s.id === form.section)?.name}</div>
+                    <div><b>Категория:</b> {form.group} → {form.category}</div>
                     <div><b>Заголовок:</b> {form.title || <span className="text-ink-500">не указан</span>}</div>
                     <div><b>Цена:</b> {form.price ? `${form.price} ₽` : <span className="text-ink-500">по договорённости</span>}</div>
                     <div><b>Фото:</b> {form.photos}</div>

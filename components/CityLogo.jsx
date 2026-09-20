@@ -1,9 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { ChevronDown, Check, Sparkles } from 'lucide-react';
+import { ChevronDown, Check, Clock } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
-import Link from 'next/link';
 import {
   DEFAULT_REGION_ID,
   REGIONS,
@@ -36,7 +35,7 @@ export default function CityLogo({ value, onChange }) {
   const label = resolved?.kind === 'region' ? resolved.region.shortName : resolved?.city.name;
 
   const homeRegion = REGIONS.find((r) => r.id === DEFAULT_REGION_ID);
-  const otherRegions = REGIONS.filter((r) => r.id !== DEFAULT_REGION_ID);
+  const hasOtherLaunched = REGIONS.some((r) => r.id !== DEFAULT_REGION_ID && r.launched);
 
   function select(id) {
     onChange?.(id);
@@ -102,49 +101,23 @@ export default function CityLogo({ value, onChange }) {
               </div>
             )}
 
-            {/* Другие регионы */}
-            {otherRegions.length > 0 && (
+            {/* Другие регионы — пока заглушка «скоро» */}
+            {!hasOtherLaunched && (
               <div className="border-t border-black/5 p-1.5">
                 <div className="px-2.5 py-1 text-[10px] uppercase tracking-wide text-ink-500 font-bold">
                   Другие регионы
                 </div>
-                {otherRegions.map((r) => {
-                  const active = value === r.id;
-                  return (
-                    <button
-                      key={r.id}
-                      onClick={() => select(r.id)}
-                      className={`w-full text-left px-2.5 py-2 rounded-xl flex items-center gap-2 hover:bg-brand-50 ${
-                        active ? 'bg-brand-50' : ''
-                      }`}
-                      role="menuitem"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <div className="text-sm font-semibold text-ink-800 truncate">
-                          {r.shortName}
-                          {!r.launched && (
-                            <span className="ml-2 text-[10px] font-bold uppercase tracking-wide text-accent-600">
-                              скоро
-                            </span>
-                          )}
-                        </div>
-                        {r.domain && (
-                          <div className="text-[11px] text-ink-500 truncate">
-                            {r.domain}
-                          </div>
-                        )}
-                      </div>
-                      {active && <Check className="w-4 h-4 text-brand-600 shrink-0" />}
-                    </button>
-                  );
-                })}
+                <div className="mx-1 my-1 rounded-xl bg-slate-50 ring-1 ring-black/5 px-3 py-2.5 flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-ink-500 shrink-0" />
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold text-ink-800">Скоро</div>
+                    <div className="text-[11px] text-ink-500">
+                      Расширяемся на соседние города
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
-
-            <div className="border-t border-black/5 px-3 py-2 flex items-center gap-1.5 text-[11px] text-ink-500">
-              <Sparkles className="w-3.5 h-3.5 text-brand-600" />
-              Единая авторизация во всех регионах
-            </div>
           </motion.div>
         )}
       </AnimatePresence>

@@ -14,6 +14,7 @@ import {
   Star,
   Store,
   Hammer,
+  Briefcase,
   User as UserIcon,
   ShoppingBag,
   MapPin,
@@ -28,6 +29,7 @@ import AdCard from '@/components/AdCard';
 import AdModal from '@/components/AdModal';
 import PostAdModal from '@/components/PostAdModal';
 import AuthModal from '@/components/AuthModal';
+import BusinessSetupModal from '@/components/BusinessSetupModal';
 
 import { getMe, getMyAds, getReviews } from '@/lib/api';
 import { formatRelative } from '@/lib/format';
@@ -58,14 +60,35 @@ function ProfileContent() {
   const [openAd, setOpenAd] = useState(null);
   const [postOpen, setPostOpen] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
+  const [bizSetupOpen, setBizSetupOpen] = useState(false);
+  const [businessName, setBusinessName] = useState(''); // локальное отображение
 
   useEffect(() => {
     getMe().then((u) => {
       setMe(u);
       setType(u.type);
+      setBusinessName(u.businessProfile?.name || u.shop?.name || '');
     });
     getMyAds().then(setMyAds);
   }, []);
+
+  function requestSwitchToPersonal() {
+    if (type === 'personal') return;
+    if (
+      typeof window !== 'undefined' &&
+      window.confirm(
+        'Перейти на Личный аккаунт? Бизнес-профиль будет архивирован — можно вернуться, все данные сохранятся.'
+      )
+    ) {
+      setType('personal');
+    }
+  }
+
+  function onBusinessConfirmed({ kind, name }) {
+    setType(kind);
+    setBusinessName(name);
+    // Позже: POST /v1/me/business { kind, name } на бэк
+  }
 
   useEffect(() => {
     const t = search.get('tab');
@@ -123,7 +146,7 @@ function ProfileContent() {
                 <div className="flex items-center gap-2">
                   <div className="text-lg md:text-xl font-extrabold text-ink-900 truncate">
                     {(type === 'master' || type === 'shop')
-                      ? (me.businessProfile?.name || me.shop?.name || me.name)
+                      ? (businessName || me.businessProfile?.name || me.shop?.name || me.name)
                       : me.name}
                   </div>
                   {me.verified && (
@@ -155,29 +178,43 @@ function ProfileContent() {
               <div className="inline-flex bg-slate-100 rounded-full p-1">
                 <TypeChip
                   active={type === 'personal'}
-                  onClick={() => setType('personal')}
+                  onClick={requestSwitchToPersonal}
                   icon={UserIcon}
                   label="Личный"
                 />
                 <TypeChip
-                  active={type === 'master'}
-                  onClick={() => setType('master')}
-                  icon={Hammer}
-                  label="Мастер"
-                />
-                <TypeChip
-                  active={type === 'shop'}
-                  onClick={() => setType('shop')}
-                  icon={Store}
-                  label="Магазин"
+                  active={type === 'master' || type === 'shop'}
+                  onClick={() => setBizSetupOpen(true)}
+                  icon={Briefcase}
+                  label="Бизнес"
                 />
               </div>
+              {(type === 'master' || type === 'shop') && (
+                <div className="mt-1.5 text-[11px] text-ink-500 flex items-center gap-1.5">
+                  <span
+                    className={`inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                      type === 'master'
+                        ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200'
+                        : 'bg-brand-50 text-brand-700 ring-1 ring-brand-200'
+                    }`}
+                  >
+                    {type === 'master' ? '🛠 Мастер услуг' : '🏬 Магазин'}
+                  </span>
+                  <span>·</span>
+                  <button
+                    onClick={() => setBizSetupOpen(true)}
+                    className="underline hover:text-ink-700"
+                  >
+                    сменить тип или название
+                  </button>
+                </div>
+              )}
               <div className="mt-1 text-[11px] text-ink-500">
                 {type === 'personal'
-                  ? 'Приватный профиль обычного пользователя. Отзывы видны только вам.'
+                  ? 'Приватный профиль. Отзывы и рейтинг видны только вам.'
                   : type === 'master'
-                  ? 'Публичный профиль мастера услуг — электрик, репетитор, грузчик.'
-                  : 'Публичный профиль магазина или бизнеса, с рейтингом и отзывами.'}
+                  ? 'Публичный профиль мастера — доступен всем по прямой ссылке.'
+                  : 'Публичный профиль магазина — доступен всем, с рейтингом и отзывами.'}
               </div>
             </div>
 
@@ -275,6 +312,13 @@ function ProfileContent() {
       <AdModal ad={openAd} onClose={() => setOpenAd(null)} />
       <PostAdModal open={postOpen} onClose={() => setPostOpen(false)} />
       <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
+      <BusinessSetupModal
+        open={bizSetupOpen}
+        currentKind={type}
+        currentName={businessName}
+        onClose={() => setBizSetupOpen(false)}
+        onSubmit={onBusinessConfirmed}
+      />
       <BottomNav onPost={() => setPostOpen(true)} />
     </div>
   );

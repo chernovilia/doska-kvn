@@ -13,11 +13,14 @@ import {
   Settings,
   Star,
   Store,
+  Hammer,
   User as UserIcon,
   ShoppingBag,
   MapPin,
-  Clock
+  Clock,
+  Sparkles
 } from 'lucide-react';
+import { tierLabel, tierColor } from '@/lib/accountType';
 
 import VkIcon from '@/components/icons/VkIcon';
 import BottomNav from '@/components/BottomNav';
@@ -49,7 +52,7 @@ function ProfileContent() {
   const [tab, setTab] = useState(initialTab);
 
   const [me, setMe] = useState(null);
-  const [type, setType] = useState('shop');
+  const [type, setType] = useState('master'); // 'personal' | 'master' | 'shop'
   const [myAds, setMyAds] = useState([]);
 
   const [openAd, setOpenAd] = useState(null);
@@ -119,7 +122,9 @@ function ProfileContent() {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <div className="text-lg md:text-xl font-extrabold text-ink-900 truncate">
-                    {type === 'shop' ? me.shop.name : me.name}
+                    {(type === 'master' || type === 'shop')
+                      ? (me.businessProfile?.name || me.shop?.name || me.name)
+                      : me.name}
                   </div>
                   {me.verified && (
                     <BadgeCheck className="w-4.5 h-4.5 text-brand-600 shrink-0" />
@@ -152,7 +157,13 @@ function ProfileContent() {
                   active={type === 'personal'}
                   onClick={() => setType('personal')}
                   icon={UserIcon}
-                  label="Пользователь"
+                  label="Личный"
+                />
+                <TypeChip
+                  active={type === 'master'}
+                  onClick={() => setType('master')}
+                  icon={Hammer}
+                  label="Мастер"
                 />
                 <TypeChip
                   active={type === 'shop'}
@@ -162,17 +173,33 @@ function ProfileContent() {
                 />
               </div>
               <div className="mt-1 text-[11px] text-ink-500">
-                {type === 'shop'
-                  ? 'Публичный профиль магазина с рейтингом и отзывами клиентов.'
-                  : 'Приватный профиль обычного пользователя. Отзывы видны только вам.'}
+                {type === 'personal'
+                  ? 'Приватный профиль обычного пользователя. Отзывы видны только вам.'
+                  : type === 'master'
+                  ? 'Публичный профиль мастера услуг — электрик, репетитор, грузчик.'
+                  : 'Публичный профиль магазина или бизнеса, с рейтингом и отзывами.'}
               </div>
             </div>
 
-            {type === 'shop' && me.shop && (
+            {(type === 'master' || type === 'shop') && (me.businessProfile || me.shop) && (
               <div className="mt-4 rounded-xl bg-slate-50 ring-1 ring-black/5 p-3 text-sm text-ink-700 space-y-1">
-                <div>{me.shop.description}</div>
+                {/* Тариф — если есть подписка */}
+                {me.businessProfile?.currentTierName && (
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className={`inline-flex items-center gap-1 text-[11px] font-bold px-2 py-1 rounded-full ring-1 ${tierColor(me.businessProfile.currentTierName)}`}>
+                      <Sparkles className="w-3 h-3" />
+                      {tierLabel(me.businessProfile.currentTierName)}
+                    </span>
+                    {me.subscriptionExpired && (
+                      <span className="text-[11px] font-semibold text-rose-700 bg-rose-50 ring-1 ring-rose-200 px-2 py-0.5 rounded-full">
+                        Подписка истекла
+                      </span>
+                    )}
+                  </div>
+                )}
+                <div>{me.businessProfile?.description || me.shop?.description}</div>
                 <div className="flex flex-wrap gap-1.5 mt-2">
-                  {me.shop.categories.map((c) => (
+                  {(me.businessProfile?.categories || me.shop?.categories || []).map((c) => (
                     <span
                       key={c}
                       className="text-[11px] font-semibold text-brand-700 bg-brand-50 ring-1 ring-brand-200 px-2 py-0.5 rounded-full"
@@ -183,10 +210,10 @@ function ProfileContent() {
                 </div>
                 <div className="text-[12px] text-ink-500 mt-2 flex flex-wrap gap-x-3 gap-y-1">
                   <span className="inline-flex items-center gap-1">
-                    <Clock className="w-3.5 h-3.5" /> {me.shop.hours}
+                    <Clock className="w-3.5 h-3.5" /> {me.businessProfile?.hours || me.shop?.hours}
                   </span>
                   <span className="inline-flex items-center gap-1">
-                    <MapPin className="w-3.5 h-3.5" /> {me.shop.address}
+                    <MapPin className="w-3.5 h-3.5" /> {me.businessProfile?.address || me.shop?.address}
                   </span>
                 </div>
               </div>
@@ -374,7 +401,12 @@ function SettingsTab({ me, type }) {
     { label: 'Город по умолчанию', hint: me.cityName },
     {
       label: 'Тип аккаунта',
-      hint: type === 'shop' ? 'Магазин (публичный)' : 'Пользователь (приватный)'
+      hint:
+        type === 'personal'
+          ? 'Личный (приватный)'
+          : type === 'master'
+          ? 'Мастер услуг (публичный)'
+          : 'Магазин (публичный)'
     },
     { label: 'Способы оплаты', hint: 'Не подключены' },
     { label: 'Уведомления', hint: 'Push + e-mail' },

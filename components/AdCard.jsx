@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { BadgeCheck, Clock, Heart, MapPin, Calendar, Flame, Crown, ExternalLink } from 'lucide-react';
 import { cityName } from '@/lib/api';
 import { formatPrice, formatRelative, formatEventDate } from '@/lib/format';
+import { accountTypeLabel, accountTypeEmoji, accountTypeBadgeClass, isBusiness } from '@/lib/accountType';
 import { useState } from 'react';
 
 // Единый стиль карточки: одинаковые внешние/внутренние отступы,
@@ -12,6 +13,11 @@ import { useState } from 'react';
 export default function AdCard({ ad, onOpen }) {
   const [liked, setLiked] = useState(false);
   const isEvent = ad.section === 'events';
+  // Тип автора — снапшот на момент публикации (frozen).
+  const authorType = ad.authorType || ad.author?.type || null;
+  const authorTypeIsBiz = isBusiness(authorType);
+  const typeEmoji = accountTypeEmoji(authorType);
+  const typeText = accountTypeLabel(authorType);
 
   return (
     <motion.button
@@ -56,6 +62,12 @@ export default function AdCard({ ad, onOpen }) {
             <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600 px-2 py-1 text-[11px] font-bold text-white shadow">
               <ExternalLink className="h-3 w-3" />
               Авито
+            </span>
+          )}
+          {authorTypeIsBiz && typeText && (
+            <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-bold ring-1 shadow ${accountTypeBadgeClass(authorType)}`}>
+              <span>{typeEmoji}</span>
+              {typeText}
             </span>
           )}
         </div>

@@ -19,12 +19,35 @@ export const MOCK_USER = {
   vkUrl: 'https://vk.com/id123456789',
   bio: 'Здравствуйте! Работаю в КВН более 10 лет. Помогаю с ремонтом техники и электрикой.',
   phone: '+7 (908) 123-45-67',
-  type: 'shop',
+  // Три типа: personal / master / shop
+  type: 'master',
+  role: 'owner',
   verified: true,
+  isPublic: true,
+  subscriptionExpired: false,
   rating: 4.9,
   reviewsCount: 34,
   dealsCount: 128,
   activeAdsCount: 6,
+  wallet: {
+    balance: 45 // звёзды за активность
+  },
+  businessProfile: {
+    slug: 'ilya-master',
+    name: 'Мастерская Ильи',
+    description:
+      'Ремонт стиральных машин, электрика и мелкий ремонт бытовой техники. Выезд по КВН.',
+    categories: ['Ремонт техники', 'Электрик', 'Сантехник'],
+    hours: 'Пн–Сб · 8:00–22:00',
+    address: 'Выкса, ул. Ленина, 14',
+    phone: '+7 (908) 123-45-67',
+    verified: true,
+    legalVerified: false,
+    currentTierName: 'top', // Старт | ТОП | Премиум
+    currentTierExpiresAt: '2026-10-22T14:00:00Z',
+    viewsCount: 412
+  },
+  // Легаси-поле для обратной совместимости (пока UI не переведён на businessProfile)
   shop: {
     name: 'Мастерская Ильи',
     description:

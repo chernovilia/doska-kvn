@@ -1,0 +1,290 @@
+# Архитектура Доска/КВН
+
+Canonical-документ. Правила игры для всех текущих и будущих коммитов.
+
+---
+
+## Стек
+
+### Фронтенд
+- **Next.js 14** (App Router)
+- **Tailwind CSS**, **Framer Motion**, **Lucide React**
+- Хостится на **Amvera** как отдельное приложение (Node.js 20)
+- Домены: `доска-квн.рф` (сейчас) + `доска-муром.рф`, `доска-арзамас.рф`, … (301 на основной)
+
+### Бэкенд
+- **NestJS + TypeScript**
+- **Prisma ORM**
+- Хостится на **Amvera** как отдельное приложение (Node.js 20)
+- Поддомен: `api.доска-квн.рф`
+
+### БД
+- **PostgreSQL 16** — Managed Amvera
+- Один инстанс, один шардинг (позже — по regionId, если разрастётся)
+
+### Кеш и очереди
+- **Redis** — Managed Amvera (со 2-го месяца)
+  - Rate limiting
+  - SMS-коды (TTL 5 минут)
+  - Refresh-token blacklist на logout
+  - BullMQ для фоновых задач (модерация, ресайз фото)
+
+### Медиа
+- **Timeweb S3** (~100 ₽/мес за 30 ГБ)
+- 3 размера каждого фото через `sharp`: thumb 300, card 800, full 1600
+- pre-signed URL upload напрямую с фронта (минуя API)
+
+### Внешние сервисы
+- **SMSC.ru** — SMS-коды (~3 ₽/SMS)
+- **Yandex SMTP** — e-mail magic-link (бесплатно)
+- **Yandex ID OAuth** — второй способ входа (после одобрения)
+- **GigaChat** — LLM-модерация (после этапа 5, ~200 ₽/мес)
+- **ЮKassa** — платежи (после этапа 5)
+
+### Мониторинг
+- **Яндекс.Метрика** — трафик, воронки, цели
+- **Sentry** — ошибки фронт + бэк (бесплатный тариф)
+- **UptimeRobot** — пинг главной + api (бесплатно)
+
+### Инфраструктура
+- **Cloudflare** — DNS, CDN, DDoS-защита (бесплатно)
+- **Let's Encrypt** — HTTPS через Amvera
+
+**Итого инфры на MVP-старте**: ~2 500 ₽/мес. С запасом до 5 000 DAU.
+
+---
+
+## Домены и URL
+
+```
+доска-квн.рф                    → фронт (Amvera)
+api.доска-квн.рф                → API (Amvera)
+admin.доска-квн.рф              → админка (отдельное приложение? или /admin в фронте — TBD)
+доска-муром.рф → 301 → /murom   → региональный маркетинг-вход
+```
+
+### URL-структура фронта
+```
+/                               главная (регион по умолчанию — KVN)
+/[place]                        регион или город: kulebaki, vyksa, kvn, murom, ...
+/ad/[id]                        публичная страница объявления
+/u/[userId]                     публичный профиль пользователя/магазина
+/login                          вход
+/messages                       мессенджер (auth)
+/messages?chat=[id]             активный чат
+/profile                        кабинет (auth)
+/post                           форма подачи (auth, позже — переезжает из модалки)
+/terms, /privacy, /help         статические страницы
+/pwa-install                    инструкция установки PWA
+/admin/**                       админка (роли: owner/admin/moderator/content/support)
+```
+
+---
+
+## Слой данных (backend contract)
+
+Prisma-схема ложится **1:1 на текущий `lib/types.js`** — фронт не переписываем.
+
+### Основные таблицы
+
+```
+Region       (id, name, shortName, domain, launched, neighbors[])
+City         (id, name, regionId, population, lat, lon)
+
+User         (id, phone, email, name, avatar, homeCityId, type, verified,
+              createdAt, lastSeenAt, blockedAt, blockReason)
+Shop         (userId, name, description, categories[], hours, address, verified)
+TrustedDevice (userId, deviceId, userAgent, firstUsedAt, lastUsedAt, ip)
+
+Category     (id, sectionId, groupName, name)  ← из data/categories.js
+Ad           (id, sectionId, categoryId, cityId, regionId, authorId,
+              title, price, priceSuffix, description, phone, avitoUrl,
+              status, moderationLevel, moderationNotes, moderatedById,
+              top, urgent, verified, createdAt, publishedAt, expiresAt,
+              viewsCount, favoritesCount, reportsCount)
+AdPhoto      (id, adId, url, order, phash)
+
+Chat         (id, adId, buyerId, sellerId, createdAt, lastMessageAt)
+Message      (id, chatId, fromUserId, text, at, readAt)
+
+Review       (id, targetUserId, fromUserId, adId, rating, text, at, hiddenAt)
+Report       (id, targetKind, targetId, fromUserId, reason, comment, at,
+              status, resolvedById, resolvedAt)
+Favorite     (userId, adId, at)
+
+AdView       (userId, adId, at, source)              — для рекомендаций
+AnalyticsEvent (userId?, name, props, at)            — универсальный event
+
+AdminUser    (userId, role, createdAt)               — доступ в /admin
+AdminAction  (adminId, action, targetKind, targetId, notes, at)   — audit log
+
+Setting      (key, value, updatedAt, updatedById)    — feature-flags и лимиты
+Slide        (id, order, eyebrow, title, body, ctaLabel, ctaKind, ctaHref,
+              accent, emoji, enabled, startsAt, endsAt)
+```
+
+### Индексы (обязательные)
+
+```
+Ad:   (regionId, sectionId, status, createdAt DESC)
+Ad:   (cityId, sectionId, status, createdAt DESC)
+Ad:   tsvector(title || description) GIN
+Ad:   (authorId, status, createdAt DESC)
+Ad:   (status, createdAt) — для очереди модерации
+
+Chat: (buyerId), (sellerId), (adId)
+Message: (chatId, at)
+
+AnalyticsEvent: (userId, at), (name, at)
+```
+
+### Feature flags через таблицу Setting
+
+Экземпляр таблицы `Setting`:
+
+```
+KEY                           VALUE     ЧТО ДЕЛАЕТ
+ads.rateLimit.perDay          5         сколько объявлений в день на юзера
+ads.rateLimit.perHour         1         ...в час
+ads.autoApprove               true      без модерации, если прошёл базовые фильтры
+moderation.llm.enabled        false     подключён ли GigaChat
+moderation.llm.provider       gigachat  gigachat | yandexgpt
+messages.rateLimit.perMinute  30        антиспам в чатах
+auth.sms.enabled              true      можно ли входить через SMS
+auth.email.enabled            true      можно ли через e-mail
+auth.yandex.enabled           false     Yandex ID (после одобрения)
+payments.enabled              false     тарифы и разовые опции
+signup.opened                 true      можно ли новым регаться
+seed.demoAdsCount             0         показывать ли демо-объявления
+```
+
+Изменяется через админку без деплоя. Читается при бутстрапе + hot-reload раз в минуту.
+
+---
+
+## Авторизация
+
+### Регистрация / вход
+1. Пользователь вводит номер телефона на `/login`
+2. `POST /auth/phone/request` → бэк генерит 4-значный код → сохраняет в Redis (TTL 5 мин) → отправляет через SMSC
+3. Пользователь вводит код → `POST /auth/phone/verify {phone, code}`
+4. Бэк выдаёт:
+   - **Access token** — JWT, 15 минут, `httpOnly` cookie
+   - **Refresh token** — random 32-byte string, 90 дней, `httpOnly` cookie
+   - **Device id** — UUID, вечная кука, метка Trusted Device
+
+### Продление сессии
+- Клиент шлёт `POST /auth/refresh` за 1 минуту до истечения access (или сразу при 401)
+- Бэк проверяет refresh → выдаёт новую пару access + refresh
+- Refresh **ротируется** — каждый refresh одноразовый (защита от угона)
+
+### Выход
+- `POST /auth/logout` → удаляем refresh из БД → отправляем `Set-Cookie: ; Max-Age=0` → чистим Redis-кеш сессии
+
+### Trusted Device
+- При первом входе кладём `device_id` в вечную куку и в таблицу `TrustedDevice`
+- Через 90 дней, когда refresh истёк, но `device_id` жив — авторизуем **без SMS**, только проверяем phone match
+- Смена телефона / новый браузер → снова SMS
+
+### Роли и права
+- `guest` — не залогинен
+- `user` — обычный
+- `shop` — магазинный аккаунт
+- `moderator` — доступ к /admin/moderation, /admin/reports
+- `content` — /admin/slides, /admin/content, /admin/afisha
+- `support` — /admin/users (read-only), /admin/chats
+- `admin` — всё выше + /admin/settings, /admin/users (write)
+- `owner` — админ + удаление аккаунтов, экспорт БД, глобальные настройки
+
+Право проверяется в NestJS-guard через таблицу `AdminUser.role`. Не в JWT (чтобы можно было отозвать без перевыпуска токена).
+
+---
+
+## Модерация
+
+### Слои (в порядке применения)
+
+1. **Rate limit** — 5 объявлений/день, 1 час — блок публикации
+2. **Blacklist слов** — ~200 запрещённых (крипта, эскорт, оружие, ссылки на конкурентов)
+3. **pHash duplicate photos** — если фото 1-в-1 повторяет чужое → в ручную
+4. **Levenshtein по заголовку** — >85% совпадение с уже опубликованным → в ручную
+5. **LLM (опционально)** — GigaChat через feature flag `moderation.llm.enabled`
+
+### Статусы объявления
+```
+pending      только что подано, ждёт модерации
+approved     опубликовано, видно в ленте
+rejected     отклонено, показываем автору причину
+hidden       скрыто (по жалобе или админом)
+expired      истёк срок (90 дней)
+```
+
+### Очередь ручной модерации
+- Что попадает: `pending` со статусом-триггером от одного из слоёв + все жалобы `Report`
+- Кто видит: `moderator`, `admin`, `owner`
+- Действия: **Одобрить** / **Отклонить с причиной** / **Заблокировать автора**
+
+### Каждое действие пишется в AdminAction (audit log)
+
+---
+
+## PWA
+
+- `manifest.json` в `/public/`
+- Service Worker — минимальный, кеш статики
+- Иконки 192×192, 512×512, maskable
+- iOS-теги через `<meta apple-*>`
+- Компонент `<InstallPWABanner>` — умный, определяет платформу
+- Компонент `<OpenInBrowserModal>` — для VK-браузера
+- Аналитика PWA:
+  - `pwa_prompted`, `pwa_installed`, `pwa_dismissed`, `pwa_open` (standalone)
+  - Поле `User.pwaFirstOpenAt`
+
+---
+
+## Аналитика (события в бэк)
+
+Универсальная таблица `AnalyticsEvent` под всё:
+
+```
+ad_view           смотрел карточку
+ad_open           открыл модалку/страницу
+ad_favorite       добавил в избранное
+ad_phone_reveal   показал телефон
+ad_write_click    нажал «Написать»
+ad_publish_start  открыл форму
+ad_publish_done   опубликовал
+ad_report         пожаловался
+search_query      сделал поиск
+place_change      сменил город/регион
+signup_start      начал регистрацию
+signup_done       вошёл
+message_send      отправил сообщение
+pwa_prompted, pwa_installed, pwa_open, ...
+```
+
+Из этого потом строится любая воронка. Ретеншн, MAU/DAU, время до первой сделки.
+
+---
+
+## Правовое и compliance
+
+- **Пользовательское соглашение** `/terms`
+- **Политика конфиденциальности** `/privacy` (152-ФЗ)
+- **Реквизиты владельца** в футере (ФИО самозанятого + ИНН)
+- **Все данные в РФ** — Amvera (Yandex Cloud), Timeweb S3, SMSC, Yandex SMTP
+- **Согласие на обработку** — галочка при регистрации, чекбокс сохраняем в БД
+- **Логирование действий** — AdminAction + AnalyticsEvent + БД-триггеры на изменения
+
+---
+
+## Что оставляем на потом (осознанно)
+
+- WebSocket мессенджер — сначала polling каждые 10 сек
+- Микросервисы — монолит-API до 50k DAU
+- Kubernetes — Docker + Amvera хватит
+- Elasticsearch — Postgres FTS до 100k объявлений
+- ML-рекомендации — content-based по city/section/price первые полгода
+- Native-приложение — PWA + VK Mini App
+- Многоязычность — только русский
+- Пуш через APNs — Web Push + VK-бот-нотификации первые полгода

@@ -24,12 +24,55 @@
 
 ## ⚠️ Безопасность и обновления
 
-- [ ] **Апгрейд Next.js**: `14.2.5` → `14.2.30` (или последняя safe-версия). Уязвимость в SSR-роутинге, эксплуатируется через Middleware — у нас его пока нет, но патчим до этапа 3.
-- [ ] **npm audit fix** для транзитивных уязвимостей уровня high/critical. Проверить, не ломает ли что-то.
-- [ ] Настроить **Dependabot** в GitHub — автоматические PR-ки на security-обновления.
-- [ ] После бэка: **rate limiting** через Redis на `POST /ads`, `POST /messages`, `POST /auth/vk` — от спама и брутфорса.
-- [ ] После бэка: **CORS whitelist** с явным списком доменов (доска-квн.рф + региональные).
-- [ ] После бэка: **CSP-заголовки** через `next.config.js` — защита от XSS.
+- [ ] **Апгрейд Next.js**: `14.2.5` → `14.2.30` (или последняя safe-версия). Уязвимость в SSR-роутинге через Middleware — у нас его пока нет, но патчим до этапа 3.
+- [ ] **npm audit fix** для транзитивных high/critical.
+- [ ] Настроить **Dependabot** в GitHub — авто-PR на security.
+- [ ] После бэка: **rate limiting** через Redis на `POST /ads`, `POST /messages`, `POST /auth/*`.
+- [ ] После бэка: **CORS whitelist** с явным списком доменов.
+- [ ] После бэка: **CSP-заголовки** через `next.config.js`.
+
+---
+
+## 🎯 Целевая аудитория и запуск
+
+- **Первый канал**: паблик «Подслушано Кулебаки» (32 000 подписчиков) — владельцем является Илья, посев в 0 ₽.
+- **Юридическая база**: самозанятость Ильи и его девушки — площадка как информационный посредник.
+- **Целевой охват MVP**: 500–1000 активных пользователей за первые 3 месяца.
+- **Расширение**: соседние города через маркетинговые домены (`доска-муром.рф`, `доска-арзамас.рф` — 301 → основной).
+
+---
+
+## 🔐 Авторизация — финализировано
+
+Основной канал — **телефон + SMS** через SMSC.ru. Опция — **e-mail magic-link**. Позже — **Яндекс ID**. VK ID НЕ используем (жёсткая модерация).
+
+- Access token: JWT, 15 мин, `httpOnly` cookie
+- Refresh token: 90 дней, `httpOnly` cookie, ротируется при каждом refresh
+- **Trusted Device**: `device_id` в вечной куке — после 90 дней входим без SMS
+- Экономика SMS: ~12 ₽/юзер/год со стандартной схемой, ~3 ₽/юзер с Trusted Device
+- Позже: код в push (для PWA) и Telegram-бот как дополнительные бесплатные каналы
+
+---
+
+## 🛡 Модерация — многослойная
+
+1. **Rate limit**: 5 объявлений/день, 1 в час
+2. **Blacklist слов**: ~200 стоп-слов, ловит очевидный спам
+3. **pHash дубли фото**
+4. **Levenshtein по заголовку** — >85% совпадение
+5. **Ручная очередь** (админка) — всё, что триггернуло 2–4
+6. **LLM (позже, feature flag)** — GigaChat, не DeepSeek (152-ФЗ)
+
+---
+
+## 📱 PWA-стратегия
+
+- `manifest.json` + минимальный Service Worker
+- Иконки, iOS meta-теги
+- Компонент `<InstallPWABanner>` — определяет платформу, показывает нужный CTA
+- Компонент `<OpenInBrowserModal>` — для VK-браузера (intent:// + QR + инструкция для iOS)
+- Аналитика установок: события `pwa_prompted`, `pwa_installed`, `pwa_dismissed`, `pwa_open`
+- Поле `User.pwaFirstOpenAt` — засекаем момент установки
 
 ---
 
@@ -76,45 +119,68 @@
 
 ## Этап 2 · Бэкенд NestJS + Postgres
 
-Цель: реальные объявления и профили, живущие в БД.
+Цель: реальные объявления и профили, живущие в БД. Полная схема в `ARCHITECTURE.md`.
 
 - [ ] Отдельный репозиторий `doska-kvn-api` (приватный).
 - [ ] Стек: NestJS + TypeScript + Prisma + PostgreSQL 16.
-- [ ] Схема Prisma:
-  - `Region`, `City` — из `data/regions.js`
-  - `User`, `Shop`
-  - `Ad`, `AdPhoto`
-  - `Chat`, `Message`
-  - `Review`, `Favorite`
-  - `AdView`, `AnalyticsEvent` — под будущие рекомендации
-- [ ] REST-контроллеры зеркально `lib/api.js`: `GET /ads`, `GET /ads/:id`, `POST /ads`, `GET /me`, `GET /chats`.
-- [ ] На Amvera — Managed PostgreSQL 16 (~500 ₽/мес).
-- [ ] API как отдельное приложение — свой поддомен, например `api.доска-квн.рф`.
-- [ ] Индексы: `(regionId, section, status, createdAt DESC)`, полнотекст `tsvector(title || description)`.
+- [ ] Prisma-схема по `lib/types.js` + таблицы админки (AdminUser, AdminAction, Setting, Slide).
+- [ ] Managed PostgreSQL 16 на Amvera (~500 ₽/мес).
+- [ ] API как отдельное приложение — поддомен `api.доска-квн.рф`.
+- [ ] Обязательные индексы: `(regionId, sectionId, status, createdAt DESC)`, полнотекст `tsvector`.
+- [ ] Первые endpoints:
+  - `GET /ads?place&section&chip&search`
+  - `GET /ads/:id`
+  - `POST /ads` (auth-guard)
+  - `POST /reports/:adId`
+- [ ] CORS whitelist только для основного домена.
+- [ ] Feature flags из `Setting` — hot-reload при чтении.
 
 ---
 
-## Этап 3 · ВКонтакте-авторизация и медиа
+## Этап 3 · Авторизация (SMS + email) и медиа
 
-- [ ] Регистрация приложения на dev.vk.com, `app_id` + `secure_key`.
-- [ ] VK ID SDK на фронте, `POST /auth/vk` на бэке.
-- [ ] JWT в `httpOnly cookie`, `SameSite=Lax`, `Secure`.
-- [ ] S3 (Timeweb или Selectel) — ~100 ₽/мес за 30 ГБ.
-- [ ] `POST /upload/presign` → фронт грузит фото напрямую в S3.
-- [ ] `sharp` на бэке — 3 размера (thumb 300, card 800, full 1600).
-- [ ] **Перевести репо в приватный** (см. пункт «⚠️ ВАЖНО»).
+- [ ] SMSC.ru: интеграция, отправка 4-значного кода
+- [ ] Redis: хранение кода (TTL 5 мин), rate limit (1 SMS/минуту на телефон)
+- [ ] `POST /auth/phone/request`, `POST /auth/phone/verify`, `POST /auth/refresh`, `POST /auth/logout`
+- [ ] Двухтокенная схема: access 15 мин + refresh 90 дней
+- [ ] Trusted Device: вечная кука `device_id` + таблица `TrustedDevice`
+- [ ] E-mail magic-link через Yandex SMTP (бесплатно): `POST /auth/email/request`, `GET /auth/email/verify?token=`
+- [ ] S3 (Timeweb, ~100 ₽/мес) + pre-signed upload
+- [ ] `sharp` — 3 размера (300 / 800 / 1600)
+- [ ] Форма подачи реально сохраняет — `POST /ads` → статус `pending`
+- [ ] Перевести репо в приватный (см. «⚠️ ВАЖНО»)
+- [ ] Страницы `/terms` и `/privacy` — под 152-ФЗ
 
 ---
 
-## Этап 4 · Мессенджер и модерация
+## Этап 3.5 · Админка (MVP-версия)
 
-- [ ] Managed Redis на Amvera (~300 ₽/мес).
-- [ ] Socket.IO с Redis-adapter.
-- [ ] События: `chat:join`, `message:send`, `message:read`, `typing`.
+Подробности в `ADMIN.md`.
+
+- [ ] Middleware для роута `/admin/**` — читает `AdminUser.role` из БД
+- [ ] Дашборд с базовыми метриками
+- [ ] Модерация — очередь `pending`, действия «Одобрить / Отклонить / Заблокировать»
+- [ ] Жалобы — таблица `Report`, обработка
+- [ ] Пользователи — поиск + блок / разблок
+- [ ] Объявления — все, поиск, удаление
+- [ ] Слайды главной — редактор `Slide` из БД (заменяет `data/slides.js`)
+- [ ] Настройки — визуальный редактор feature flags
+- [ ] `AdminAction` — audit log каждого действия
+- [ ] Роли пока только `owner` — Илья. Остальные роли появятся, когда появятся сотрудники.
+
+---
+
+## Этап 4 · Мессенджер и LLM-модерация
+
+- [ ] Managed Redis на Amvera (~300 ₽/мес)
+- [ ] Мессенджер: **polling каждые 10 сек** — без Socket.IO на MVP
+  - `POST /messages`, `GET /chats`, `GET /chats/:id/messages?since=<ts>`
+  - WebSocket добавим позже, когда упрёмся в polling
 - [ ] Модерация через BullMQ-очередь:
-  - Черный список слов + pHash фото (дубли)
-  - GigaChat/YandexGPT (~1 ₽ за проверку)
-- [ ] Мини-админка `/admin` для ручной модерации.
+  - Slot 1-4: rate limit + blacklist + pHash + Levenshtein (без LLM)
+  - Slot 5: **GigaChat** (не DeepSeek) — через feature flag `moderation.llm.enabled`
+  - Промпт возвращает `OK / Подозрительно / Нарушение` + причину
+- [ ] Кнопка «Пожаловаться» на карточке объявления → `POST /reports`
 
 ---
 
@@ -130,16 +196,20 @@
 
 ## Этап 6 · Мобильный опыт и запуск
 
-- [ ] PWA-манифест + service worker → «Добавить на главный экран».
-- [ ] VK Mini App-режим.
-- [ ] Push-уведомления (VK Bridge для VK-юзеров, Web Push для остальных).
-- [ ] Open Graph теги (готовые для страниц объявлений).
-- [ ] sitemap.xml с ISR-регенерацией, robots.txt.
-- [ ] Яндекс.Метрика + цели.
-- [ ] Закрытая бета на 20-30 знакомых в Выксе.
-- [ ] Партнёрство с «Подслушано Кулебаки/Выкса/Навашино».
-- [ ] Затравить 300-500 объявлений до массового открытия.
-- [ ] 5-10 мастеров-«якорей» на бесплатный ТОП-Мастер на 3 мес.
+- [ ] PWA-манифест + минимальный Service Worker
+- [ ] Иконки 192×192, 512×512 maskable
+- [ ] iOS meta-теги
+- [ ] `<InstallPWABanner>` — умный, определяет платформу
+- [ ] `<OpenInBrowserModal>` — для VK-браузера (intent:// + QR + инструкция iOS)
+- [ ] Аналитика PWA: события установок и открытий
+- [ ] Open Graph теги для страниц объявлений — красивое превью в VK/TG
+- [ ] sitemap.xml + robots.txt
+- [ ] Яндекс.Метрика + цели: `ad_publish_done`, `ad_phone_reveal`, `ad_write_click`, `signup_done`
+- [ ] Sentry на фронт и бэк
+- [ ] UptimeRobot на главную и API
+- [ ] **Наполнение до запуска**: 300+ реальных объявлений (собственный парсер VK-групп + ручное)
+- [ ] Закрытая бета: 20-30 знакомых в Выксе
+- [ ] Пост в «Подслушано Кулебаки» (32k подписчиков, владелец — Илья) с гиф-инструкцией
 
 ---
 

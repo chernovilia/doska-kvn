@@ -29,10 +29,43 @@ Canonical-документ. Правила игры для всех текущи
   - Refresh-token blacklist на logout
   - BullMQ для фоновых задач (модерация, ресайз фото)
 
-### Медиа
-- **Timeweb S3** (~100 ₽/мес за 30 ГБ)
-- 3 размера каждого фото через `sharp`: thumb 300, card 800, full 1600
-- pre-signed URL upload напрямую с фронта (минуя API)
+### Медиа — Timeweb S3
+
+- **Bucket**: `doska-kvn-media` (~2 ₽/ГБ/мес)
+- **CDN**: `media.доска-квн.рф` → CNAME на Timeweb S3
+- **Стоимость**: на 1000 юзеров ~1 ГБ/мес прирост, ~15-20 ₽/мес
+
+**Flow загрузки**:
+1. Фронт → `POST /v1/uploads/presign` → API валидирует (auth, MIME whitelist, размер, rate limit)
+2. API возвращает **presigned PUT URL** (5 мин TTL)
+3. Фронт грузит **напрямую в S3**, не через API — нагрузки на бэк нет
+4. Фронт → `POST /v1/uploads/confirm` с URL
+5. API создаёт `AdPhoto` со статусом `pending`, ставит задачу в BullMQ
+6. Воркер (Sharp) скачивает оригинал → делает 3 WebP размера → заливает обратно → обновляет URL в БД
+7. Через 30 дней оригинал удаляется (юр-архив через бэкапы)
+
+**Размеры**:
+- `thumb` 300×300 (~15 КБ) — для sidebar-превью
+- `card` 800×600 (~80 КБ) — для карточек в ленте
+- `full` 1600×1200 (~250 КБ) — для модалки и страницы объявления
+
+**Формат**: WebP (−35% веса vs JPEG). AVIF через Cloudflare Image Resizing позже.
+
+**Пути в S3**:
+```
+doska-kvn-media/
+├── ads/{adId}/photos/{photoId}/{thumb|card|full}.webp
+├── users/{userId}/{avatar|business-logo}.webp
+├── banners/{bannerId}.webp
+└── temp/{uuid}.jpg    (presigned uploads, TTL 1ч)
+```
+
+**Безопасность**:
+- MIME-whitelist: `image/jpeg | image/png | image/webp`
+- Max размер: 10 МБ на фото
+- Rate limit: 50 фото/день на юзера через Redis
+- Sharp валидирует байты (защита от переименованных .php)
+- Hotlink protection на CDN — только с наших доменов
 
 ### Внешние сервисы
 - **SMSC.ru** — SMS-коды (~3 ₽/SMS)

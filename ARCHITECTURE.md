@@ -54,14 +54,30 @@ Canonical-документ. Правила игры для всех текущи
 
 ---
 
-## Домены и URL
+## Домены и URL (актуальное состояние)
 
 ```
-доска-квн.рф                    → фронт (Amvera)
-api.доска-квн.рф                → API (Amvera)
-admin.доска-квн.рф              → админка (отдельное приложение? или /admin в фронте — TBD)
-доска-муром.рф → 301 → /murom   → региональный маркетинг-вход
+доска-квн.рф                    → фронт (Amvera, живой) ✅
+api.доска-квн.рф                → API (Amvera, живой) ✅
+xn----7sbhf4acwc1a.xn--p1ai     → Punycode того же домена (в конфигах)
+admin.доска-квн.рф              → админка (позже — этап 3.5)
+доска-муром.рф → 301 → /murom   → региональный маркетинг-вход (не куплены)
 ```
+
+### Прямые Amvera-URL (fallback)
+
+```
+Фронт: https://doska-kvn-chernovilia.amvera.io
+API:   https://doska-kvn-api-chernovilia.amvera.io/v1
+БД:    amvera-chernovilia-cnpg-doska-kvn-db-rw (только внутренний доступ)
+```
+
+### Cloudflare
+
+- **NS**: `leif.ns.cloudflare.com`, `paige.ns.cloudflare.com`
+- **Proxy** 🟠 включён на `доска-квн.рф` и `api.доска-квн.рф`
+- **SSL/TLS mode**: Full
+- **Cache Rule**: `*/_next/static/*` → Edge TTL 1 year, ignore cache-control
 
 ### URL-структура фронта
 ```

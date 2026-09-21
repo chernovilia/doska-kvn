@@ -8,6 +8,7 @@ import HeroBanner from '@/components/HeroBanner';
 import SectionTabs from '@/components/SectionTabs';
 import FilterButton from '@/components/FilterButton';
 import AdCard from '@/components/AdCard';
+import AdCardSkeleton from '@/components/AdCardSkeleton';
 import AdModal from '@/components/AdModal';
 import PostAdModal from '@/components/PostAdModal';
 import PricingModal from '@/components/PricingModal';
@@ -37,6 +38,7 @@ export default function AdsView({ place = DEFAULT_REGION_ID }) {
   const [primary, setPrimary] = useState([]);
   const [nearby, setNearby] = useState([]);
   const [counts, setCounts] = useState({});
+  const [loading, setLoading] = useState(true);
 
   const [openAd, setOpenAd] = useState(null);
   const [postOpen, setPostOpen] = useState(false);
@@ -48,16 +50,21 @@ export default function AdsView({ place = DEFAULT_REGION_ID }) {
   // Основные объявления и опционально «соседние».
   useEffect(() => {
     let cancelled = false;
-    getAds({ place, section, chip, includeNearby: isCity }).then((r) => {
-      if (cancelled) return;
-      if (isCity) {
-        setPrimary(r.primary);
-        setNearby(r.nearby);
-      } else {
-        setPrimary(r);
-        setNearby([]);
-      }
-    });
+    setLoading(true);
+    getAds({ place, section, chip, includeNearby: isCity })
+      .then((r) => {
+        if (cancelled) return;
+        if (isCity) {
+          setPrimary(r.primary);
+          setNearby(r.nearby);
+        } else {
+          setPrimary(r);
+          setNearby([]);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
     return () => {
       cancelled = true;
     };
@@ -124,8 +131,14 @@ export default function AdsView({ place = DEFAULT_REGION_ID }) {
                 {sectionName}
               </div>
               <div className="text-base md:text-lg font-extrabold text-ink-900 leading-tight">
-                Найдено {primary.length} объявлен{plural(primary.length)}
-                {chip ? <span className="text-brand-700"> · {chip}</span> : null}
+                {loading ? (
+                  <span className="text-ink-500">Загружаем объявления…</span>
+                ) : (
+                  <>
+                    Найдено {primary.length} объявлен{plural(primary.length)}
+                    {chip ? <span className="text-brand-700"> · {chip}</span> : null}
+                  </>
+                )}
               </div>
             </div>
             <FilterButton
@@ -146,21 +159,35 @@ export default function AdsView({ place = DEFAULT_REGION_ID }) {
             }
           >
             <AnimatePresence mode="popLayout">
-              {primary.map((ad) => (
-                <motion.div
-                  layout
-                  key={ad.id}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -6, scale: 0.98 }}
-                  transition={{ type: 'spring', stiffness: 400, damping: 32 }}
-                  className="h-full"
-                >
-                  <AdCard ad={ad} onOpen={setOpenAd} />
-                </motion.div>
-              ))}
+              {loading
+                ? Array.from({ length: 8 }).map((_, i) => (
+                    <motion.div
+                      layout
+                      key={`skel-${i}`}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.15 }}
+                      className="h-full"
+                    >
+                      <AdCardSkeleton />
+                    </motion.div>
+                  ))
+                : primary.map((ad) => (
+                    <motion.div
+                      layout
+                      key={ad.id}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -6, scale: 0.98 }}
+                      transition={{ type: 'spring', stiffness: 400, damping: 32 }}
+                      className="h-full"
+                    >
+                      <AdCard ad={ad} onOpen={setOpenAd} />
+                    </motion.div>
+                  ))}
             </AnimatePresence>
-            {primary.length === 0 && (
+            {!loading && primary.length === 0 && (
               <div className="col-span-full rounded-2xl bg-white ring-1 ring-black/5 p-8 text-center">
                 <div className="text-2xl">🤷‍♂️</div>
                 <div className="mt-2 font-extrabold text-ink-900">Пока пусто</div>

@@ -163,12 +163,20 @@ export default function AdModal({ ad, onClose }) {
             </div>
           )}
 
+          <Link
+            href={`/ad/${ad.id}`}
+            className="mt-3 inline-flex items-center gap-2 rounded-2xl bg-brand-50 ring-1 ring-brand-200 hover:bg-brand-100 px-4 py-2.5 text-sm font-semibold text-brand-700 w-full justify-center"
+          >
+            <ExternalLink className="w-4 h-4" />
+            Открыть страницу объявления
+          </Link>
+
           {ad.avitoUrl && (
             <a
               href={ad.avitoUrl}
               target="_blank"
               rel="noreferrer"
-              className="mt-3 inline-flex items-center gap-2 rounded-2xl bg-white ring-1 ring-black/10 hover:bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-700 w-full justify-center"
+              className="mt-2 inline-flex items-center gap-2 rounded-2xl bg-white ring-1 ring-black/10 hover:bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-700 w-full justify-center"
             >
               <ExternalLink className="w-4 h-4" />
               Открыть похожие на Авито

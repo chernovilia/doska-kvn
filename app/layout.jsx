@@ -1,4 +1,5 @@
 import './globals.css';
+import { ToastProvider } from '@/components/Toast';
 
 const BASE_URL = 'https://xn----7sbhf4acwc1a.xn--p1ai';
 
@@ -62,7 +63,9 @@ export const viewport = {
 export default function RootLayout({ children }) {
   return (
     <html lang="ru">
-      <body className="min-h-screen font-sans">{children}</body>
+      <body className="min-h-screen font-sans">
+        <ToastProvider>{children}</ToastProvider>
+      </body>
     </html>
   );
 }

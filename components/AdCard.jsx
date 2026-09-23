@@ -1,23 +1,45 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { BadgeCheck, Clock, Heart, MapPin, Calendar, Flame, Crown, ExternalLink } from 'lucide-react';
+import { BadgeCheck, Clock, Heart, Link as LinkIcon, MapPin, Calendar, Flame, Crown, ExternalLink } from 'lucide-react';
 import { cityName } from '@/lib/api';
 import { formatPrice, formatRelative, formatEventDate } from '@/lib/format';
 import { accountTypeLabel, accountTypeEmoji, accountTypeBadgeClass, isBusiness } from '@/lib/accountType';
+import { shareOrCopy } from '@/lib/share';
+import { useToast } from './Toast';
 import { useState } from 'react';
 
 // Единый стиль карточки: одинаковые внешние/внутренние отступы,
 // одинаковая высота обложки (aspect-[4/3]), тело — flex-column с ровными gap.
 // h-full позволяет карточкам в CSS grid тянуться до одной высоты по ряду.
-export default function AdCard({ ad, onOpen }) {
+/**
+ * Карточка объявления.
+ * @param {Object} props
+ * @param {Object} props.ad
+ * @param {Function} [props.onOpen]      — при клике на карточку (обычно router.push('/ad/id'))
+ * @param {boolean}  [props.showShare]   — показать кнопку копирования ссылки (для профиля)
+ */
+export default function AdCard({ ad, onOpen, showShare = false }) {
   const [liked, setLiked] = useState(false);
+  const { toast } = useToast();
   const isEvent = ad.section === 'events';
   // Тип автора — снапшот на момент публикации (frozen).
   const authorType = ad.authorType || ad.author?.type || null;
   const authorTypeIsBiz = isBusiness(authorType);
   const typeEmoji = accountTypeEmoji(authorType);
   const typeText = accountTypeLabel(authorType);
+
+  async function onCopyLink(e) {
+    e.stopPropagation();
+    const status = await shareOrCopy({
+      url: `/ad/${ad.id}`,
+      title: ad.title,
+      text: `${ad.title} — ${formatPrice(ad)}`
+    });
+    if (status === 'copied') toast('Ссылка скопирована');
+    else if (status === 'shared') toast('Отправлено');
+    else if (status === 'error') toast('Не удалось скопировать', { kind: 'error' });
+  }
 
   return (
     <motion.button
@@ -72,8 +94,8 @@ export default function AdCard({ ad, onOpen }) {
           )}
         </div>
 
-        {/* Избранное */}
-        <div className="absolute right-2 top-2">
+        {/* Действия в верхнем правом углу */}
+        <div className="absolute right-2 top-2 flex flex-col gap-1.5">
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -86,6 +108,16 @@ export default function AdCard({ ad, onOpen }) {
               className={`h-4 w-4 ${liked ? 'fill-rose-500 text-rose-500' : 'text-ink-700'}`}
             />
           </button>
+          {showShare && (
+            <button
+              onClick={onCopyLink}
+              className="grid h-8 w-8 place-items-center rounded-full bg-white/95 shadow-card ring-1 ring-black/5 hover:bg-brand-50"
+              aria-label="Скопировать ссылку"
+              title="Скопировать ссылку"
+            >
+              <LinkIcon className="h-4 w-4 text-brand-700" />
+            </button>
+          )}
         </div>
 
         {/* Цена */}

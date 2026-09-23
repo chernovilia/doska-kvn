@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   ArrowLeft,
@@ -26,7 +26,6 @@ import { tierLabel, tierColor } from '@/lib/accountType';
 import VkIcon from '@/components/icons/VkIcon';
 import BottomNav from '@/components/BottomNav';
 import AdCard from '@/components/AdCard';
-import AdModal from '@/components/AdModal';
 import PostAdModal from '@/components/PostAdModal';
 import AuthModal from '@/components/AuthModal';
 import BusinessSetupModal from '@/components/BusinessSetupModal';
@@ -57,7 +56,6 @@ function ProfileContent() {
   const [type, setType] = useState('master'); // 'personal' | 'master' | 'shop'
   const [myAds, setMyAds] = useState([]);
 
-  const [openAd, setOpenAd] = useState(null);
   const [postOpen, setPostOpen] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
   const [bizSetupOpen, setBizSetupOpen] = useState(false);
@@ -301,7 +299,7 @@ function ProfileContent() {
             transition={{ duration: 0.2 }}
           >
             {tab === 'ads' && (
-              <MyAdsTab ads={myAds} onOpen={setOpenAd} onPost={() => setPostOpen(true)} />
+              <MyAdsTab ads={myAds} onPost={() => setPostOpen(true)} />
             )}
             {tab === 'reviews' && <ReviewsTab me={me} />}
             {tab === 'settings' && <SettingsTab me={me} type={type} />}
@@ -309,7 +307,6 @@ function ProfileContent() {
         </AnimatePresence>
       </main>
 
-      <AdModal ad={openAd} onClose={() => setOpenAd(null)} />
       <PostAdModal open={postOpen} onClose={() => setPostOpen(false)} />
       <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
       <BusinessSetupModal
@@ -350,11 +347,14 @@ function Metric({ value, label, icon }) {
   );
 }
 
-function MyAdsTab({ ads, onOpen, onPost }) {
+function MyAdsTab({ ads, onPost }) {
+  const router = useRouter();
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between px-0.5">
-        <div className="text-sm font-bold text-ink-900">Мои объявления · {ads.length}</div>
+        <div className="text-sm font-bold text-ink-900">
+          Мои объявления · {ads.length}
+        </div>
         <button
           onClick={onPost}
           className="rounded-full bg-accent-500 hover:bg-accent-600 text-white text-sm font-semibold px-3 py-1.5"
@@ -362,10 +362,18 @@ function MyAdsTab({ ads, onOpen, onPost }) {
           + Добавить
         </button>
       </div>
+      <div className="text-[11px] text-ink-500 px-0.5 -mt-1">
+        Нажми на 🔗 — скопируется ссылка на объявление, чтобы поделиться в
+        VK или мессенджере.
+      </div>
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 auto-rows-fr">
         {ads.map((ad) => (
           <div key={ad.id} className="h-full">
-            <AdCard ad={ad} onOpen={onOpen} />
+            <AdCard
+              ad={ad}
+              showShare
+              onOpen={(a) => router.push(`/ad/${a.id}`)}
+            />
           </div>
         ))}
       </div>

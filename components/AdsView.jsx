@@ -9,7 +9,6 @@ import SectionTabs from '@/components/SectionTabs';
 import FilterButton from '@/components/FilterButton';
 import AdCard from '@/components/AdCard';
 import AdCardSkeleton from '@/components/AdCardSkeleton';
-import AdModal from '@/components/AdModal';
 import PostAdModal from '@/components/PostAdModal';
 import PricingModal from '@/components/PricingModal';
 import Footer from '@/components/Footer';
@@ -18,7 +17,6 @@ import { MapPin, Sparkles } from 'lucide-react';
 import {
   SECTIONS,
   DEFAULT_REGION_ID,
-  getAd,
   getAds,
   getCountsBySection,
   resolvePlace
@@ -40,7 +38,6 @@ export default function AdsView({ place = DEFAULT_REGION_ID }) {
   const [counts, setCounts] = useState({});
   const [loading, setLoading] = useState(true);
 
-  const [openAd, setOpenAd] = useState(null);
   const [postOpen, setPostOpen] = useState(false);
   const [pricingOpen, setPricingOpen] = useState(false);
 
@@ -85,13 +82,9 @@ export default function AdsView({ place = DEFAULT_REGION_ID }) {
     router.push(newPlace === DEFAULT_REGION_ID ? '/' : `/${newPlace}`);
   }
 
-  async function onSearchSelect(sel) {
+  function onSearchSelect(sel) {
     if (sel.kind === 'ad') {
-      const ad = await getAd(sel.id);
-      if (ad) {
-        setSection(ad.section);
-        setOpenAd(ad);
-      }
+      router.push(`/ad/${sel.id}`);
     } else if (sel.kind === 'section') {
       setSection(sel.id);
     }
@@ -183,7 +176,7 @@ export default function AdsView({ place = DEFAULT_REGION_ID }) {
                       transition={{ type: 'spring', stiffness: 400, damping: 32 }}
                       className="h-full"
                     >
-                      <AdCard ad={ad} onOpen={setOpenAd} />
+                      <AdCard ad={ad} onOpen={(a) => router.push(`/ad/${a.id}`)} />
                     </motion.div>
                   ))}
             </AnimatePresence>
@@ -209,7 +202,7 @@ export default function AdsView({ place = DEFAULT_REGION_ID }) {
             <NearbyBlock
               cityName={resolved.city.name}
               nearby={nearby}
-              onOpen={setOpenAd}
+              onOpen={(a) => router.push(`/ad/${a.id}`)}
               onExpand={() => onPlaceChange(resolved.region.id)}
               regionName={resolved.region.shortName}
             />
@@ -219,7 +212,6 @@ export default function AdsView({ place = DEFAULT_REGION_ID }) {
 
       <Footer />
 
-      <AdModal ad={openAd} onClose={() => setOpenAd(null)} />
       <PostAdModal open={postOpen} onClose={() => setPostOpen(false)} />
       <PricingModal open={pricingOpen} onClose={() => setPricingOpen(false)} />
 

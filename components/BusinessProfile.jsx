@@ -19,6 +19,8 @@ import {
 } from 'lucide-react';
 import { accountTypeEmoji, accountTypeLabel, accountTypeBadgeClass, tierLabel, tierColor } from '@/lib/accountType';
 import { useAuth } from '@/lib/auth';
+import { shareOrCopy } from '@/lib/share';
+import { useToast } from './Toast';
 import AdCard from './AdCard';
 import BottomNav from './BottomNav';
 import Footer from './Footer';
@@ -32,6 +34,7 @@ import PostAdModal from './PostAdModal';
 export default function BusinessProfile({ biz, ads = [] }) {
   const router = useRouter();
   const { user, ready } = useAuth();
+  const { toast } = useToast();
   const authed = ready && !!user;
   const [phoneShown, setPhoneShown] = useState(false);
   const [postOpen, setPostOpen] = useState(false);
@@ -53,19 +56,15 @@ export default function BusinessProfile({ biz, ads = [] }) {
     router.push(`/messages?chat=new-user-${biz.userId}`);
   }
 
-  function onShare() {
-    if (typeof navigator !== 'undefined' && navigator.share) {
-      navigator
-        .share({
-          title: biz.name,
-          text: `${biz.name} — ${kindLabel} на Доска/КВН`,
-          url: typeof window !== 'undefined' ? window.location.href : ''
-        })
-        .catch(() => {});
-    } else if (typeof navigator !== 'undefined' && navigator.clipboard) {
-      navigator.clipboard.writeText(window.location.href);
-      alert('Ссылка скопирована');
-    }
+  async function onShare() {
+    const status = await shareOrCopy({
+      url: `/u/${biz.slug}`,
+      title: biz.name,
+      text: `${biz.name} — ${kindLabel} на Доска/КВН`
+    });
+    if (status === 'copied') toast('Ссылка скопирована');
+    else if (status === 'shared') toast('Отправлено');
+    else if (status === 'error') toast('Не удалось скопировать', { kind: 'error' });
   }
 
   return (

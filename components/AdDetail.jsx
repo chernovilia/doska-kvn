@@ -28,6 +28,8 @@ import { cityName, SECTIONS } from '@/lib/api';
 import { formatPrice, formatRelative, formatEventDate } from '@/lib/format';
 import { accountTypeLabel, accountTypeEmoji, accountTypeBadgeClass, isBusiness } from '@/lib/accountType';
 import { useAuth } from '@/lib/auth';
+import { shareOrCopy } from '@/lib/share';
+import { useToast } from './Toast';
 import AdCard from './AdCard';
 import BottomNav from './BottomNav';
 import Footer from './Footer';
@@ -36,6 +38,7 @@ import PostAdModal from './PostAdModal';
 export default function AdDetail({ ad, similar = [] }) {
   const router = useRouter();
   const { user, ready } = useAuth();
+  const { toast } = useToast();
   const authed = ready && !!user;
   const [phoneShown, setPhoneShown] = useState(false);
   const [liked, setLiked] = useState(false);
@@ -62,19 +65,15 @@ export default function AdDetail({ ad, similar = [] }) {
     setPhoneShown(true);
   }
 
-  function onShare() {
-    if (typeof navigator !== 'undefined' && navigator.share) {
-      navigator
-        .share({
-          title: ad.title,
-          text: `${ad.title} — ${formatPrice(ad)}`,
-          url: typeof window !== 'undefined' ? window.location.href : ''
-        })
-        .catch(() => {});
-    } else if (typeof navigator !== 'undefined' && navigator.clipboard) {
-      navigator.clipboard.writeText(window.location.href);
-      alert('Ссылка скопирована');
-    }
+  async function onShare() {
+    const status = await shareOrCopy({
+      url: `/ad/${ad.id}`,
+      title: ad.title,
+      text: `${ad.title} — ${formatPrice(ad)}`
+    });
+    if (status === 'copied') toast('Ссылка скопирована');
+    else if (status === 'shared') toast('Отправлено');
+    else if (status === 'error') toast('Не удалось скопировать', { kind: 'error' });
   }
 
   return (

@@ -12,22 +12,17 @@ import {
   LogOut,
   Settings,
   Star,
-  Store,
-  Hammer,
   Briefcase,
   User as UserIcon,
   ShoppingBag,
-  MapPin,
-  Clock,
-  Sparkles
+  MapPin
 } from 'lucide-react';
-import { tierLabel, tierColor } from '@/lib/accountType';
 
 import VkIcon from '@/components/icons/VkIcon';
 import BottomNav from '@/components/BottomNav';
 import AdCard from '@/components/AdCard';
 import PostAdModal from '@/components/PostAdModal';
-import BusinessSetupModal from '@/components/BusinessSetupModal';
+import OnboardingModal from '@/components/OnboardingModal';
 import { useAuth } from '@/lib/auth';
 
 import { getMyAds, getReviews } from '@/lib/api';
@@ -54,18 +49,13 @@ function ProfileContent() {
   const [tab, setTab] = useState(initialTab);
 
   const { user: me, ready, signOut } = useAuth();
-  const [type, setType] = useState('personal'); // 'personal' | 'master' | 'shop'
   const [myAds, setMyAds] = useState([]);
-
   const [postOpen, setPostOpen] = useState(false);
-  const [bizSetupOpen, setBizSetupOpen] = useState(false);
-  const [businessName, setBusinessName] = useState('');
+
+  // На MVP всегда 'personal'. Бизнес-профили — в разработке.
+  const type = 'personal';
 
   useEffect(() => {
-    if (me) {
-      setType(me.type || 'personal');
-      setBusinessName(me.businessProfile?.name || '');
-    }
     getMyAds().then(setMyAds).catch(() => setMyAds([]));
   }, [me]);
 
@@ -74,24 +64,6 @@ function ProfileContent() {
       router.push('/login?returnTo=/profile');
     }
   }, [ready, me, router]);
-
-  function requestSwitchToPersonal() {
-    if (type === 'personal') return;
-    if (
-      typeof window !== 'undefined' &&
-      window.confirm(
-        'Перейти на Личный аккаунт? Бизнес-профиль будет архивирован — можно вернуться, все данные сохранятся.'
-      )
-    ) {
-      setType('personal');
-    }
-  }
-
-  function onBusinessConfirmed({ kind, name }) {
-    setType(kind);
-    setBusinessName(name);
-    // Позже: POST /v1/me/business { kind, name } на бэк
-  }
 
   useEffect(() => {
     const t = search.get('tab');
@@ -157,9 +129,7 @@ function ProfileContent() {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <div className="text-lg md:text-xl font-extrabold text-ink-900 truncate">
-                    {(type === 'master' || type === 'shop')
-                      ? (businessName || me.businessProfile?.name || me.shop?.name || me.name)
-                      : me.name}
+                    {me.name}
                   </div>
                   {me.verified && (
                     <BadgeCheck className="w-4.5 h-4.5 text-brand-600 shrink-0" />
@@ -195,84 +165,28 @@ function ProfileContent() {
               </div>
               <div className="inline-flex bg-slate-100 rounded-full p-1">
                 <TypeChip
-                  active={type === 'personal'}
-                  onClick={requestSwitchToPersonal}
+                  active
+                  onClick={() => {}}
                   icon={UserIcon}
                   label="Личный"
                 />
-                <TypeChip
-                  active={type === 'master' || type === 'shop'}
-                  onClick={() => setBizSetupOpen(true)}
-                  icon={Briefcase}
-                  label="Бизнес"
-                />
-              </div>
-              {(type === 'master' || type === 'shop') && (
-                <div className="mt-1.5 text-[11px] text-ink-500 flex items-center gap-1.5">
-                  <span
-                    className={`inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
-                      type === 'master'
-                        ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200'
-                        : 'bg-brand-50 text-brand-700 ring-1 ring-brand-200'
-                    }`}
-                  >
-                    {type === 'master' ? '🛠 Мастер услуг' : '🏬 Магазин'}
+                {/* Бизнес-профиль пока в разработке — весь блок задизейблен */}
+                <div
+                  className="inline-flex items-center gap-1.5 px-3 h-9 rounded-full text-sm font-semibold text-ink-400 cursor-not-allowed opacity-70 relative"
+                  title="Скоро — бизнес-профили с рейтингом и тарифами"
+                >
+                  <Briefcase className="w-4 h-4" />
+                  Бизнес
+                  <span className="ml-1 text-[9px] font-bold uppercase tracking-wide text-amber-700 bg-amber-100 ring-1 ring-amber-200 px-1.5 py-0.5 rounded-full">
+                    Скоро
                   </span>
-                  <span>·</span>
-                  <button
-                    onClick={() => setBizSetupOpen(true)}
-                    className="underline hover:text-ink-700"
-                  >
-                    сменить тип или название
-                  </button>
                 </div>
-              )}
+              </div>
               <div className="mt-1 text-[11px] text-ink-500">
-                {type === 'personal'
-                  ? 'Приватный профиль. Отзывы и рейтинг видны только вам.'
-                  : type === 'master'
-                  ? 'Публичный профиль мастера — доступен всем по прямой ссылке.'
-                  : 'Публичный профиль магазина — доступен всем, с рейтингом и отзывами.'}
+                Приватный профиль. Бизнес-профили (мастера и магазины) — в разработке.
               </div>
             </div>
 
-            {(type === 'master' || type === 'shop') && (me.businessProfile || me.shop) && (
-              <div className="mt-4 rounded-xl bg-slate-50 ring-1 ring-black/5 p-3 text-sm text-ink-700 space-y-1">
-                {/* Тариф — если есть подписка */}
-                {me.businessProfile?.currentTierName && (
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className={`inline-flex items-center gap-1 text-[11px] font-bold px-2 py-1 rounded-full ring-1 ${tierColor(me.businessProfile.currentTierName)}`}>
-                      <Sparkles className="w-3 h-3" />
-                      {tierLabel(me.businessProfile.currentTierName)}
-                    </span>
-                    {me.subscriptionExpired && (
-                      <span className="text-[11px] font-semibold text-rose-700 bg-rose-50 ring-1 ring-rose-200 px-2 py-0.5 rounded-full">
-                        Подписка истекла
-                      </span>
-                    )}
-                  </div>
-                )}
-                <div>{me.businessProfile?.description || me.shop?.description}</div>
-                <div className="flex flex-wrap gap-1.5 mt-2">
-                  {(me.businessProfile?.categories || me.shop?.categories || []).map((c) => (
-                    <span
-                      key={c}
-                      className="text-[11px] font-semibold text-brand-700 bg-brand-50 ring-1 ring-brand-200 px-2 py-0.5 rounded-full"
-                    >
-                      {c}
-                    </span>
-                  ))}
-                </div>
-                <div className="text-[12px] text-ink-500 mt-2 flex flex-wrap gap-x-3 gap-y-1">
-                  <span className="inline-flex items-center gap-1">
-                    <Clock className="w-3.5 h-3.5" /> {me.businessProfile?.hours || me.shop?.hours}
-                  </span>
-                  <span className="inline-flex items-center gap-1">
-                    <MapPin className="w-3.5 h-3.5" /> {me.businessProfile?.address || me.shop?.address}
-                  </span>
-                </div>
-              </div>
-            )}
           </div>
 
           <div className="grid grid-cols-4 border-t border-black/5 text-center">
@@ -328,14 +242,10 @@ function ProfileContent() {
       </main>
 
       <PostAdModal open={postOpen} onClose={() => setPostOpen(false)} />
-      <BusinessSetupModal
-        open={bizSetupOpen}
-        currentKind={type}
-        currentName={businessName}
-        onClose={() => setBizSetupOpen(false)}
-        onSubmit={onBusinessConfirmed}
-      />
       <BottomNav onPost={() => setPostOpen(true)} />
+
+      {/* Онбординг: показываем, пока юзер не заполнил обязательные данные */}
+      {!me.onboardedAt && <OnboardingModal me={me} />}
     </div>
   );
 }
@@ -468,19 +378,11 @@ function ReviewsTab({ me }) {
 function SettingsTab({ me, type }) {
   const rows = [
     { label: 'Личные данные', hint: me.name },
-    { label: 'Телефон', hint: me.phone },
-    { label: 'Город по умолчанию', hint: me.cityName },
-    {
-      label: 'Тип аккаунта',
-      hint:
-        type === 'personal'
-          ? 'Личный (приватный)'
-          : type === 'master'
-          ? 'Мастер услуг (публичный)'
-          : 'Магазин (публичный)'
-    },
+    { label: 'Телефон', hint: me.phone || 'Не указан' },
+    { label: 'Город по умолчанию', hint: me.cityName || 'Не указан' },
+    { label: 'Тип аккаунта', hint: 'Личный (приватный)' },
     { label: 'Способы оплаты', hint: 'Не подключены' },
-    { label: 'Уведомления', hint: 'Push + e-mail' },
+    { label: 'Уведомления', hint: me.notifyEmail ? 'E-mail включён' : 'Отключены' },
     { label: 'Правила и политика', hint: 'v. 1.4' }
   ];
   return (

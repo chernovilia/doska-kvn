@@ -1,5 +1,6 @@
 import './globals.css';
 import { ToastProvider } from '@/components/Toast';
+import { AuthProvider } from '@/lib/auth';
 
 const BASE_URL = 'https://xn----7sbhf4acwc1a.xn--p1ai';
 
@@ -64,7 +65,9 @@ export default function RootLayout({ children }) {
   return (
     <html lang="ru">
       <body className="min-h-screen font-sans">
-        <ToastProvider>{children}</ToastProvider>
+        <AuthProvider>
+          <ToastProvider>{children}</ToastProvider>
+        </AuthProvider>
       </body>
     </html>
   );

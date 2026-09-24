@@ -11,6 +11,7 @@ import {
   ChevronRight,
   LogOut,
   Settings,
+  ShieldCheck,
   Star,
   Briefcase,
   User as UserIcon,
@@ -90,6 +91,16 @@ function ProfileContent() {
             Профиль
           </div>
           <div className="ml-auto flex items-center gap-2">
+            {me.isAdmin && (
+              <Link
+                href="/admin"
+                className="inline-flex items-center gap-1.5 h-10 px-3 rounded-full bg-amber-100 text-amber-900 ring-1 ring-amber-200 hover:bg-amber-200 text-sm font-semibold shadow-card"
+                title="Админка"
+              >
+                <ShieldCheck className="w-4 h-4" />
+                <span className="hidden sm:inline">Админка</span>
+              </Link>
+            )}
             <button
               className="w-10 h-10 grid place-items-center rounded-full bg-white ring-1 ring-black/5 hover:bg-brand-50 shadow-card"
               aria-label="Уведомления"

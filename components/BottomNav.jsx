@@ -1,25 +1,49 @@
 'use client';
 
-import { Home, LayoutGrid, MessageCircle, Plus, User } from 'lucide-react';
+import { Home, LayoutGrid, MessageCircle, Plus, User, LogIn } from 'lucide-react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { useAuth } from '@/lib/auth';
 
 // Нижняя навигация. Показывается только на мобильных.
-// Пропсы: onPost — открывает модалку подачи объявления.
+// Пропсы: onPost — открывает модалку подачи объявления (если залогинен).
 export default function BottomNav({ onPost }) {
   const path = usePathname();
+  const router = useRouter();
+  const { user, ready } = useAuth();
 
-  const Item = ({ href, icon: Icon, label, active }) => (
-    <Link
-      href={href}
-      className={`flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-[10px] font-semibold ${
-        active ? 'text-brand-700' : 'text-ink-500'
-      }`}
-    >
-      <Icon className={`h-5 w-5 ${active ? 'text-brand-700' : 'text-ink-700'}`} />
-      <span>{label}</span>
-    </Link>
-  );
+  const Item = ({ href, icon: Icon, label, active, onClick }) => {
+    const content = (
+      <>
+        <Icon className={`h-5 w-5 ${active ? 'text-brand-700' : 'text-ink-700'}`} />
+        <span>{label}</span>
+      </>
+    );
+    const cls = `flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-[10px] font-semibold ${
+      active ? 'text-brand-700' : 'text-ink-500'
+    }`;
+    if (onClick) {
+      return (
+        <button type="button" onClick={onClick} className={cls}>
+          {content}
+        </button>
+      );
+    }
+    return (
+      <Link href={href} className={cls}>
+        {content}
+      </Link>
+    );
+  };
+
+  function requireAuth(next, action) {
+    if (!ready) return; // не знаем статус — игнор
+    if (!user) {
+      router.push(`/login?returnTo=${encodeURIComponent(next)}`);
+      return;
+    }
+    action();
+  }
 
   return (
     <nav
@@ -37,7 +61,7 @@ export default function BottomNav({ onPost }) {
 
         {/* Центральная плюс-кнопка */}
         <button
-          onClick={onPost}
+          onClick={() => requireAuth('/', () => onPost?.())}
           className="relative -mt-6 flex-1 flex items-start justify-center"
           aria-label="Подать объявление"
         >
@@ -47,17 +71,27 @@ export default function BottomNav({ onPost }) {
         </button>
 
         <Item
-          href="/messages"
           icon={MessageCircle}
           label="Сообщения"
           active={path?.startsWith('/messages')}
+          onClick={() => requireAuth('/messages', () => router.push('/messages'))}
         />
-        <Item
-          href="/profile"
-          icon={User}
-          label="Профиль"
-          active={path === '/profile'}
-        />
+
+        {user ? (
+          <Item
+            href="/profile"
+            icon={User}
+            label="Профиль"
+            active={path === '/profile'}
+          />
+        ) : (
+          <Item
+            href="/login"
+            icon={LogIn}
+            label="Войти"
+            active={path?.startsWith('/login')}
+          />
+        )}
       </div>
     </nav>
   );

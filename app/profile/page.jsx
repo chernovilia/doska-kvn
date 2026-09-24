@@ -27,10 +27,10 @@ import VkIcon from '@/components/icons/VkIcon';
 import BottomNav from '@/components/BottomNav';
 import AdCard from '@/components/AdCard';
 import PostAdModal from '@/components/PostAdModal';
-import AuthModal from '@/components/AuthModal';
 import BusinessSetupModal from '@/components/BusinessSetupModal';
+import { useAuth } from '@/lib/auth';
 
-import { getMe, getMyAds, getReviews } from '@/lib/api';
+import { getMyAds, getReviews } from '@/lib/api';
 import { formatRelative } from '@/lib/format';
 
 const TABS = [
@@ -48,27 +48,32 @@ export default function ProfilePage() {
 }
 
 function ProfileContent() {
+  const router = useRouter();
   const search = useSearchParams();
   const initialTab = search.get('tab') || 'ads';
   const [tab, setTab] = useState(initialTab);
 
-  const [me, setMe] = useState(null);
-  const [type, setType] = useState('master'); // 'personal' | 'master' | 'shop'
+  const { user: me, ready, signOut } = useAuth();
+  const [type, setType] = useState('personal'); // 'personal' | 'master' | 'shop'
   const [myAds, setMyAds] = useState([]);
 
   const [postOpen, setPostOpen] = useState(false);
-  const [authOpen, setAuthOpen] = useState(false);
   const [bizSetupOpen, setBizSetupOpen] = useState(false);
-  const [businessName, setBusinessName] = useState(''); // локальное отображение
+  const [businessName, setBusinessName] = useState('');
 
   useEffect(() => {
-    getMe().then((u) => {
-      setMe(u);
-      setType(u.type);
-      setBusinessName(u.businessProfile?.name || u.shop?.name || '');
-    });
-    getMyAds().then(setMyAds);
-  }, []);
+    if (me) {
+      setType(me.type || 'personal');
+      setBusinessName(me.businessProfile?.name || '');
+    }
+    getMyAds().then(setMyAds).catch(() => setMyAds([]));
+  }, [me]);
+
+  useEffect(() => {
+    if (ready && !me) {
+      router.push('/login?returnTo=/profile');
+    }
+  }, [ready, me, router]);
 
   function requestSwitchToPersonal() {
     if (type === 'personal') return;
@@ -120,7 +125,10 @@ function ProfileContent() {
               <Bell className="w-4.5 h-4.5 text-ink-800" />
             </button>
             <button
-              onClick={() => setAuthOpen(true)}
+              onClick={async () => {
+                await signOut();
+                router.push('/');
+              }}
               className="w-10 h-10 grid place-items-center rounded-full bg-white ring-1 ring-black/5 hover:bg-rose-50 shadow-card"
               aria-label="Выйти"
             >
@@ -308,7 +316,6 @@ function ProfileContent() {
       </main>
 
       <PostAdModal open={postOpen} onClose={() => setPostOpen(false)} />
-      <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
       <BusinessSetupModal
         open={bizSetupOpen}
         currentKind={type}

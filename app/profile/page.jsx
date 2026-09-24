@@ -278,6 +278,29 @@ function Metric({ value, label, icon }) {
 
 function MyAdsTab({ ads, onPost }) {
   const router = useRouter();
+
+  if (ads.length === 0) {
+    return (
+      <div className="rounded-2xl bg-white ring-1 ring-black/5 shadow-card p-8 text-center">
+        <div className="mx-auto w-14 h-14 grid place-items-center rounded-2xl bg-brand-50 text-brand-700">
+          <ShoppingBag className="w-7 h-7" />
+        </div>
+        <div className="mt-3 text-lg font-extrabold text-ink-900">
+          У вас пока нет объявлений
+        </div>
+        <div className="text-sm text-ink-500 mt-1 max-w-sm mx-auto">
+          Опубликуйте первое — займёт меньше минуты. Оно появится в общей ленте сразу после публикации.
+        </div>
+        <button
+          onClick={onPost}
+          className="mt-4 inline-flex items-center gap-1.5 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold px-5 py-3"
+        >
+          Создать первое объявление
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between px-0.5">

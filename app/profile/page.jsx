@@ -13,7 +13,7 @@ import {
   Settings,
   ShieldCheck,
   Star,
-  Briefcase,
+  Pencil,
   User as UserIcon,
   ShoppingBag,
   MapPin
@@ -23,10 +23,11 @@ import VkIcon from '@/components/icons/VkIcon';
 import BottomNav from '@/components/BottomNav';
 import AdCard from '@/components/AdCard';
 import PostAdModal from '@/components/PostAdModal';
-import OnboardingModal from '@/components/OnboardingModal';
+import SettingsEditModal from '@/components/SettingsEditModal';
 import { useAuth } from '@/lib/auth';
+import { getCity } from '@/data/regions';
 
-import { getMyAds, getReviews } from '@/lib/api';
+import { getMyAds, getReviews, deleteAd } from '@/lib/api';
 import { formatRelative } from '@/lib/format';
 
 const TABS = [
@@ -148,13 +149,7 @@ function ProfileContent() {
                 </div>
                 <div className="text-[12px] text-ink-500 flex items-center gap-1.5 mt-0.5">
                   <MapPin className="w-3.5 h-3.5 text-brand-600" />
-                  {me.cityName || 'Город не указан'}
-                  {me.registeredAt && (
-                    <>
-                      <span className="text-ink-300">·</span>
-                      {me.registeredAt}
-                    </>
-                  )}
+                  {getCity(me.homeCityId)?.name || 'Город не указан'}
                 </div>
                 {me.vkUrl && (
                   <a
@@ -174,27 +169,22 @@ function ProfileContent() {
               <div className="text-[11px] uppercase tracking-wide text-ink-500 font-bold mb-1.5">
                 Тип аккаунта
               </div>
-              <div className="inline-flex bg-slate-100 rounded-full p-1">
-                <TypeChip
-                  active
-                  onClick={() => {}}
-                  icon={UserIcon}
-                  label="Личный"
-                />
-                {/* Бизнес-профиль пока в разработке — весь блок задизейблен */}
-                <div
-                  className="inline-flex items-center gap-1.5 px-3 h-9 rounded-full text-sm font-semibold text-ink-400 cursor-not-allowed opacity-70 relative"
-                  title="Скоро — бизнес-профили с рейтингом и тарифами"
+              <div className="inline-flex items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 px-3 h-9 rounded-full text-sm font-semibold bg-white shadow-card text-brand-700 ring-1 ring-brand-200">
+                  <UserIcon className="w-4 h-4" />
+                  Личный
+                </span>
+                <button
+                  type="button"
+                  disabled
+                  title="Смена типа аккаунта — скоро"
+                  className="w-8 h-8 grid place-items-center rounded-full text-ink-400 cursor-not-allowed opacity-60"
                 >
-                  <Briefcase className="w-4 h-4" />
-                  Бизнес
-                  <span className="ml-1 text-[9px] font-bold uppercase tracking-wide text-amber-700 bg-amber-100 ring-1 ring-amber-200 px-1.5 py-0.5 rounded-full">
-                    Скоро
-                  </span>
-                </div>
+                  <Pencil className="w-4 h-4" />
+                </button>
               </div>
               <div className="mt-1 text-[11px] text-ink-500">
-                Приватный профиль. Бизнес-профили (мастера и магазины) — в разработке.
+                Приватный профиль. Бизнес-аккаунты (мастера, магазины) добавим позже.
               </div>
             </div>
 
@@ -244,19 +234,20 @@ function ProfileContent() {
             transition={{ duration: 0.2 }}
           >
             {tab === 'ads' && (
-              <MyAdsTab ads={myAds} onPost={() => setPostOpen(true)} />
+              <MyAdsTab
+                ads={myAds}
+                onPost={() => setPostOpen(true)}
+                onReload={() => getMyAds().then(setMyAds).catch(() => {})}
+              />
             )}
             {tab === 'reviews' && <ReviewsTab me={me} />}
-            {tab === 'settings' && <SettingsTab me={me} type={type} />}
+            {tab === 'settings' && <SettingsTab me={me} />}
           </motion.section>
         </AnimatePresence>
       </main>
 
       <PostAdModal open={postOpen} onClose={() => setPostOpen(false)} />
       <BottomNav onPost={() => setPostOpen(true)} />
-
-      {/* Онбординг: показываем, пока юзер не заполнил обязательные данные */}
-      {!me.onboardedAt && <OnboardingModal me={me} />}
     </div>
   );
 }
@@ -287,8 +278,18 @@ function Metric({ value, label, icon }) {
   );
 }
 
-function MyAdsTab({ ads, onPost }) {
+function MyAdsTab({ ads, onPost, onReload }) {
   const router = useRouter();
+
+  async function handleDelete(ad) {
+    if (!window.confirm(`Удалить объявление «${ad.title}»?`)) return;
+    try {
+      await deleteAd(ad.id);
+      onReload?.();
+    } catch (err) {
+      alert(err.message || 'Не удалось удалить');
+    }
+  }
 
   if (ads.length === 0) {
     return (
@@ -336,6 +337,7 @@ function MyAdsTab({ ads, onPost }) {
               ad={ad}
               showShare
               onOpen={(a) => router.push(`/ad/${a.id}`)}
+              onDelete={handleDelete}
             />
           </div>
         ))}
@@ -409,34 +411,53 @@ function ReviewsTab({ me }) {
   );
 }
 
-function SettingsTab({ me, type }) {
+function SettingsTab({ me }) {
+  const [editKind, setEditKind] = useState(null);
+
+  const phoneHint = (() => {
+    if (me.contactMethod === 'phone' && me.phone) return `${me.phone} · показываем`;
+    if (me.contactMethod === 'phone') return 'Показываем — но номер не указан';
+    return me.phone ? `${me.phone} · только сообщения` : 'Только сообщения на сайте';
+  })();
+
   const rows = [
-    { label: 'Личные данные', hint: me.name },
-    { label: 'Телефон', hint: me.phone || 'Не указан' },
-    { label: 'Город по умолчанию', hint: me.cityName || 'Не указан' },
-    { label: 'Тип аккаунта', hint: 'Личный (приватный)' },
-    { label: 'Способы оплаты', hint: 'Не подключены' },
-    { label: 'Уведомления', hint: me.notifyEmail ? 'E-mail включён' : 'Отключены' },
-    { label: 'Правила и политика', hint: 'v. 1.4' }
+    { kind: 'personal', label: 'Личные данные', hint: me.name || 'Не заполнено' },
+    { kind: 'phone', label: 'Телефон и способ связи', hint: phoneHint },
+    { kind: 'city', label: 'Домашний город', hint: getCity(me.homeCityId)?.name || 'Не указан' },
+    { kind: null, label: 'Тип аккаунта', hint: 'Личный (приватный)', disabled: true },
+    { kind: null, label: 'Способы оплаты', hint: 'Не подключены', disabled: true },
+    { kind: 'notifications', label: 'Уведомления', hint: me.notifyEmail ? 'E-mail включён' : 'Отключены' },
+    { kind: null, label: 'Правила и политика', hint: 'v. 1.4', disabled: true }
   ];
+
   return (
-    <div className="rounded-2xl bg-white ring-1 ring-black/5 shadow-card overflow-hidden">
-      <ul>
-        {rows.map((r, i) => (
-          <li
-            key={r.label}
-            className={`px-4 py-3 flex items-center gap-3 ${
-              i < rows.length - 1 ? 'border-b border-black/5' : ''
-            } hover:bg-brand-50 cursor-pointer`}
-          >
-            <div className="min-w-0">
-              <div className="text-sm font-semibold text-ink-900">{r.label}</div>
-              <div className="text-[12px] text-ink-500">{r.hint}</div>
-            </div>
-            <ChevronRight className="w-4 h-4 text-ink-500 ml-auto" />
-          </li>
-        ))}
-      </ul>
-    </div>
+    <>
+      <div className="rounded-2xl bg-white ring-1 ring-black/5 shadow-card overflow-hidden">
+        <ul>
+          {rows.map((r, i) => (
+            <li
+              key={r.label}
+              onClick={() => r.kind && setEditKind(r.kind)}
+              className={`px-4 py-3 flex items-center gap-3 ${
+                i < rows.length - 1 ? 'border-b border-black/5' : ''
+              } ${r.kind ? 'hover:bg-brand-50 cursor-pointer' : 'opacity-60 cursor-not-allowed'}`}
+            >
+              <div className="min-w-0">
+                <div className="text-sm font-semibold text-ink-900">{r.label}</div>
+                <div className="text-[12px] text-ink-500 truncate">{r.hint}</div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-ink-500 ml-auto" />
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <SettingsEditModal
+        open={!!editKind}
+        kind={editKind}
+        me={me}
+        onClose={() => setEditKind(null)}
+      />
+    </>
   );
 }

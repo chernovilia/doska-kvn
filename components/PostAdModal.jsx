@@ -1,10 +1,12 @@
 'use client';
 
 import { AnimatePresence, motion } from 'framer-motion';
-import { CITIES, SECTIONS, getCategoryGroups } from '@/lib/api';
-import { CheckCircle2, Camera, Sparkles, ArrowLeft, ArrowRight, Download, ChevronRight } from 'lucide-react';
+import { CITIES, SECTIONS, getCategoryGroups, createAd } from '@/lib/api';
+import { CheckCircle2, Camera, Sparkles, ArrowLeft, ArrowRight, Download, ChevronRight, AlertCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Modal from './Modal';
+import { useAuth } from '@/lib/auth';
 
 const STEPS = ['Город', 'Раздел', 'Категория', 'Описание', 'Фото', 'Проверка'];
 
@@ -13,10 +15,16 @@ function isAvitoLink(text) {
   return /avito\.(ru|com)/i.test(text);
 }
 
+function defaultCity(user) {
+  return user?.homeCityId || 'vyksa';
+}
+
 export default function PostAdModal({ open, onClose }) {
+  const router = useRouter();
+  const { user } = useAuth();
   const [step, setStep] = useState(0);
-  const [form, setForm] = useState({
-    city: 'vyksa',
+  const [form, setForm] = useState(() => ({
+    city: defaultCity(user),
     section: 'market',
     group: null,
     category: null,
@@ -24,9 +32,11 @@ export default function PostAdModal({ open, onClose }) {
     price: '',
     description: '',
     photos: 0
-  });
+  }));
   const [checking, setChecking] = useState(false);
   const [done, setDone] = useState(false);
+  const [publishedAdId, setPublishedAdId] = useState(null);
+  const [error, setError] = useState(null);
 
   const groups = getCategoryGroups(form.section);
 
@@ -35,10 +45,18 @@ export default function PostAdModal({ open, onClose }) {
     setForm((f) => ({ ...f, group: null, category: null }));
   }, [form.section]);
 
+  // Если юзер загрузился позже и у него есть homeCityId — подставим дефолт.
+  useEffect(() => {
+    if (user?.homeCityId) {
+      setForm((f) => (f.city === 'vyksa' ? { ...f, city: user.homeCityId } : f));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.homeCityId]);
+
   function reset() {
     setStep(0);
     setForm({
-      city: 'vyksa',
+      city: defaultCity(user),
       section: 'market',
       group: null,
       category: null,
@@ -49,15 +67,36 @@ export default function PostAdModal({ open, onClose }) {
     });
     setChecking(false);
     setDone(false);
+    setPublishedAdId(null);
+    setError(null);
+  }
+
+  async function publish() {
+    setError(null);
+    setChecking(true);
+    try {
+      const payload = {
+        title: form.title.trim(),
+        section: form.section,
+        cityId: form.city,
+        categoryGroup: form.group || undefined,
+        category: form.category || undefined,
+        price: form.price ? Number(form.price) : 0,
+        description: form.description?.trim() || undefined
+      };
+      const ad = await createAd(payload);
+      setPublishedAdId(ad.id);
+      setDone(true);
+    } catch (err) {
+      setError(err.message || 'Не удалось опубликовать');
+    } finally {
+      setChecking(false);
+    }
   }
 
   function next() {
     if (step === STEPS.length - 1) {
-      setChecking(true);
-      setTimeout(() => {
-        setChecking(false);
-        setDone(true);
-      }, 1600);
+      publish();
       return;
     }
     setStep((s) => Math.min(s + 1, STEPS.length - 1));
@@ -129,10 +168,10 @@ export default function PostAdModal({ open, onClose }) {
                     <CheckCircle2 className="w-8 h-8" />
                   </div>
                   <div className="mt-3 text-lg font-extrabold text-ink-900">
-                    Объявление одобрено!
+                    Объявление опубликовано!
                   </div>
                   <div className="mt-1 text-sm text-ink-500">
-                    Модерация прошла успешно. Объявление уже на витрине.
+                    Оно уже видно всем в вашем городе.
                   </div>
                 </div>
               ) : checking ? (
@@ -141,10 +180,10 @@ export default function PostAdModal({ open, onClose }) {
                     <Sparkles className="w-8 h-8" />
                   </div>
                   <div className="mt-3 text-lg font-extrabold text-ink-900">
-                    Модерация…
+                    Публикуем…
                   </div>
                   <div className="mt-1 text-sm text-ink-500">
-                    Проверяем на запрещёнку, дубли и корректность цены
+                    Сохраняем объявление и отправляем на витрину
                   </div>
                 </div>
               ) : step === 0 ? (
@@ -381,6 +420,13 @@ export default function PostAdModal({ open, onClose }) {
             </button>
           </div>
         )}
+        {error && !checking && (
+          <div className="mt-4 flex items-start gap-2 rounded-xl bg-rose-50 ring-1 ring-rose-200 px-3 py-2 text-[13px] text-rose-800">
+            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+            <div>{error}</div>
+          </div>
+        )}
+
         {done && (
           <div className="mt-4 flex items-center gap-2">
             <button
@@ -388,10 +434,23 @@ export default function PostAdModal({ open, onClose }) {
                 onClose?.();
                 setTimeout(reset, 300);
               }}
-              className="ml-auto inline-flex items-center gap-1.5 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white px-4 py-3 text-sm font-semibold"
+              className="rounded-2xl bg-white ring-1 ring-black/10 text-ink-700 hover:bg-slate-50 px-4 py-3 text-sm font-semibold"
             >
-              Готово
+              Закрыть
             </button>
+            {publishedAdId && (
+              <button
+                onClick={() => {
+                  onClose?.();
+                  setTimeout(reset, 300);
+                  router.push(`/ad/${publishedAdId}`);
+                }}
+                className="ml-auto inline-flex items-center gap-1.5 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white px-4 py-3 text-sm font-semibold"
+              >
+                Открыть объявление
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            )}
           </div>
         )}
       </div>

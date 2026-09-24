@@ -1,6 +1,7 @@
 import './globals.css';
 import { ToastProvider } from '@/components/Toast';
 import { AuthProvider } from '@/lib/auth';
+import AuthOnboardingGate from '@/components/AuthOnboardingGate';
 
 const BASE_URL = 'https://xn----7sbhf4acwc1a.xn--p1ai';
 
@@ -66,7 +67,10 @@ export default function RootLayout({ children }) {
     <html lang="ru">
       <body className="min-h-screen font-sans">
         <AuthProvider>
-          <ToastProvider>{children}</ToastProvider>
+          <ToastProvider>
+            {children}
+            <AuthOnboardingGate />
+          </ToastProvider>
         </AuthProvider>
       </body>
     </html>

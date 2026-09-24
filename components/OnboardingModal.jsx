@@ -20,7 +20,7 @@ import { motion } from 'framer-motion';
 import Link from 'next/link';
 import {
   User as UserIcon,
-  Briefcase,
+  Pencil,
   MapPin,
   Phone,
   MessageCircle,
@@ -118,25 +118,19 @@ export default function OnboardingModal({ me }) {
         >
           {/* Тип аккаунта */}
           <Field label="Тип аккаунта">
-            <div className="inline-flex bg-slate-100 rounded-full p-1">
-              <TypePill
-                active
-                icon={UserIcon}
-                label="Личный"
-                onClick={() =>
-                  setForm((f) => ({ ...f, accountType: 'personal' }))
-                }
-              />
-              <div
-                title="Скоро — бизнес-профили с рейтингом и тарифами"
-                className="inline-flex items-center gap-1.5 px-3 h-9 rounded-full text-sm font-semibold text-ink-400 cursor-not-allowed opacity-70"
+            <div className="inline-flex items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 px-3 h-9 rounded-full text-sm font-semibold bg-white shadow-card text-brand-700 ring-1 ring-brand-200">
+                <UserIcon className="w-4 h-4" />
+                Личный
+              </span>
+              <button
+                type="button"
+                disabled
+                title="Смена типа аккаунта — скоро"
+                className="w-8 h-8 grid place-items-center rounded-full text-ink-400 cursor-not-allowed opacity-60"
               >
-                <Briefcase className="w-4 h-4" />
-                Бизнес
-                <span className="ml-1 text-[9px] font-bold uppercase tracking-wide text-amber-700 bg-amber-100 ring-1 ring-amber-200 px-1.5 py-0.5 rounded-full">
-                  Скоро
-                </span>
-              </div>
+                <Pencil className="w-4 h-4" />
+              </button>
             </div>
           </Field>
 

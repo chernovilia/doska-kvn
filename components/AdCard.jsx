@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { BadgeCheck, Clock, Heart, Link as LinkIcon, MapPin, Calendar, Flame, Crown, ExternalLink } from 'lucide-react';
+import { BadgeCheck, Clock, Heart, Link as LinkIcon, MapPin, Calendar, Flame, Crown, ExternalLink, Trash2 } from 'lucide-react';
 import { cityName } from '@/lib/api';
 import { formatPrice, formatRelative, formatEventDate } from '@/lib/format';
 import { accountTypeLabel, accountTypeEmoji, accountTypeBadgeClass, isBusiness } from '@/lib/accountType';
@@ -19,7 +19,7 @@ import { useState } from 'react';
  * @param {Function} [props.onOpen]      — при клике на карточку (обычно router.push('/ad/id'))
  * @param {boolean}  [props.showShare]   — показать кнопку копирования ссылки (для профиля)
  */
-export default function AdCard({ ad, onOpen, showShare = false }) {
+export default function AdCard({ ad, onOpen, showShare = false, onDelete }) {
   const [liked, setLiked] = useState(false);
   const { toast } = useToast();
   const isEvent = ad.section === 'events';
@@ -116,6 +116,19 @@ export default function AdCard({ ad, onOpen, showShare = false }) {
               title="Скопировать ссылку"
             >
               <LinkIcon className="h-4 w-4 text-brand-700" />
+            </button>
+          )}
+          {onDelete && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(ad);
+              }}
+              className="grid h-8 w-8 place-items-center rounded-full bg-white/95 shadow-card ring-1 ring-black/5 hover:bg-rose-50"
+              aria-label="Удалить"
+              title="Удалить"
+            >
+              <Trash2 className="h-4 w-4 text-rose-600" />
             </button>
           )}
         </div>

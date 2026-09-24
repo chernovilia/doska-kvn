@@ -22,7 +22,10 @@ import {
   Trash2,
   AlertTriangle,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Sliders,
+  Zap,
+  Filter
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import {
@@ -31,7 +34,9 @@ import {
   adminListAds,
   adminDeleteUser,
   adminDeleteAd,
-  adminWipeAll
+  adminWipeAll,
+  adminGetModeration,
+  adminSetModeration
 } from '@/lib/api';
 
 const PAGE_SIZE = 50;
@@ -107,6 +112,10 @@ export default function AdminPage() {
             <ShoppingBag className="w-4 h-4 inline mr-1 -mt-0.5" />
             Объявления
           </TabBtn>
+          <TabBtn active={tab === 'settings'} onClick={() => setTab('settings')}>
+            <Sliders className="w-4 h-4 inline mr-1 -mt-0.5" />
+            Настройки
+          </TabBtn>
         </div>
       </header>
 
@@ -114,7 +123,97 @@ export default function AdminPage() {
         {tab === 'overview' && <OverviewTab />}
         {tab === 'users' && <UsersTab />}
         {tab === 'ads' && <AdsTab />}
+        {tab === 'settings' && <SettingsTab />}
       </main>
+    </div>
+  );
+}
+
+function SettingsTab() {
+  const [autoApprove, setAutoApprove] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
+
+  async function load() {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await adminGetModeration();
+      setAutoApprove(data.autoApprove);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+  useEffect(() => { load(); }, []);
+
+  async function toggle() {
+    setSaving(true);
+    setError(null);
+    try {
+      const data = await adminSetModeration(!autoApprove);
+      setAutoApprove(data.autoApprove);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="space-y-4 max-w-2xl">
+      <h2 className="text-lg font-extrabold text-ink-900">Настройки платформы</h2>
+
+      {error && <ErrorRow message={error} />}
+
+      <div className="rounded-2xl bg-white ring-1 ring-black/5 shadow-card p-5">
+        <div className="flex items-start gap-3">
+          <div className={`w-10 h-10 grid place-items-center rounded-xl ${
+            autoApprove ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'
+          }`}>
+            {autoApprove ? <Zap className="w-5 h-5" /> : <Filter className="w-5 h-5" />}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-extrabold text-ink-900">
+              Модерация объявлений
+            </div>
+            <div className="text-[12px] text-ink-500 mt-0.5">
+              {loading
+                ? 'Загрузка…'
+                : autoApprove
+                ? 'Автопубликация: новое объявление сразу видно всем.'
+                : 'Ручная модерация: новые объявления получают статус «pending» и не появляются в ленте, пока их не одобрят.'}
+            </div>
+            <div className="mt-3 flex items-center gap-3">
+              <button
+                onClick={toggle}
+                disabled={loading || saving || autoApprove === null}
+                className={`relative w-12 h-6 rounded-full transition ${
+                  autoApprove ? 'bg-emerald-500' : 'bg-slate-300'
+                } disabled:opacity-50`}
+              >
+                <span
+                  className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition ${
+                    autoApprove ? 'left-6' : 'left-0.5'
+                  }`}
+                />
+              </button>
+              <div className="text-sm font-semibold text-ink-900">
+                {autoApprove ? 'Автопубликация включена' : 'Требуется одобрение'}
+              </div>
+              {saving && <span className="text-[11px] text-ink-500">сохраняем…</span>}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-2xl bg-slate-50 ring-1 ring-black/5 p-4 text-[12px] text-ink-500">
+        <b className="text-ink-800">Следующим этапом</b> добавим ИИ-модерацию —
+        промежуточный режим, где нейросеть быстро проверяет объявление и
+        пропускает без ручной проверки, если всё чисто.
+      </div>
     </div>
   );
 }

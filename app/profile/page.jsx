@@ -143,11 +143,17 @@ function ProfileContent() {
         <section className="rounded-2xl bg-white ring-1 ring-black/5 shadow-card overflow-hidden">
           <div className="p-4 md:p-5">
             <div className="flex items-start gap-3 md:gap-4">
-              <img
-                src={me.avatar}
-                alt={me.name}
-                className="w-16 h-16 md:w-20 md:h-20 rounded-2xl object-cover ring-2 ring-white shadow-card"
-              />
+              {me.avatar ? (
+                <img
+                  src={me.avatar}
+                  alt={me.name}
+                  className="w-16 h-16 md:w-20 md:h-20 rounded-2xl object-cover ring-2 ring-white shadow-card"
+                />
+              ) : (
+                <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-brand-100 text-brand-700 ring-2 ring-white shadow-card grid place-items-center text-2xl font-black">
+                  {(me.name || 'A').slice(0, 1).toUpperCase()}
+                </div>
+              )}
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <div className="text-lg md:text-xl font-extrabold text-ink-900 truncate">
@@ -161,19 +167,25 @@ function ProfileContent() {
                 </div>
                 <div className="text-[12px] text-ink-500 flex items-center gap-1.5 mt-0.5">
                   <MapPin className="w-3.5 h-3.5 text-brand-600" />
-                  {me.cityName}
-                  <span className="text-ink-300">·</span>
-                  {me.registeredAt}
+                  {me.cityName || 'Город не указан'}
+                  {me.registeredAt && (
+                    <>
+                      <span className="text-ink-300">·</span>
+                      {me.registeredAt}
+                    </>
+                  )}
                 </div>
-                <a
-                  href={me.vkUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="mt-2 inline-flex items-center gap-1.5 text-[12px] font-semibold text-[#0077FF] hover:underline"
-                >
-                  <VkIcon className="w-4 h-4" />
-                  {me.name} · ВКонтакте
-                </a>
+                {me.vkUrl && (
+                  <a
+                    href={me.vkUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-2 inline-flex items-center gap-1.5 text-[12px] font-semibold text-[#0077FF] hover:underline"
+                  >
+                    <VkIcon className="w-4 h-4" />
+                    {me.name} · ВКонтакте
+                  </a>
+                )}
               </div>
             </div>
 
@@ -265,13 +277,13 @@ function ProfileContent() {
 
           <div className="grid grid-cols-4 border-t border-black/5 text-center">
             <Metric
-              value={me.rating.toFixed(1)}
+              value={(me.rating ?? 0).toFixed(1)}
               label="Рейтинг"
               icon={<Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />}
             />
-            <Metric value={me.reviewsCount} label="Отзывы" />
-            <Metric value={me.dealsCount} label="Сделки" />
-            <Metric value={me.activeAdsCount} label="Активных" />
+            <Metric value={me.reviewsCount ?? 0} label="Отзывы" />
+            <Metric value={me.dealsCount ?? 0} label="Сделки" />
+            <Metric value={me.activeAdsCount ?? myAds.length} label="Активных" />
           </div>
         </section>
 
@@ -399,7 +411,7 @@ function ReviewsTab({ me }) {
     <div className="space-y-3">
       <div className="rounded-2xl bg-white ring-1 ring-black/5 shadow-card p-4 flex items-center gap-4">
         <div className="text-3xl md:text-4xl font-black text-ink-900">
-          {me.rating.toFixed(1)}
+          {(me.rating ?? 0).toFixed(1)}
           <span className="text-lg md:text-xl text-ink-500">/5</span>
         </div>
         <div className="flex-1">
@@ -409,7 +421,7 @@ function ReviewsTab({ me }) {
             ))}
           </div>
           <div className="text-[12px] text-ink-500 mt-0.5">
-            На основе {me.reviewsCount} отзывов от покупателей
+            На основе {me.reviewsCount ?? 0} отзывов от покупателей
           </div>
         </div>
         <button className="rounded-full bg-white ring-1 ring-black/10 hover:bg-brand-50 text-sm font-semibold text-ink-800 px-3 py-2">

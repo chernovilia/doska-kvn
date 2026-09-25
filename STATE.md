@@ -2,6 +2,12 @@
 
 Живой снимок: что уже работает в проде, что моки, что впереди. Обновляется по мере роста.
 
+Смежные документы:
+- **[ROADMAP.md](ROADMAP.md)** — что делаем в каком порядке
+- **[RANKING-AND-PROMO.md](RANKING-AND-PROMO.md)** — движок ленты, VIP по scope, звёзды, монетизация
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** — canonical архитектура
+- **[BUSINESS-MODEL.md](BUSINESS-MODEL.md)** — типы аккаунтов и тарифы
+
 ---
 
 ## ✅ Что работает в проде

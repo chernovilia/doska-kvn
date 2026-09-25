@@ -357,7 +357,13 @@ export default function PostAdModal({ open, onClose }) {
               ) : step === 4 ? (
                 <PhotosStep
                   photos={form.photos}
-                  setPhotos={(next) => setForm((f) => ({ ...f, photos: next }))}
+                  setPhotos={(nextOrFn) =>
+                    setForm((f) => ({
+                      ...f,
+                      photos:
+                        typeof nextOrFn === 'function' ? nextOrFn(f.photos) : nextOrFn
+                    }))
+                  }
                   uploading={uploading}
                   setUploading={setUploading}
                   onError={setError}

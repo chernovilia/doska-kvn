@@ -1,8 +1,8 @@
 'use client';
 
 import { AnimatePresence, motion } from 'framer-motion';
-import { CITIES, SECTIONS, getCategoryGroups, createAd } from '@/lib/api';
-import { CheckCircle2, Camera, Sparkles, ArrowLeft, ArrowRight, Download, ChevronRight, AlertCircle } from 'lucide-react';
+import { CITIES, SECTIONS, getCategoryGroups, createAd, uploadAdPhoto } from '@/lib/api';
+import { CheckCircle2, Camera, Sparkles, ArrowLeft, ArrowRight, Download, ChevronRight, AlertCircle, X, ImagePlus } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Modal from './Modal';
@@ -31,8 +31,9 @@ export default function PostAdModal({ open, onClose }) {
     title: '',
     price: '',
     description: '',
-    photos: 0
+    photos: [] // Массив { url } с бэка
   }));
+  const [uploading, setUploading] = useState(0); // Количество активных загрузок
   const [checking, setChecking] = useState(false);
   const [done, setDone] = useState(false);
   const [publishedAdId, setPublishedAdId] = useState(null);
@@ -63,12 +64,13 @@ export default function PostAdModal({ open, onClose }) {
       title: '',
       price: '',
       description: '',
-      photos: 0
+      photos: []
     });
     setChecking(false);
     setDone(false);
     setPublishedAdId(null);
     setError(null);
+    setUploading(0);
   }
 
   async function publish() {
@@ -82,7 +84,8 @@ export default function PostAdModal({ open, onClose }) {
         categoryGroup: form.group || undefined,
         category: form.category || undefined,
         price: form.price ? Number(form.price) : 0,
-        description: form.description?.trim() || undefined
+        description: form.description?.trim() || undefined,
+        photoUrls: form.photos.map((p) => p.url)
       };
       const ad = await createAd(payload);
       setPublishedAdId(ad.id);
@@ -107,12 +110,13 @@ export default function PostAdModal({ open, onClose }) {
   }
 
   const canNext =
-    (step === 0 && form.city) ||
-    (step === 1 && form.section) ||
-    (step === 2 && form.category) ||
-    (step === 3 && form.title.trim().length > 3) ||
-    step === 4 ||
-    step === 5;
+    uploading === 0 &&
+    ((step === 0 && form.city) ||
+      (step === 1 && form.section) ||
+      (step === 2 && form.category) ||
+      (step === 3 && form.title.trim().length > 3) ||
+      step === 4 ||
+      step === 5);
 
   return (
     <Modal
@@ -310,8 +314,7 @@ export default function PostAdModal({ open, onClose }) {
                             price: f.price || '15000',
                             description:
                               f.description ||
-                              'Описание автоматически импортировано с Авито. Проверьте и отредактируйте.',
-                            photos: Math.max(f.photos, 3)
+                              'Описание автоматически импортировано с Авито. Проверьте и отредактируйте.'
                           }))
                         }
                         className="shrink-0 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-3 py-1.5"
@@ -352,33 +355,13 @@ export default function PostAdModal({ open, onClose }) {
                   </div>
                 </div>
               ) : step === 4 ? (
-                <div>
-                  <div className="text-sm font-semibold text-ink-700 mb-2">Фотографии (демо)</div>
-                  <div className="grid grid-cols-3 gap-2">
-                    {[0, 1, 2, 3, 4, 5].map((i) => (
-                      <button
-                        key={i}
-                        onClick={() =>
-                          setForm((f) => ({ ...f, photos: Math.min(6, f.photos + 1) }))
-                        }
-                        className={`aspect-square rounded-2xl grid place-items-center ring-1 transition ${
-                          i < form.photos
-                            ? 'bg-brand-50 ring-brand-300 text-brand-700'
-                            : 'bg-slate-50 ring-black/10 text-ink-500 hover:bg-brand-50'
-                        }`}
-                      >
-                        {i < form.photos ? (
-                          <CheckCircle2 className="w-6 h-6" />
-                        ) : (
-                          <Camera className="w-6 h-6" />
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="mt-3 text-xs text-ink-500">
-                    Загружено фото: <b>{form.photos}</b> из 6. Для демо тапайте по слотам.
-                  </div>
-                </div>
+                <PhotosStep
+                  photos={form.photos}
+                  setPhotos={(next) => setForm((f) => ({ ...f, photos: next }))}
+                  uploading={uploading}
+                  setUploading={setUploading}
+                  onError={setError}
+                />
               ) : (
                 <div className="space-y-2">
                   <div className="text-sm font-semibold text-ink-700">Проверьте объявление</div>
@@ -388,7 +371,7 @@ export default function PostAdModal({ open, onClose }) {
                     <div><b>Категория:</b> {form.group} → {form.category}</div>
                     <div><b>Заголовок:</b> {form.title || <span className="text-ink-500">не указан</span>}</div>
                     <div><b>Цена:</b> {form.price ? `${form.price} ₽` : <span className="text-ink-500">по договорённости</span>}</div>
-                    <div><b>Фото:</b> {form.photos}</div>
+                    <div><b>Фото:</b> {form.photos.length}</div>
                   </div>
                   <p className="text-[12px] text-ink-500">
                     Нажимая «Опубликовать», вы соглашаетесь с правилами платформы «Доска/КВН».
@@ -455,5 +438,105 @@ export default function PostAdModal({ open, onClose }) {
         )}
       </div>
     </Modal>
+  );
+}
+
+// ── Шаг «Фото»: реальная загрузка через POST /uploads/ad-photo ─────
+const MAX_PHOTOS = 6;
+
+function PhotosStep({ photos, setPhotos, uploading, setUploading, onError }) {
+  async function handleFiles(fileList) {
+    const files = Array.from(fileList || []);
+    if (!files.length) return;
+    const room = MAX_PHOTOS - photos.length;
+    const accepted = files.slice(0, room);
+
+    for (const file of accepted) {
+      setUploading((n) => n + 1);
+      try {
+        const res = await uploadAdPhoto(file);
+        setPhotos((prev) => [...prev, { url: res.url, size: res.size }]);
+      } catch (err) {
+        onError?.(err.message || 'Не удалось загрузить фото');
+      } finally {
+        setUploading((n) => Math.max(0, n - 1));
+      }
+    }
+  }
+
+  function removeAt(idx) {
+    setPhotos(photos.filter((_, i) => i !== idx));
+  }
+
+  const canAddMore = photos.length < MAX_PHOTOS;
+
+  return (
+    <div>
+      <div className="text-sm font-semibold text-ink-700 mb-1">
+        Фотографии
+        <span className="ml-1 font-normal text-ink-500">
+          — до {MAX_PHOTOS} штук, JPG/PNG/WebP/HEIC
+        </span>
+      </div>
+      <div className="text-[12px] text-ink-500 mb-3">
+        Первое фото станет обложкой. Сжимаем автоматически до 1600 px.
+      </div>
+
+      <div className="grid grid-cols-3 gap-2">
+        {photos.map((p, i) => (
+          <div
+            key={p.url}
+            className="relative aspect-square rounded-2xl overflow-hidden ring-1 ring-black/10 bg-slate-50 group"
+          >
+            <img src={p.url} alt="" className="w-full h-full object-cover" />
+            {i === 0 && (
+              <div className="absolute top-1 left-1 text-[10px] font-bold uppercase bg-brand-600 text-white rounded-md px-1.5 py-0.5">
+                Обложка
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={() => removeAt(i)}
+              className="absolute top-1 right-1 w-6 h-6 grid place-items-center rounded-full bg-white/90 shadow ring-1 ring-black/10 hover:bg-rose-50"
+              aria-label="Удалить"
+            >
+              <X className="w-3.5 h-3.5 text-rose-600" />
+            </button>
+          </div>
+        ))}
+
+        {Array.from({ length: uploading }).map((_, i) => (
+          <div
+            key={`up-${i}`}
+            className="aspect-square rounded-2xl grid place-items-center ring-1 ring-brand-200 bg-brand-50 text-brand-700 animate-pulse"
+          >
+            <div className="text-[11px] font-semibold">Загрузка…</div>
+          </div>
+        ))}
+
+        {canAddMore && (
+          <label className="aspect-square rounded-2xl grid place-items-center ring-1 ring-dashed ring-black/20 bg-slate-50 text-ink-500 hover:bg-brand-50 hover:ring-brand-300 hover:text-brand-700 cursor-pointer">
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              className="sr-only"
+              onChange={(e) => handleFiles(e.target.files)}
+            />
+            <div className="text-center">
+              <ImagePlus className="w-6 h-6 mx-auto" />
+              <div className="text-[11px] font-semibold mt-1">Добавить</div>
+            </div>
+          </label>
+        )}
+      </div>
+
+      <div className="mt-3 text-xs text-ink-500">
+        Загружено: <b>{photos.length}</b> из {MAX_PHOTOS}
+        {uploading > 0 && (
+          <span className="text-brand-700"> · в очереди: {uploading}</span>
+        )}
+      </div>
+    </div>
   );
 }

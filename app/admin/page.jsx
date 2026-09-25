@@ -36,7 +36,8 @@ import {
   adminDeleteAd,
   adminWipeAll,
   adminGetModeration,
-  adminSetModeration
+  adminSetModeration,
+  adminSetAdStatus
 } from '@/lib/api';
 
 const PAGE_SIZE = 50;
@@ -453,6 +454,7 @@ function AdsTab() {
   const [items, setItems] = useState([]);
   const [total, setTotal] = useState(0);
   const [offset, setOffset] = useState(0);
+  const [status, setStatus] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -460,7 +462,7 @@ function AdsTab() {
     setLoading(true);
     setError(null);
     try {
-      const data = await adminListAds({ limit: PAGE_SIZE, offset });
+      const data = await adminListAds({ limit: PAGE_SIZE, offset, status: status || null });
       setItems(data.items);
       setTotal(data.total);
     } catch (err) {
@@ -469,7 +471,10 @@ function AdsTab() {
       setLoading(false);
     }
   }
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [offset]);
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, [offset, status]);
+
+  // Сбрасываем offset при смене фильтра.
+  useEffect(() => { setOffset(0); }, [status]);
 
   async function onDelete(id, title) {
     if (!window.confirm(`Удалить объявление «${title}»?`)) return;
@@ -481,18 +486,56 @@ function AdsTab() {
     }
   }
 
+  async function onSetStatus(id, newStatus) {
+    try {
+      await adminSetAdStatus(id, newStatus);
+      await load();
+    } catch (err) {
+      alert(err.message);
+    }
+  }
+
+  const filters = [
+    { key: '', label: 'Все' },
+    { key: 'pending', label: 'На модерации' },
+    { key: 'approved', label: 'Одобрены' },
+    { key: 'rejected', label: 'Отклонены' },
+    { key: 'archived', label: 'В архиве' }
+  ];
+
   return (
     <div className="space-y-3">
-      <TableHead
-        title="Объявления"
-        total={total}
-        offset={offset}
-        pageSize={PAGE_SIZE}
-        onPrev={() => setOffset((o) => Math.max(0, o - PAGE_SIZE))}
-        onNext={() => setOffset((o) => o + PAGE_SIZE)}
-        onReload={load}
-        loading={loading}
-      />
+      <div className="flex flex-wrap items-center gap-2">
+        <h2 className="text-lg font-extrabold text-ink-900">
+          Объявления <span className="text-ink-400 font-bold">· {total}</span>
+        </h2>
+        <div className="flex flex-wrap gap-1 ml-2">
+          {filters.map((f) => (
+            <button
+              key={f.key || 'all'}
+              onClick={() => setStatus(f.key)}
+              className={`text-xs font-semibold rounded-full px-3 py-1.5 ring-1 ${
+                status === f.key
+                  ? 'bg-brand-600 text-white ring-brand-600'
+                  : 'bg-white text-ink-700 ring-black/10 hover:bg-brand-50'
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+        <div className="ml-auto flex items-center gap-2">
+          <TableNav
+            total={total}
+            offset={offset}
+            pageSize={PAGE_SIZE}
+            onPrev={() => setOffset((o) => Math.max(0, o - PAGE_SIZE))}
+            onNext={() => setOffset((o) => o + PAGE_SIZE)}
+            onReload={load}
+            loading={loading}
+          />
+        </div>
+      </div>
 
       {error && <ErrorRow message={error} />}
 
@@ -501,8 +544,8 @@ function AdsTab() {
           <thead className="bg-slate-50 text-ink-500 uppercase text-[10px] tracking-wide">
             <tr>
               <Th>Заголовок</Th>
+              <Th>Автор</Th>
               <Th>Раздел</Th>
-              <Th>Категория</Th>
               <Th>Цена</Th>
               <Th>Город</Th>
               <Th>Статус</Th>
@@ -518,8 +561,11 @@ function AdsTab() {
                     {a.title}
                   </Link>
                 </Td>
+                <Td className="text-ink-500 text-[11px]">
+                  {a.author?.name || '—'}
+                  <div className="text-ink-400">{a.author?.email}</div>
+                </Td>
                 <Td>{a.section}</Td>
-                <Td className="text-ink-500">{a.category || '—'}</Td>
                 <Td className="tabular-nums">{a.price ? `${a.price} ₽` : 'даром'}</Td>
                 <Td>{a.cityId}</Td>
                 <Td>
@@ -527,13 +573,33 @@ function AdsTab() {
                 </Td>
                 <Td>{new Date(a.createdAt).toLocaleString('ru-RU')}</Td>
                 <Td>
-                  <button
-                    onClick={() => onDelete(a.id, a.title)}
-                    className="text-rose-600 hover:text-rose-800"
-                    title="Удалить"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  <div className="flex items-center gap-1">
+                    {a.status !== 'approved' && (
+                      <button
+                        onClick={() => onSetStatus(a.id, 'approved')}
+                        className="text-emerald-700 hover:text-emerald-900 text-[11px] font-bold px-2 py-1 rounded-lg hover:bg-emerald-50"
+                        title="Одобрить"
+                      >
+                        ✓ Одобрить
+                      </button>
+                    )}
+                    {a.status !== 'rejected' && a.status === 'pending' && (
+                      <button
+                        onClick={() => onSetStatus(a.id, 'rejected')}
+                        className="text-amber-700 hover:text-amber-900 text-[11px] font-bold px-2 py-1 rounded-lg hover:bg-amber-50"
+                        title="Отклонить"
+                      >
+                        ✕ Откл.
+                      </button>
+                    )}
+                    <button
+                      onClick={() => onDelete(a.id, a.title)}
+                      className="text-rose-600 hover:text-rose-800 p-1"
+                      title="Удалить"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </Td>
               </tr>
             ))}
@@ -543,6 +609,40 @@ function AdsTab() {
           </tbody>
         </table>
       </div>
+    </div>
+  );
+}
+
+// Компактная навигация без заголовка (используется когда заголовок кастомный)
+function TableNav({ total, offset, pageSize, onPrev, onNext, onReload, loading }) {
+  const from = total === 0 ? 0 : offset + 1;
+  const to = Math.min(total, offset + pageSize);
+  return (
+    <div className="flex items-center gap-1">
+      <div className="text-[12px] text-ink-500 mr-2 tabular-nums">
+        {from}–{to} из {total}
+      </div>
+      <button
+        onClick={onPrev}
+        disabled={offset === 0}
+        className="w-8 h-8 grid place-items-center rounded-full ring-1 ring-black/10 hover:bg-slate-50 disabled:opacity-40"
+      >
+        <ChevronLeft className="w-4 h-4" />
+      </button>
+      <button
+        onClick={onNext}
+        disabled={to >= total}
+        className="w-8 h-8 grid place-items-center rounded-full ring-1 ring-black/10 hover:bg-slate-50 disabled:opacity-40"
+      >
+        <ChevronRight className="w-4 h-4" />
+      </button>
+      <button
+        onClick={onReload}
+        disabled={loading}
+        className="w-8 h-8 grid place-items-center rounded-full ring-1 ring-black/10 hover:bg-slate-50 disabled:opacity-40"
+      >
+        <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+      </button>
     </div>
   );
 }

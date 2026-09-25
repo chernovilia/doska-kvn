@@ -39,6 +39,7 @@ import {
   adminSetModeration,
   adminSetAdStatus
 } from '@/lib/api';
+import ModerationModal from '@/components/admin/ModerationModal';
 
 const PAGE_SIZE = 50;
 
@@ -457,6 +458,7 @@ function AdsTab() {
   const [status, setStatus] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [modAdId, setModAdId] = useState(null);
 
   async function load() {
     setLoading(true);
@@ -555,11 +557,15 @@ function AdsTab() {
           </thead>
           <tbody>
             {items.map((a) => (
-              <tr key={a.id} className="border-t border-black/5 hover:bg-brand-50/40">
+              <tr
+                key={a.id}
+                onClick={() => setModAdId(a.id)}
+                className="border-t border-black/5 hover:bg-brand-50/40 cursor-pointer"
+              >
                 <Td>
-                  <Link href={`/ad/${a.id}`} target="_blank" className="text-brand-700 hover:underline">
+                  <span className="text-brand-700 hover:underline">
                     {a.title}
-                  </Link>
+                  </span>
                 </Td>
                 <Td className="text-ink-500 text-[11px]">
                   {a.author?.name || '—'}
@@ -572,7 +578,7 @@ function AdsTab() {
                   <StatusBadge status={a.status} />
                 </Td>
                 <Td>{new Date(a.createdAt).toLocaleString('ru-RU')}</Td>
-                <Td>
+                <Td onClick={(e) => e.stopPropagation()}>
                   <div className="flex items-center gap-1">
                     {a.status !== 'approved' && (
                       <button
@@ -609,6 +615,13 @@ function AdsTab() {
           </tbody>
         </table>
       </div>
+
+      <ModerationModal
+        open={!!modAdId}
+        adId={modAdId}
+        onClose={() => setModAdId(null)}
+        onChanged={load}
+      />
     </div>
   );
 }
@@ -703,8 +716,12 @@ function TableHead({ title, total, offset, pageSize, onPrev, onNext, onReload, l
 function Th({ children }) {
   return <th className="text-left px-3 py-2 font-bold">{children}</th>;
 }
-function Td({ children, className = '' }) {
-  return <td className={`px-3 py-2 align-middle ${className}`}>{children}</td>;
+function Td({ children, className = '', onClick }) {
+  return (
+    <td onClick={onClick} className={`px-3 py-2 align-middle ${className}`}>
+      {children}
+    </td>
+  );
 }
 function ErrorRow({ message }) {
   return (

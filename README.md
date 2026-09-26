@@ -23,8 +23,10 @@
 npm install
 # .env.local
 # NEXT_PUBLIC_API_URL=http://localhost:3000/v1
-npm run dev
+node node_modules/next/dist/bin/next dev
 ```
+
+`npm run dev` в папке `доска:квн` не сработает: двоеточие в пути — разделитель `PATH`, и shell не находит `next`.
 
 Нужен запущенный API. Если API слушает тот же порт 3000, запусти фронт на другом: `npm run dev -- -p 3001`.
 

@@ -2,8 +2,7 @@ import './globals.css';
 import { ToastProvider } from '@/components/Toast';
 import { AuthProvider } from '@/lib/auth';
 import AuthOnboardingGate from '@/components/AuthOnboardingGate';
-
-const BASE_URL = 'https://xn----7sbhf4acwc1a.xn--p1ai';
+import { SITE_URL as BASE_URL } from '@/lib/site';
 
 export const metadata = {
   metadataBase: new URL(BASE_URL),

@@ -43,7 +43,8 @@
 - `GET /v1/ads` с фильтрами (place, section, chip, search) + ранкинг (score или recent)
 - `GET /v1/ads/:id` с автором + фото
 - `POST /v1/ads` — создание с фото (`photoUrls[]`), автопубликация по `Setting['moderation.autoApprove']`
-- `DELETE /v1/ads/:id` — владелец удаляет своё (проверка `authorId`)
+- `DELETE /v1/ads/:id` — владелец удаляет своё (проверка `authorId`); на `/ad/[id]` автор видит панель владельца со статусом и кнопкой «Удалить»
+- `POST /v1/ads/:id/bump` — бесплатный подъём опубликованного объявления (`boostedAt = now` → +0.15 к score на 24 ч), пауза `Setting['ranking.bump_cooldown_hours']` = 72; кнопка «Поднять» в панели владельца и под карточками в `/profile`
 - `GET /v1/me/ads` — все свои (approved / pending / rejected / archived)
 - Публичная страница `/ad/[id]` с Open Graph
 - `PostAdModal`: 6 шагов (город → раздел → категория → описание → фото → превью), финиш → редирект на `/ad/[id]`

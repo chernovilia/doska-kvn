@@ -57,6 +57,7 @@ ranking.freshness_days        = 10
 ranking.vip_top_positions     = 3
 ranking.same_author_max_top10 = 3
 ranking.boost_bonus           = 0.15
+ranking.bump_cooldown_hours   = 72
 ```
 
 Endpoint для управления — TODO (расширить `/admin/moderation` до общей вкладки «Настройки»).
@@ -358,7 +359,7 @@ Region.id='murom' помечаем launched=false (или удаляем)
 |---|---|---|
 | `limits.maxActiveAdsPerUser` | 10 | Максимум активных объявлений |
 | `limits.maxAdsPerMonth` | 30 | Максимум публикаций в месяц |
-| `limits.bumpCooldownHours` | 72 | Cooldown между ручными бустами |
+| `ranking.bump_cooldown_hours` | 72 | Пауза между бесплатными подъёмами (✅ работает) |
 | `limits.adTtlDays` | 30 | Через сколько уходит в архив |
 | `limits.photosPerAd` | 6 | Максимум фото в объявлении |
 | `limits.dailyLoginBonus` | 1 | Звёзд за сессию > 5 мин раз в сутки |
@@ -425,12 +426,11 @@ model AdPhoto {
 - applyRules с VIP-топом и anti-repetition
 - Тумблер автомодерации из /admin
 - getWeights читает из Setting (можно менять веса без деплоя)
+- Бесплатный подъём: `POST /v1/ads/:id/bump` с паузой `ranking.bump_cooldown_hours`, кнопка «Поднять» в /ad/[id] (панель владельца) и под карточками в /profile
 
 ### ⏳ Нужно написать (ориентировочно)
 | Задача | Оценка |
 |---|---|
-| Endpoint `POST /ads/:id/bump` + cooldown 72ч | 1 час |
-| UI кнопки «Поднять» в /profile и /ad/[id] | 1 час |
 | Проверка дубликатов заголовка при публикации | 30 мин |
 | Расширение `AdPromo` полями scope | 30 мин |
 | Логика применения VIP по scope в list() | 3 часа |

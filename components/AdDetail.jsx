@@ -22,9 +22,10 @@ import {
   Phone,
   Share2,
   Shield,
-  Star
+  Star,
+  Trash2
 } from 'lucide-react';
-import { cityName, SECTIONS } from '@/lib/api';
+import { cityName, SECTIONS, deleteAd } from '@/lib/api';
 import { formatPrice, formatRelative, formatEventDate } from '@/lib/format';
 import { accountTypeLabel, accountTypeEmoji, accountTypeBadgeClass, isBusiness } from '@/lib/accountType';
 import { useAuth } from '@/lib/auth';
@@ -44,6 +45,8 @@ export default function AdDetail({ ad, similar = [] }) {
   const [liked, setLiked] = useState(false);
   const [photoIdx, setPhotoIdx] = useState(0);
   const [postOpen, setPostOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const isOwner = authed && ad.authorId === user.id;
 
   const gallery = ad.gallery && ad.gallery.length ? ad.gallery : ad.image ? [ad.image] : [];
   const isEvent = ad.section === 'events';
@@ -63,6 +66,19 @@ export default function AdDetail({ ad, similar = [] }) {
   function onShowPhone() {
     if (!authed) return loginRedirect();
     setPhoneShown(true);
+  }
+
+  async function onDelete() {
+    if (!window.confirm(`Удалить объявление «${ad.title}»? Вернуть его будет нельзя.`)) return;
+    setDeleting(true);
+    try {
+      await deleteAd(ad.id);
+      toast('Объявление удалено');
+      router.push('/profile');
+    } catch (err) {
+      toast(err.message || 'Не удалось удалить', { kind: 'error' });
+      setDeleting(false);
+    }
   }
 
   async function onShare() {
@@ -296,7 +312,22 @@ export default function AdDetail({ ad, similar = [] }) {
               </div>
             </div>
 
-            {/* Кнопки контакта — sticky на мобильном */}
+            {isOwner ? (
+              <div className="rounded-2xl bg-white ring-1 ring-black/5 shadow-card p-4 space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="text-sm font-bold text-ink-900">Это ваше объявление</div>
+                  <OwnerStatus status={ad.status} />
+                </div>
+                <button
+                  onClick={onDelete}
+                  disabled={deleting}
+                  className="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-white ring-1 ring-rose-200 text-rose-700 hover:bg-rose-50 font-semibold px-4 py-3 disabled:opacity-50"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  {deleting ? 'Удаляем…' : 'Удалить объявление'}
+                </button>
+              </div>
+            ) : (
             <div className="rounded-2xl bg-white ring-1 ring-black/5 shadow-card p-4 space-y-2">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <button
@@ -342,14 +373,19 @@ export default function AdDetail({ ad, similar = [] }) {
                 </a>
               )}
             </div>
+            )}
 
             {/* Мелкие действия */}
             <div className="flex items-center gap-3 text-[12px] text-ink-500 px-1">
-              <button className="inline-flex items-center gap-1 hover:text-ink-800">
-                <Flag className="w-3.5 h-3.5" />
-                Пожаловаться
-              </button>
-              <span className="text-ink-300">·</span>
+              {!isOwner && (
+                <>
+                  <button className="inline-flex items-center gap-1 hover:text-ink-800">
+                    <Flag className="w-3.5 h-3.5" />
+                    Пожаловаться
+                  </button>
+                  <span className="text-ink-300">·</span>
+                </>
+              )}
               <span>ID: {ad.id.slice(0, 8)}</span>
             </div>
 
@@ -387,5 +423,21 @@ export default function AdDetail({ ad, similar = [] }) {
       <PostAdModal open={postOpen} onClose={() => setPostOpen(false)} />
       <BottomNav onPost={() => setPostOpen(true)} />
     </div>
+  );
+}
+
+const OWNER_STATUS = {
+  approved: ['Опубликовано', 'bg-emerald-50 text-emerald-700 ring-emerald-200'],
+  pending: ['На модерации', 'bg-amber-50 text-amber-800 ring-amber-200'],
+  rejected: ['Отклонено', 'bg-rose-50 text-rose-700 ring-rose-200'],
+  archived: ['В архиве', 'bg-slate-100 text-slate-700 ring-slate-200']
+};
+
+function OwnerStatus({ status }) {
+  const [label, cls] = OWNER_STATUS[status] || OWNER_STATUS.approved;
+  return (
+    <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ring-1 ${cls}`}>
+      {label}
+    </span>
   );
 }

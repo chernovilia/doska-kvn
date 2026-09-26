@@ -35,6 +35,7 @@ import AdCard from './AdCard';
 import BottomNav from './BottomNav';
 import Footer from './Footer';
 import PostAdModal from './PostAdModal';
+import BumpButton from './BumpButton';
 
 export default function AdDetail({ ad, similar = [] }) {
   const router = useRouter();
@@ -318,6 +319,7 @@ export default function AdDetail({ ad, similar = [] }) {
                   <div className="text-sm font-bold text-ink-900">Это ваше объявление</div>
                   <OwnerStatus status={ad.status} />
                 </div>
+                <BumpButton ad={ad} />
                 <button
                   onClick={onDelete}
                   disabled={deleting}

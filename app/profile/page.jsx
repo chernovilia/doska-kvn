@@ -24,6 +24,7 @@ import BottomNav from '@/components/BottomNav';
 import AdCard from '@/components/AdCard';
 import PostAdModal from '@/components/PostAdModal';
 import SettingsEditModal from '@/components/SettingsEditModal';
+import BumpButton from '@/components/BumpButton';
 import { useAuth } from '@/lib/auth';
 import { getCity } from '@/data/regions';
 
@@ -332,13 +333,16 @@ function MyAdsTab({ ads, onPost, onReload }) {
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 auto-rows-fr">
         {ads.map((ad) => (
-          <div key={ad.id} className="h-full">
-            <AdCard
-              ad={ad}
-              showShare
-              onOpen={(a) => router.push(`/ad/${a.id}`)}
-              onDelete={handleDelete}
-            />
+          <div key={ad.id} className="h-full flex flex-col gap-1.5">
+            <div className="flex-1">
+              <AdCard
+                ad={ad}
+                showShare
+                onOpen={(a) => router.push(`/ad/${a.id}`)}
+                onDelete={handleDelete}
+              />
+            </div>
+            <BumpButton ad={ad} compact />
           </div>
         ))}
       </div>

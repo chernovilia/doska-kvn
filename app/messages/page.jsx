@@ -20,6 +20,33 @@ export default function MessagesPage() {
   );
 }
 
+// iOS и встроенные браузеры (ВК) при открытии клавиатуры не уменьшают страницу, а
+// прокручивают её вверх — шапка с диалогом уезжают. Держим экран чата ровно в видимой
+// над клавиатурой области: шапка на месте, список сжимается, поле ввода над клавиатурой.
+function useFitToVisualViewport(ref, enabled) {
+  useEffect(() => {
+    const vv = window.visualViewport;
+    const el = ref.current;
+    if (!enabled || !vv || !el) return;
+    const update = () => {
+      el.style.height = `${vv.height}px`;
+      el.style.transform = `translateY(${vv.offsetTop}px)`;
+    };
+    update();
+    vv.addEventListener('resize', update);
+    vv.addEventListener('scroll', update);
+    window.addEventListener('resize', update);
+    const prevOverflow = document.documentElement.style.overflow;
+    document.documentElement.style.overflow = 'hidden';
+    return () => {
+      vv.removeEventListener('resize', update);
+      vv.removeEventListener('scroll', update);
+      window.removeEventListener('resize', update);
+      document.documentElement.style.overflow = prevOverflow;
+    };
+  }, [ref, enabled]);
+}
+
 // Опрос сервера: замирает на свёрнутой вкладке и сразу обновляется при возврате на неё.
 function useVisiblePolling(fn, ms, enabled) {
   useEffect(() => {
@@ -45,6 +72,8 @@ function MessagesContent() {
   const [chats, setChats] = useState([]);
   const [chatsState, setChatsState] = useState('loading'); // loading | ok | error
   const [query, setQuery] = useState('');
+  const screenRef = useRef(null);
+  useFitToVisualViewport(screenRef, ready && !!user);
 
   useEffect(() => {
     if (ready && !user) {
@@ -80,7 +109,7 @@ function MessagesContent() {
     : chats;
 
   return (
-    <div className="chat-h flex flex-col bg-slate-50">
+    <div ref={screenRef} className="chat-h fixed inset-x-0 top-0 flex flex-col bg-slate-50">
       <div className={`hero-gradient border-b border-black/5 shrink-0 ${chatId ? 'hidden md:block' : ''}`}>
         <div className="px-3 md:px-5 h-14 flex items-center gap-3">
           <Link
@@ -270,6 +299,18 @@ function ChatView({ chatId, me, onActivity }) {
     const el = listRef.current;
     if (el) el.scrollTop = el.scrollHeight;
   }, [msgs.length]);
+
+  // Клавиатура открылась — список сжался; держим последние сообщения в кадре.
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const keepBottom = () => {
+      const el = listRef.current;
+      if (el) el.scrollTop = el.scrollHeight;
+    };
+    vv.addEventListener('resize', keepBottom);
+    return () => vv.removeEventListener('resize', keepBottom);
+  }, []);
 
   async function onSend(e) {
     e.preventDefault();

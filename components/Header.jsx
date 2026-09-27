@@ -9,17 +9,17 @@ import { useAuth } from '@/lib/auth';
 import { useUnreadCount } from '@/lib/chats';
 import UnreadBadge from './UnreadBadge';
 
-export default function Header({ place, onPlaceChange, onSearchSelect }) {
+export default function Header({ place, onPlaceChange, search, onSearchSubmit, onSearchSelect }) {
   const { user, ready } = useAuth();
   const unread = useUnreadCount(!!user);
 
   return (
     <header className="sticky top-0 z-40 hero-gradient border-b border-black/5 backdrop-blur">
-      <div className="max-w-6xl mx-auto px-4 md:px-6 pt-4 pb-3">
-        <div className="flex items-center gap-3">
+      <div className="max-w-6xl mx-auto px-4 md:px-6 pt-3 md:pt-4 pb-3">
+        <div className="flex items-center gap-2">
           <CityLogo value={place} onChange={onPlaceChange} />
 
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex items-center gap-2 shrink-0">
             {user && <NotificationsButton />}
             {user && (
               <Link
@@ -57,7 +57,7 @@ export default function Header({ place, onPlaceChange, onSearchSelect }) {
                 href="/login"
                 className="inline-flex items-center gap-1.5 h-10 px-3.5 rounded-full bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold shadow-card"
               >
-                <LogIn className="w-4 h-4" />
+                <LogIn className="w-4 h-4 hidden sm:block" />
                 Войти
               </Link>
             )}
@@ -65,7 +65,7 @@ export default function Header({ place, onPlaceChange, onSearchSelect }) {
         </div>
 
         <div className="mt-3">
-          <SearchBar onSelect={onSearchSelect} />
+          <SearchBar value={search} onSubmit={onSearchSubmit} onSelect={onSearchSelect} />
         </div>
       </div>
     </header>

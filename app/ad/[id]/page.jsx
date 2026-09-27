@@ -1,3 +1,4 @@
+import { formatPrice } from '@/lib/format';
 import { notFound } from 'next/navigation';
 import { getAd } from '@/lib/api';
 import AdDetail from '@/components/AdDetail';
@@ -15,10 +16,7 @@ export async function generateMetadata({ params }) {
     };
   }
 
-  const priceText =
-    ad.price > 0
-      ? `${new Intl.NumberFormat('ru-RU').format(ad.price)} ${ad.priceSuffix || '₽'}`
-      : ad.priceSuffix || 'Бесплатно';
+  const priceText = formatPrice(ad);
 
   const title = `${ad.title} · ${priceText}`;
   const description =

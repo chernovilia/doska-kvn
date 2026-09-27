@@ -1,8 +1,10 @@
 'use client';
 
 import { AnimatePresence, motion } from 'framer-motion';
-import { CITIES, REGIONS, SECTIONS, getCategoryGroups, createAd, uploadAdPhoto } from '@/lib/api';
-import { CheckCircle2, Camera, Sparkles, ArrowLeft, ArrowRight, Download, ChevronRight, AlertCircle, X, ImagePlus } from 'lucide-react';
+import { CITIES, REGIONS, SECTIONS, getCategoryGroups, getSection, createAd, uploadAdPhoto } from '@/lib/api';
+import { FREE_FROM_SECTIONS } from '@/data/categories';
+import { formatPrice } from '@/lib/format';
+import { CheckCircle2, Sparkles, ArrowLeft, ArrowRight, ChevronRight, AlertCircle, X, ImagePlus } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Modal from './Modal';
@@ -14,9 +16,37 @@ const STEPS = ['Город', 'Раздел', 'Категория', 'Описан
 const LAUNCHED = REGIONS.filter((r) => r.launched).map((r) => r.id);
 const POST_CITIES = CITIES.filter((c) => LAUNCHED.includes(c.regionId));
 
-function isAvitoLink(text) {
-  if (!text) return false;
-  return /avito\.(ru|com)/i.test(text);
+// Поля цены зависят от раздела: вилка зарплаты у вакансий, «в месяц» у аренды.
+function priceConfig(form) {
+  if (form.section === 'jobs') {
+    return form.group === 'Вакансии'
+      ? { label: 'Зарплата, ₽ в месяц', range: true, suffix: '₽/мес', hint: 'Можно указать только «от».' }
+      : { label: 'Желаемая зарплата, ₽ в месяц', suffix: '₽/мес' };
+  }
+  if (form.section === 'realty' && form.group === 'Аренда жилья') {
+    return form.category === 'Посуточно'
+      ? { label: 'Цена, ₽ за сутки', suffix: '₽/сутки' }
+      : { label: 'Цена, ₽ в месяц', suffix: '₽/мес' };
+  }
+  if (FREE_FROM_SECTIONS.includes(form.section)) {
+    return { label: 'Цена, ₽', hint: 'Без цены объявление попадёт в «Отдам даром».' };
+  }
+  if (form.section === 'events') return { label: 'Цена билета, ₽', hint: 'Без цены — «Бесплатно».' };
+  return { label: 'Цена, ₽', hint: 'Без цены — «Договорная».' };
+}
+
+function emptyForm(user) {
+  return {
+    city: defaultCity(user),
+    section: null,
+    group: null,
+    category: null,
+    title: '',
+    price: '',
+    priceTo: '',
+    description: '',
+    photos: [] // Массив { url } с бэка
+  };
 }
 
 function defaultCity(user) {
@@ -27,16 +57,7 @@ export default function PostAdModal({ open, onClose }) {
   const router = useRouter();
   const { user } = useAuth();
   const [step, setStep] = useState(0);
-  const [form, setForm] = useState(() => ({
-    city: defaultCity(user),
-    section: 'market',
-    group: null,
-    category: null,
-    title: '',
-    price: '',
-    description: '',
-    photos: [] // Массив { url } с бэка
-  }));
+  const [form, setForm] = useState(() => emptyForm(user));
   const [uploading, setUploading] = useState(0); // Количество активных загрузок
   const [checking, setChecking] = useState(false);
   const [done, setDone] = useState(false);
@@ -44,6 +65,7 @@ export default function PostAdModal({ open, onClose }) {
   const [error, setError] = useState(null);
 
   const groups = getCategoryGroups(form.section);
+  const priceCfg = priceConfig(form);
 
   // При смене раздела — сбрасываем выбор подкатегории.
   useEffect(() => {
@@ -60,16 +82,7 @@ export default function PostAdModal({ open, onClose }) {
 
   function reset() {
     setStep(0);
-    setForm({
-      city: defaultCity(user),
-      section: 'market',
-      group: null,
-      category: null,
-      title: '',
-      price: '',
-      description: '',
-      photos: []
-    });
+    setForm(emptyForm(user));
     setChecking(false);
     setDone(false);
     setPublishedAdId(null);
@@ -88,6 +101,8 @@ export default function PostAdModal({ open, onClose }) {
         categoryGroup: form.group || undefined,
         category: form.category || undefined,
         price: form.price ? Number(form.price) : 0,
+        priceTo: priceCfg.range && form.priceTo ? Number(form.priceTo) : undefined,
+        priceSuffix: priceCfg.suffix,
         description: form.description?.trim() || undefined,
         photoUrls: form.photos.map((p) => p.url)
       };
@@ -216,25 +231,34 @@ export default function PostAdModal({ open, onClose }) {
               ) : step === 1 ? (
                 <div>
                   <div className="text-sm font-semibold text-ink-700 mb-2">Раздел</div>
-                  <div className="grid grid-cols-1 gap-2">
-                    {SECTIONS.map((s) => (
-                      <button
-                        key={s.id}
-                        onClick={() => setForm((f) => ({ ...f, section: s.id }))}
-                        className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-left ring-1 transition ${
-                          form.section === s.id
-                            ? 'bg-brand-50 ring-brand-300'
-                            : 'bg-white ring-black/10 hover:bg-brand-50'
-                        }`}
-                      >
-                        <div className="text-2xl">{s.emoji}</div>
-                        <div>
-                          <div className="font-bold text-ink-900">{s.name}</div>
-                          <div className="text-[12px] text-ink-500">{s.hint}</div>
-                        </div>
-                      </button>
-                    ))}
+                  <div className="grid grid-cols-2 gap-2">
+                    {SECTIONS.map((s) => {
+                      const Icon = s.icon;
+                      return (
+                        <button
+                          key={s.id}
+                          onClick={() => setForm((f) => ({ ...f, section: s.id }))}
+                          className={`flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-2.5 rounded-2xl p-2.5 text-left ring-1 transition min-w-0 ${
+                            form.section === s.id
+                              ? 'bg-brand-50 ring-brand-300'
+                              : 'bg-white ring-black/10 hover:bg-brand-50'
+                          }`}
+                        >
+                          <span className={`grid place-items-center w-10 h-10 rounded-xl shrink-0 ${s.tile}`}>
+                            <Icon className="w-5 h-5" />
+                          </span>
+                          <span className="min-w-0 w-full">
+                            <span className="block font-bold text-ink-900 text-sm leading-tight">{s.name}</span>
+                            <span className="block text-[11px] text-ink-500 leading-tight truncate">{s.hint}</span>
+                          </span>
+                        </button>
+                      );
+                    })}
                   </div>
+                  <p className="mt-3 text-[12px] text-ink-500">
+                    Отдаёте бесплатно? Выберите раздел по смыслу и не указывайте цену — объявление
+                    появится в «Отдам даром».
+                  </p>
                 </div>
               ) : step === 2 ? (
                 <div>
@@ -298,35 +322,6 @@ export default function PostAdModal({ open, onClose }) {
                 </div>
               ) : step === 3 ? (
                 <div className="space-y-3">
-                  {(isAvitoLink(form.title) || isAvitoLink(form.description)) && (
-                    <div className="rounded-2xl bg-emerald-50 ring-1 ring-emerald-200 p-3 flex items-start gap-3">
-                      <Download className="w-5 h-5 text-emerald-700 mt-0.5" />
-                      <div className="min-w-0 flex-1">
-                        <div className="text-sm font-bold text-emerald-800">
-                          Ссылка на Авито распознана
-                        </div>
-                        <div className="text-[12px] text-emerald-700/90">
-                          Мы можем автоматически подтянуть заголовок, цену и фото.
-                        </div>
-                      </div>
-                      <button
-                        onClick={() =>
-                          setForm((f) => ({
-                            ...f,
-                            title: 'Импорт с Авито — заголовок подтянут',
-                            price: f.price || '15000',
-                            description:
-                              f.description ||
-                              'Описание автоматически импортировано с Авито. Проверьте и отредактируйте.'
-                          }))
-                        }
-                        className="shrink-0 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-3 py-1.5"
-                      >
-                        Импортировать
-                      </button>
-                    </div>
-                  )}
-
                   <div>
                     <label className="text-sm font-semibold text-ink-700">Заголовок</label>
                     <input
@@ -337,14 +332,28 @@ export default function PostAdModal({ open, onClose }) {
                     />
                   </div>
                   <div>
-                    <label className="text-sm font-semibold text-ink-700">Цена, ₽</label>
-                    <input
-                      value={form.price}
-                      onChange={(e) => setForm((f) => ({ ...f, price: e.target.value.replace(/\D/g, '') }))}
-                      placeholder="18000"
-                      inputMode="numeric"
-                      className="mt-1 w-full rounded-2xl bg-white ring-1 ring-black/10 focus:ring-brand-400 outline-none px-4 py-3 text-base"
-                    />
+                    <label className="text-sm font-semibold text-ink-700">{priceCfg.label}</label>
+                    <div className={`mt-1 grid gap-2 ${priceCfg.range ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                      <input
+                        value={form.price}
+                        onChange={(e) => setForm((f) => ({ ...f, price: e.target.value.replace(/\D/g, '').slice(0, 9) }))}
+                        placeholder={priceCfg.range ? 'от' : 'Не указана'}
+                        aria-label={priceCfg.range ? 'Зарплата от' : priceCfg.label}
+                        inputMode="numeric"
+                        className="w-full rounded-2xl bg-white ring-1 ring-black/10 focus:ring-brand-400 outline-none px-4 py-3 text-base"
+                      />
+                      {priceCfg.range && (
+                        <input
+                          value={form.priceTo}
+                          onChange={(e) => setForm((f) => ({ ...f, priceTo: e.target.value.replace(/\D/g, '').slice(0, 9) }))}
+                          placeholder="до"
+                          aria-label="Зарплата до"
+                          inputMode="numeric"
+                          className="w-full rounded-2xl bg-white ring-1 ring-black/10 focus:ring-brand-400 outline-none px-4 py-3 text-base"
+                        />
+                      )}
+                    </div>
+                    {priceCfg.hint && <div className="mt-1 text-[12px] text-ink-500">{priceCfg.hint}</div>}
                   </div>
                   <div>
                     <label className="text-sm font-semibold text-ink-700">Описание</label>
@@ -352,7 +361,7 @@ export default function PostAdModal({ open, onClose }) {
                       rows={4}
                       value={form.description}
                       onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-                      placeholder="Опишите товар или услугу, состояние, условия… Можно вставить ссылку с avito.ru — мы подтянем данные."
+                      placeholder="Опишите товар или услугу, состояние, условия…"
                       className="mt-1 w-full rounded-2xl bg-white ring-1 ring-black/10 focus:ring-brand-400 outline-none px-4 py-3 text-base"
                     />
                   </div>
@@ -376,10 +385,10 @@ export default function PostAdModal({ open, onClose }) {
                   <div className="text-sm font-semibold text-ink-700">Проверьте объявление</div>
                   <div className="rounded-2xl bg-slate-50 ring-1 ring-black/10 p-4 text-sm space-y-0.5">
                     <div><b>Город:</b> {CITIES.find((c) => c.id === form.city)?.name}</div>
-                    <div><b>Раздел:</b> {SECTIONS.find((s) => s.id === form.section)?.name}</div>
+                    <div><b>Раздел:</b> {getSection(form.section)?.name}</div>
                     <div><b>Категория:</b> {form.group} → {form.category}</div>
                     <div><b>Заголовок:</b> {form.title || <span className="text-ink-500">не указан</span>}</div>
-                    <div><b>Цена:</b> {form.price ? `${form.price} ₽` : <span className="text-ink-500">по договорённости</span>}</div>
+                    <div><b>Цена:</b> {formatPrice(previewAd(form, priceCfg))}</div>
                     <div><b>Фото:</b> {form.photos.length}</div>
                   </div>
                   <p className="text-[12px] text-ink-500">
@@ -448,6 +457,17 @@ export default function PostAdModal({ open, onClose }) {
       </div>
     </Modal>
   );
+}
+
+// Черновик в форме объявления — чтобы показать цену так же, как в ленте.
+function previewAd(form, cfg) {
+  return {
+    section: form.section,
+    categoryGroup: form.group,
+    price: form.price ? Number(form.price) : 0,
+    priceTo: cfg.range && form.priceTo ? Number(form.priceTo) : 0,
+    priceSuffix: cfg.suffix
+  };
 }
 
 // ── Шаг «Фото»: реальная загрузка через POST /uploads/ad-photo ─────

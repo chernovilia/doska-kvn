@@ -24,7 +24,7 @@ import {
   Star,
   Trash2
 } from 'lucide-react';
-import { cityName, SECTIONS, deleteAd, getAdContact, openConversation, getSimilarAds } from '@/lib/api';
+import { cityName, getSection, deleteAd, getAdContact, openConversation, getSimilarAds } from '@/lib/api';
 import { formatPrice, formatRelative, formatEventDate, formatMonthYear } from '@/lib/format';
 import { accountTypeLabel, accountTypeEmoji, accountTypeBadgeClass, isBusiness } from '@/lib/accountType';
 import { useAuth } from '@/lib/auth';
@@ -64,7 +64,8 @@ export default function AdDetail({ ad }) {
 
   const gallery = ad.gallery && ad.gallery.length ? ad.gallery : ad.image ? [ad.image] : [];
   const isEvent = ad.section === 'events';
-  const sectionName = SECTIONS.find((s) => s.id === ad.section)?.name;
+  // У старых объявлений раздел 'market' — его в справочнике уже нет.
+  const sectionInfo = getSection(ad.section);
   const authorType = ad.authorType || ad.author?.type;
   const authorTypeIsBiz = isBusiness(authorType);
 
@@ -146,8 +147,17 @@ export default function AdDetail({ ad }) {
             <Link href={`/${ad.city}`} className="hover:text-brand-700 truncate">
               {cityName(ad.city)}
             </Link>
-            <span>›</span>
-            <span className="text-ink-700 font-medium truncate">{sectionName}</span>
+            {sectionInfo && (
+              <>
+                <span>›</span>
+                <Link
+                  href={`/${ad.city}?section=${sectionInfo.id}`}
+                  className="text-ink-700 font-medium hover:text-brand-700 truncate"
+                >
+                  {sectionInfo.name}
+                </Link>
+              </>
+            )}
           </nav>
 
           <button

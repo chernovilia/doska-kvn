@@ -2,7 +2,9 @@
 module.exports = {
   content: [
     './app/**/*.{js,jsx,ts,tsx}',
-    './components/**/*.{js,jsx,ts,tsx}'
+    './components/**/*.{js,jsx,ts,tsx}',
+    // Классы плиток разделов лежат в справочнике.
+    './data/**/*.{js,jsx}'
   ],
   theme: {
     extend: {

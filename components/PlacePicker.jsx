@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import Link from 'next/link';
 import { ChevronDown, Check, Clock, MapPin } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
@@ -12,7 +11,7 @@ import {
 } from '@/lib/api';
 
 /**
- * Логотип + чип выбора места с дропдауном «регион — город».
+ * Выбор места в шапке: текст с булавкой и дропдаун «регион — город».
  * value  — id текущего «места» (регион или город).
  * onChange(placeId) — вызывается при выборе места. Родитель уже роутит на /placeId.
  *
@@ -20,7 +19,7 @@ import {
  *   Секция «Ваш регион» — регион по домену + его города.
  *   Секция «Другие регионы» — все остальные (пока не запущенные — с меткой «скоро»).
  */
-export default function CityLogo({ value, onChange }) {
+export default function PlacePicker({ value, onChange }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
@@ -44,23 +43,18 @@ export default function CityLogo({ value, onChange }) {
   }
 
   return (
-    <div ref={ref} className="relative select-none flex items-center gap-2 md:gap-3 min-w-0">
-      <Link href="/" className="font-black tracking-tight text-[22px] md:text-3xl leading-none text-ink-900 shrink-0">
-        <span>Доска</span>
-        <span className="brand-slash">/</span>
-        <span>КВН</span>
-      </Link>
-      {/* Явный выбор города: чип с булавкой, а не пунктир в логотипе */}
+    <div ref={ref} className="relative select-none min-w-0">
+      {/* Место — просто текст с булавкой, без плашки */}
       <button
         onClick={() => setOpen((v) => !v)}
-        className="inline-flex items-center gap-1 h-8 pl-2 pr-1.5 rounded-full bg-white ring-1 ring-black/10 shadow-card text-[13px] font-semibold text-ink-800 hover:bg-brand-50 whitespace-nowrap"
+        className="flex items-center gap-1 h-9 min-w-0 text-[15px] font-semibold text-ink-900 hover:text-brand-700"
         aria-haspopup="menu"
         aria-expanded={open}
-        aria-label={`Город: ${label}`}
+        aria-label={`Место: ${label}`}
       >
-        <MapPin className="w-3.5 h-3.5 text-brand-600 shrink-0" />
+        <MapPin className="w-[18px] h-[18px] shrink-0" strokeWidth={1.9} />
         <span className="truncate">{label}</span>
-        <ChevronDown className={`w-3.5 h-3.5 text-ink-500 shrink-0 transition ${open ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`w-4 h-4 shrink-0 transition ${open ? 'rotate-180' : ''}`} />
       </button>
 
       <AnimatePresence>
@@ -70,7 +64,7 @@ export default function CityLogo({ value, onChange }) {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -4 }}
             transition={{ duration: 0.15 }}
-            className="absolute left-0 top-full mt-2 w-[300px] max-w-[92vw] rounded-2xl bg-white shadow-soft ring-1 ring-black/5 z-50 overflow-hidden"
+            className="absolute right-0 top-full mt-2 w-[300px] max-w-[92vw] rounded-2xl bg-white shadow-soft ring-1 ring-black/5 z-50 overflow-hidden"
             role="menu"
           >
             {/* Ваш регион */}

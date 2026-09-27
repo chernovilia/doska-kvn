@@ -131,7 +131,7 @@ export default function AdDetail({ ad }) {
         <div className="max-w-5xl mx-auto px-4 md:px-6 pt-4 pb-3 flex items-center gap-3">
           <button
             onClick={() => router.back()}
-            className="w-10 h-10 grid place-items-center rounded-full bg-white ring-1 ring-black/5 hover:bg-brand-50 shadow-card"
+            className="btn-outline w-10 h-10 shrink-0"
             aria-label="Назад"
           >
             <ArrowLeft className="w-4.5 h-4.5 text-ink-800" />
@@ -162,7 +162,7 @@ export default function AdDetail({ ad }) {
 
           <button
             onClick={onShare}
-            className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-white ring-1 ring-black/5 hover:bg-brand-50 shadow-card px-3 py-2 text-sm font-semibold text-ink-800"
+            className="ml-auto btn-outline h-10 px-3.5 text-sm"
           >
             <Share2 className="w-4 h-4 text-brand-600" />
             <span className="hidden sm:inline">Поделиться</span>
@@ -393,7 +393,7 @@ export default function AdDetail({ ad }) {
                     <button
                       onClick={onShowPhone}
                       disabled={phoneLoading}
-                      className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white ring-1 ring-black/10 hover:bg-brand-50 font-semibold px-4 py-3 text-ink-900 disabled:opacity-60"
+                      className="btn-outline inline-flex items-center justify-center gap-2 rounded-2xl font-semibold px-4 py-3 text-ink-900 disabled:opacity-60"
                     >
                       {authed ? <Phone className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
                       {phoneLoading ? 'Загружаем…' : authed ? 'Показать телефон' : 'Войти, чтобы позвонить'}
@@ -414,7 +414,7 @@ export default function AdDetail({ ad }) {
                   href={ad.avitoUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white ring-1 ring-black/10 hover:bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-700 w-full"
+                  className="btn-outline inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold text-emerald-700 w-full"
                 >
                   <ExternalLink className="w-4 h-4" />
                   Открыть похожие на Авито

@@ -171,8 +171,8 @@ function PhoneFields({ form, setForm }) {
         <button
           type="button"
           onClick={() => setForm((f) => ({ ...f, contactMethod: 'chat' }))}
-          className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-left ring-1 ${
-            form.contactMethod === 'chat' ? 'bg-brand-50 ring-brand-400' : 'ring-black/10 hover:bg-slate-50'
+          className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-left border-[1.5px] transition-colors ${
+            form.contactMethod === 'chat' ? 'bg-brand-50 border-brand-400' : 'bg-slate-50 border-transparent hover:bg-slate-100'
           }`}
         >
           <MessageCircle className="w-5 h-5 text-brand-700" />
@@ -185,8 +185,8 @@ function PhoneFields({ form, setForm }) {
         <button
           type="button"
           onClick={() => setForm((f) => ({ ...f, contactMethod: 'phone' }))}
-          className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-left ring-1 ${
-            form.contactMethod === 'phone' ? 'bg-brand-50 ring-brand-400' : 'ring-black/10 hover:bg-slate-50'
+          className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-left border-[1.5px] transition-colors ${
+            form.contactMethod === 'phone' ? 'bg-brand-50 border-brand-400' : 'bg-slate-50 border-transparent hover:bg-slate-100'
           }`}
         >
           <PhoneIcon className="w-5 h-5 text-brand-700" />
@@ -225,8 +225,8 @@ function CityFields({ form, setForm }) {
             key={c.id}
             type="button"
             onClick={() => setForm((f) => ({ ...f, homeCityId: c.id }))}
-            className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-left ring-1 ${
-              active ? 'bg-brand-50 ring-brand-400' : 'ring-black/10 hover:bg-slate-50'
+            className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-left border-[1.5px] transition-colors ${
+              active ? 'bg-brand-50 border-brand-400' : 'bg-slate-50 border-transparent hover:bg-slate-100'
             }`}
           >
             <MapPin className="w-5 h-5 text-brand-700" />

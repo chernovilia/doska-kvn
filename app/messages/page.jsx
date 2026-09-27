@@ -114,7 +114,7 @@ function MessagesContent() {
         <div className="px-3 md:px-5 h-14 flex items-center gap-3">
           <Link
             href="/"
-            className="w-9 h-9 grid place-items-center rounded-full bg-white ring-1 ring-black/5 hover:bg-brand-50 shadow-card"
+            className="btn-outline w-9 h-9 shrink-0"
             aria-label="На главную"
           >
             <ArrowLeft className="w-4.5 h-4.5 text-ink-800" />

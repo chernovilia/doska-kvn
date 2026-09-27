@@ -86,7 +86,7 @@ function LoginContent() {
         <div className="flex items-center gap-3 mb-4">
           <Link
             href="/"
-            className="w-10 h-10 grid place-items-center rounded-full bg-white ring-1 ring-black/5 hover:bg-brand-50 shadow-card"
+            className="btn-outline w-10 h-10 shrink-0"
             aria-label="Назад"
           >
             <ArrowLeft className="w-4.5 h-4.5 text-ink-800" />

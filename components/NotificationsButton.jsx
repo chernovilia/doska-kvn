@@ -29,10 +29,10 @@ export default function NotificationsButton() {
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="relative w-10 h-10 grid place-items-center rounded-full bg-white ring-1 ring-black/5 hover:bg-brand-50 shadow-card"
+        className="relative w-9 h-9 grid place-items-center rounded-full hover:bg-slate-100"
         aria-label="Уведомления"
       >
-        <Bell className="w-4.5 h-4.5 text-ink-800" />
+        <Bell className="w-[22px] h-[22px] text-ink-700" strokeWidth={1.8} />
         {unread > 0 && (
           <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 grid place-items-center rounded-full bg-accent-500 text-white text-[10px] font-bold ring-2 ring-white">
             {unread}

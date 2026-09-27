@@ -89,7 +89,7 @@ export default function AdminPage() {
         <div className="max-w-6xl mx-auto px-4 md:px-6 py-3 flex items-center gap-3">
           <Link
             href="/"
-            className="w-9 h-9 grid place-items-center rounded-full bg-white ring-1 ring-black/10 hover:bg-brand-50"
+            className="btn-outline w-9 h-9 shrink-0"
             aria-label="На главную"
           >
             <ArrowLeft className="w-4 h-4 text-ink-800" />
@@ -516,11 +516,7 @@ function AdsTab() {
             <button
               key={f.key || 'all'}
               onClick={() => setStatus(f.key)}
-              className={`text-xs font-semibold rounded-full px-3 py-1.5 ring-1 ${
-                status === f.key
-                  ? 'bg-brand-600 text-white ring-brand-600'
-                  : 'bg-white text-ink-700 ring-black/10 hover:bg-brand-50'
-              }`}
+              className={`chip chip-sm ${status === f.key ? 'chip-on' : ''}`}
             >
               {f.label}
             </button>

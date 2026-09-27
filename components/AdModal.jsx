@@ -140,7 +140,7 @@ export default function AdModal({ ad, onClose }) {
             </button>
             <button
               onClick={onShowPhone}
-              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white ring-1 ring-black/10 hover:bg-brand-50 font-semibold px-4 py-3 text-ink-900"
+              className="btn-outline inline-flex items-center justify-center gap-2 rounded-2xl font-semibold px-4 py-3 text-ink-900"
             >
               {phoneShown && authed ? (
                 <>
@@ -176,7 +176,7 @@ export default function AdModal({ ad, onClose }) {
               href={ad.avitoUrl}
               target="_blank"
               rel="noreferrer"
-              className="mt-2 inline-flex items-center gap-2 rounded-2xl bg-white ring-1 ring-black/10 hover:bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-700 w-full justify-center"
+              className="btn-outline mt-2 inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold text-emerald-700 w-full justify-center"
             >
               <ExternalLink className="w-4 h-4" />
               Открыть похожие на Авито

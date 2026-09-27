@@ -60,39 +60,42 @@ export default function SearchBar({ value = '', onSubmit, onSelect }) {
 
   return (
     <div className="relative w-full">
+      {/* Кнопка пристыкована к полю справа, а не лежит внутри него */}
       <form
         role="search"
         onSubmit={(e) => {
           e.preventDefault();
           submit(q);
         }}
-        className="flex items-center gap-2 bg-white rounded-2xl pl-4 pr-2 py-2 shadow-card ring-1 ring-black/5"
+        className="flex h-12"
       >
-        <Search className="w-5 h-5 text-ink-500 shrink-0" />
-        <input
-          ref={inputRef}
-          type="search"
-          enterKeyHint="search"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          onFocus={() => setFocused(true)}
-          onBlur={() => setTimeout(() => setFocused(false), 120)}
-          placeholder="Найти в Кулебаках, Выксе, Навашино…"
-          className="w-full min-w-0 py-1 bg-transparent outline-none text-ink-900 placeholder:text-ink-500 text-base [&::-webkit-search-cancel-button]:hidden"
-        />
-        {q && (
-          <button
-            type="button"
-            onClick={() => (value ? submit('') : setQ(''))}
-            className="w-8 h-8 grid place-items-center rounded-full text-ink-500 hover:bg-slate-100 shrink-0"
-            aria-label="Очистить"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        )}
+        <div className="flex-1 min-w-0 flex items-center gap-2 pl-3.5 pr-1 rounded-l-2xl border-2 border-r-0 border-slate-200 bg-white focus-within:border-brand-400 transition-colors">
+          <Search className="w-5 h-5 text-ink-500 shrink-0" />
+          <input
+            ref={inputRef}
+            type="search"
+            enterKeyHint="search"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setTimeout(() => setFocused(false), 120)}
+            placeholder="Поиск товаров и услуг…"
+            className="w-full min-w-0 bg-transparent outline-none text-ink-900 placeholder:text-ink-500 text-base [&::-webkit-search-cancel-button]:hidden"
+          />
+          {q && (
+            <button
+              type="button"
+              onClick={() => (value ? submit('') : setQ(''))}
+              className="w-8 h-8 grid place-items-center rounded-full text-ink-500 hover:bg-slate-100 shrink-0"
+              aria-label="Очистить"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
         <button
           type="submit"
-          className="h-9 px-3.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold shrink-0"
+          className="px-5 rounded-r-2xl bg-brand-600 hover:bg-brand-700 text-white text-[15px] font-bold shrink-0"
         >
           Найти
         </button>

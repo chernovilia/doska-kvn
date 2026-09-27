@@ -84,7 +84,7 @@ function ProfileContent() {
         <div className="max-w-4xl mx-auto px-4 md:px-6 pt-4 pb-3 flex items-center gap-3">
           <Link
             href="/"
-            className="w-10 h-10 grid place-items-center rounded-full bg-white ring-1 ring-black/5 hover:bg-brand-50 shadow-card"
+            className="btn-outline w-10 h-10 shrink-0"
             aria-label="Назад"
           >
             <ArrowLeft className="w-4.5 h-4.5 text-ink-800" />
@@ -96,7 +96,7 @@ function ProfileContent() {
             {me.isAdmin && (
               <Link
                 href="/admin"
-                className="inline-flex items-center gap-1.5 h-10 px-3 rounded-full bg-amber-100 text-amber-900 ring-1 ring-amber-200 hover:bg-amber-200 text-sm font-semibold shadow-card"
+                className="btn-outline h-10 px-3.5 text-sm"
                 title="Админка"
               >
                 <ShieldCheck className="w-4 h-4" />
@@ -104,7 +104,7 @@ function ProfileContent() {
               </Link>
             )}
             <button
-              className="w-10 h-10 grid place-items-center rounded-full bg-white ring-1 ring-black/5 hover:bg-brand-50 shadow-card"
+              className="btn-outline w-10 h-10 shrink-0"
               aria-label="Уведомления"
             >
               <Bell className="w-4.5 h-4.5 text-ink-800" />
@@ -114,7 +114,7 @@ function ProfileContent() {
                 await signOut();
                 router.push('/');
               }}
-              className="w-10 h-10 grid place-items-center rounded-full bg-white ring-1 ring-black/5 hover:bg-rose-50 shadow-card"
+              className="btn-outline w-10 h-10 shrink-0"
               aria-label="Выйти"
             >
               <LogOut className="w-4.5 h-4.5 text-ink-800" />
@@ -171,7 +171,7 @@ function ProfileContent() {
                 Тип аккаунта
               </div>
               <div className="inline-flex items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 px-3 h-9 rounded-full text-sm font-semibold bg-white shadow-card text-brand-700 ring-1 ring-brand-200">
+                <span className="chip chip-on">
                   <UserIcon className="w-4 h-4" />
                   Личный
                 </span>
@@ -212,11 +212,7 @@ function ProfileContent() {
                 <button
                   key={t.id}
                   onClick={() => setTab(t.id)}
-                  className={`relative shrink-0 inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-sm font-semibold ring-1 ${
-                    active
-                      ? 'bg-brand-600 text-white ring-brand-600'
-                      : 'bg-white text-ink-700 ring-black/10 hover:bg-brand-50'
-                  }`}
+                  className={`chip relative shrink-0 ${active ? 'chip-on' : ''}`}
                 >
                   <Icon className="w-4 h-4" />
                   {t.name}
@@ -250,20 +246,6 @@ function ProfileContent() {
       <PostAdModal open={postOpen} onClose={() => setPostOpen(false)} />
       <BottomNav onPost={() => setPostOpen(true)} />
     </div>
-  );
-}
-
-function TypeChip({ active, onClick, icon: Icon, label }) {
-  return (
-    <button
-      onClick={onClick}
-      className={`inline-flex items-center gap-1.5 px-3 h-9 rounded-full text-sm font-semibold ${
-        active ? 'bg-white shadow-card text-brand-700' : 'text-ink-500'
-      }`}
-    >
-      <Icon className="w-4 h-4" />
-      {label}
-    </button>
   );
 }
 
@@ -322,7 +304,7 @@ function MyAdsTab({ ads, onPost, onReload }) {
         </div>
         <button
           onClick={onPost}
-          className="rounded-full bg-accent-500 hover:bg-accent-600 text-white text-sm font-semibold px-3 py-1.5"
+          className="btn-outline h-9 px-3.5 text-sm"
         >
           + Добавить
         </button>
@@ -374,7 +356,7 @@ function ReviewsTab({ me }) {
             На основе {me.reviewsCount ?? 0} отзывов от покупателей
           </div>
         </div>
-        <button className="rounded-full bg-white ring-1 ring-black/10 hover:bg-brand-50 text-sm font-semibold text-ink-800 px-3 py-2">
+        <button className="btn-outline h-9 px-3.5 text-sm">
           Все отзывы <ChevronRight className="w-4 h-4 inline -mr-1" />
         </button>
       </div>

@@ -5,8 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useAuth } from '@/lib/auth';
-import { FEED_SECTIONS } from '@/lib/api';
-import Modal from './Modal';
+import CatalogSheet from './CatalogSheet';
 import { useUnreadCount } from '@/lib/chats';
 import UnreadBadge from './UnreadBadge';
 
@@ -20,10 +19,12 @@ export default function BottomNav({ onPost, feedPath = null }) {
   const unread = useUnreadCount(!!user);
   const [sectionsOpen, setSectionsOpen] = useState(false);
 
-  function openSection(id) {
+  function openSection(id, group) {
     setSectionsOpen(false);
-    if (feedPath) window.history.pushState(null, '', `${feedPath}?section=${id}`);
-    else router.push(`/?section=${id}`);
+    const qs = new URLSearchParams({ section: id });
+    if (group) qs.set('group', group);
+    if (feedPath) window.history.pushState(null, '', `${feedPath}?${qs}`);
+    else router.push(`/?${qs}`);
   }
 
   const Item = ({ href, icon: Icon, label, active, onClick, badge = 0 }) => {
@@ -115,30 +116,7 @@ export default function BottomNav({ onPost, feedPath = null }) {
         </div>
       </nav>
 
-      <Modal open={sectionsOpen} onClose={() => setSectionsOpen(false)} size="md">
-        <div className="p-5">
-          <h3 className="text-xl font-extrabold text-ink-900">Разделы</h3>
-          <div className="mt-4 grid grid-cols-3 gap-2">
-            {FEED_SECTIONS.map((s) => {
-              const Icon = s.icon;
-              return (
-                <button
-                  key={s.id}
-                  onClick={() => openSection(s.id)}
-                  className="flex flex-col items-center gap-1.5 rounded-2xl p-2 hover:bg-slate-50"
-                >
-                  <span className={`grid place-items-center w-14 h-14 rounded-2xl ${s.tile}`}>
-                    <Icon className="w-6 h-6" />
-                  </span>
-                  <span className="text-[12px] font-semibold text-ink-800 leading-tight text-center">
-                    {s.name}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </Modal>
+      <CatalogSheet open={sectionsOpen} onClose={() => setSectionsOpen(false)} onPick={openSection} />
     </>
   );
 }

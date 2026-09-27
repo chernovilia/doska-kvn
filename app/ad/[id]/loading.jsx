@@ -18,7 +18,7 @@ export default function AdLoading() {
         <div className="max-w-5xl mx-auto px-4 md:px-6 pt-4 pb-3 flex items-center gap-3">
           <button
             onClick={() => router.back()}
-            className="w-10 h-10 grid place-items-center rounded-full bg-white ring-1 ring-black/5 hover:bg-brand-50 shadow-card"
+            className="btn-outline w-10 h-10 shrink-0"
             aria-label="Назад"
           >
             <ArrowLeft className="w-4.5 h-4.5 text-ink-800" />

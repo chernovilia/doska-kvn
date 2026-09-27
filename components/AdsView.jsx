@@ -6,6 +6,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import Header from '@/components/Header';
 import HeroBanner from '@/components/HeroBanner';
 import CategoryStrip from '@/components/CategoryStrip';
+import CatalogSheet from '@/components/CatalogSheet';
 import AdCard from '@/components/AdCard';
 import AdCardSkeleton from '@/components/AdCardSkeleton';
 import Modal from '@/components/Modal';
@@ -13,12 +14,11 @@ import PostAdModal from '@/components/PostAdModal';
 import PricingModal from '@/components/PricingModal';
 import Footer from '@/components/Footer';
 import BottomNav from '@/components/BottomNav';
-import { ArrowUpDown, ChevronDown, MapPin, SlidersHorizontal, Sparkles, X } from 'lucide-react';
+import { ChevronDown, ListFilter, MapPin, Sparkles, X } from 'lucide-react';
 import {
   DEFAULT_REGION_ID,
   FREE_SECTION,
   getAds,
-  getCategoryGroups,
   getSection,
   resolvePlace
 } from '@/lib/api';
@@ -84,6 +84,7 @@ function Feed({ place, params }) {
   const [postOpen, setPostOpen] = useState(false);
   const [pricingOpen, setPricingOpen] = useState(false);
   const [priceOpen, setPriceOpen] = useState(false);
+  const [catalogOpen, setCatalogOpen] = useState(false);
 
   const resolved = resolvePlace(place) || resolvePlace(DEFAULT_REGION_ID);
   const isCity = resolved?.kind === 'city';
@@ -153,13 +154,11 @@ function Feed({ place, params }) {
   }
 
   const sectionInfo = getSection(section);
-  const groups = section && section !== FREE_SECTION.id ? getCategoryGroups(section) : [];
   const hasPrice = priceMin != null || priceMax != null;
   const hasFilters = !!(section || q || hasPrice || sort !== 'top');
-  const placeLabel = resolved.kind === 'region' ? resolved.region.name : resolved.city.name;
+  const sortName = SORTS.find((s) => s.id === sort)?.name;
 
   const title = q ? `«${q}»` : sectionInfo ? sectionInfo.name : sort === 'top' ? 'Рекомендуем' : 'Все объявления';
-  const eyebrow = q ? (sectionInfo ? `Поиск · ${sectionInfo.name}` : 'Поиск') : placeLabel;
 
   return (
     <div className="min-h-screen pb-24 md:pb-0">
@@ -171,12 +170,15 @@ function Feed({ place, params }) {
         onSearchSelect={onSearchSelect}
       />
 
-      <main className="max-w-6xl mx-auto px-4 md:px-6 pt-3 pb-4 md:py-6 space-y-4 md:space-y-6">
-        <CategoryStrip
-          value={section}
-          onChange={(id) => setFilters({ section: id, group: null })}
-        />
+      <CategoryStrip
+        value={section}
+        group={group}
+        onChange={(id) => setFilters({ section: id, group: null })}
+        onGroupChange={(g) => setFilters({ group: g })}
+        onMore={() => setCatalogOpen(true)}
+      />
 
+      <main className="max-w-6xl mx-auto px-4 md:px-6 pt-4 pb-4 md:py-6 space-y-4 md:space-y-6">
         {!hasFilters && (
           <div className="hidden md:block">
             <HeroBanner
@@ -188,56 +190,30 @@ function Feed({ place, params }) {
         )}
 
         <section className="space-y-3">
-          <div className="flex items-end justify-between gap-3 px-0.5">
+          <div className="flex items-baseline justify-between gap-3 px-0.5">
             <div className="min-w-0">
-              <div className="text-[11px] uppercase tracking-wide text-ink-500 font-bold truncate">
-                {eyebrow}
-              </div>
-              <h1 className="text-lg md:text-xl font-extrabold text-ink-900 leading-tight truncate">
-                {title}
-              </h1>
+              {q && <div className="text-[12px] font-semibold text-ink-500">Поиск{sectionInfo ? ` · ${sectionInfo.name}` : ''}</div>}
+              <h1 className="text-2xl font-extrabold text-ink-900 leading-tight truncate">{title}</h1>
             </div>
-            <div className="text-xs text-ink-500 shrink-0 pb-0.5">
-              {loading || !ready
-                ? 'Загружаем…'
-                : loadError
+            <div className="text-[13px] text-ink-500 shrink-0">
+              {loading || !ready || loadError
                 ? ''
                 : `${primary.length} ${pluralRu(primary.length, ['объявление', 'объявления', 'объявлений'])}`}
             </div>
           </div>
 
-          {/* Подгруппы раздела: «Вакансии / Резюме», «Легковые / Мото»… */}
-          {groups.length > 0 && (
-            <div className="-mx-4 md:mx-0 overflow-x-auto no-scrollbar">
-              <div className="flex items-center gap-1.5 px-4 md:px-0 w-max">
-                <Pill active={!group} onClick={() => setFilters({ group: null })}>
-                  Все
-                </Pill>
-                {groups.map((g) => (
-                  <Pill
-                    key={g.name}
-                    active={group === g.name}
-                    onClick={() => setFilters({ group: group === g.name ? null : g.name })}
-                  >
-                    {g.name}
-                  </Pill>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Сортировка, цена, сброс */}
+          {/* Сортировка (иконкой), цена, сброс */}
           <div className="-mx-4 md:mx-0 overflow-x-auto no-scrollbar">
-            <div className="flex items-center gap-1.5 px-4 md:px-0 w-max">
-              <label className="relative inline-flex items-center">
-                <ArrowUpDown className="absolute left-3 w-3.5 h-3.5 text-ink-500 pointer-events-none" />
+            <div className="flex items-center gap-2 px-4 md:px-0 py-1 w-max">
+              {/* Нативный select поверх иконки: на телефоне открывается системный список */}
+              <label className={`pill relative px-3.5 ${sort !== 'top' ? 'pill-on' : ''}`} title={sortName}>
+                <ListFilter className="w-5 h-5" strokeWidth={2} />
+                <ChevronDown className="w-4 h-4" strokeWidth={2.2} />
                 <select
                   value={sort}
                   onChange={(e) => setFilters({ sort: e.target.value })}
-                  className={`appearance-none h-9 pl-8 pr-7 rounded-full text-[13px] font-semibold ring-1 outline-none cursor-pointer ${
-                    sort !== 'top' ? 'bg-brand-50 text-brand-700 ring-brand-300' : 'bg-white text-ink-800 ring-black/10'
-                  }`}
-                  aria-label="Сортировка"
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  aria-label={`Сортировка: ${sortName}`}
                 >
                   {SORTS.map((s) => (
                     <option key={s.id} value={s.id}>
@@ -245,22 +221,21 @@ function Feed({ place, params }) {
                     </option>
                   ))}
                 </select>
-                <ChevronDown className="absolute right-2.5 w-3.5 h-3.5 text-ink-500 pointer-events-none" />
               </label>
 
               {section !== FREE_SECTION.id && (
-                <Pill active={hasPrice} onClick={() => setPriceOpen(true)}>
-                  <SlidersHorizontal className="w-3.5 h-3.5" />
+                <button onClick={() => setPriceOpen(true)} className={`pill ${hasPrice ? 'pill-on' : ''}`}>
                   {hasPrice ? priceLabel(priceMin, priceMax) : 'Цена'}
-                </Pill>
+                  <ChevronDown className="w-4 h-4" strokeWidth={2.2} />
+                </button>
               )}
 
               {hasFilters && (
                 <button
                   onClick={() => window.history.pushState(null, '', pathname)}
-                  className="inline-flex items-center gap-1 h-9 px-3 rounded-full text-[13px] font-semibold text-ink-500 hover:text-ink-800"
+                  className="inline-flex items-center gap-1 h-10 px-2 text-[14px] font-semibold text-ink-500 hover:text-ink-800"
                 >
-                  <X className="w-3.5 h-3.5" />
+                  <X className="w-4 h-4" />
                   Сбросить
                 </button>
               )}
@@ -322,7 +297,7 @@ function Feed({ place, params }) {
                 {hasFilters ? (
                   <button
                     onClick={() => window.history.pushState(null, '', pathname)}
-                    className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-white ring-1 ring-black/10 hover:bg-brand-50 text-ink-800 font-semibold text-sm px-4 py-2"
+                    className="mt-3 btn-outline h-10 px-4 text-sm"
                   >
                     Сбросить фильтры
                   </button>
@@ -363,25 +338,19 @@ function Feed({ place, params }) {
           setFilters({ pmin: min, pmax: max });
         }}
       />
+      <CatalogSheet
+        open={catalogOpen}
+        onClose={() => setCatalogOpen(false)}
+        onPick={(id, g) => {
+          setCatalogOpen(false);
+          setFilters({ section: id, group: g, q: null });
+        }}
+      />
       <PostAdModal open={postOpen} onClose={() => setPostOpen(false)} />
       <PricingModal open={pricingOpen} onClose={() => setPricingOpen(false)} />
 
       <BottomNav onPost={() => setPostOpen(true)} feedPath={pathname} />
     </div>
-  );
-}
-
-function Pill({ active, onClick, children }) {
-  return (
-    <button
-      onClick={onClick}
-      aria-pressed={active}
-      className={`inline-flex items-center gap-1.5 h-9 px-3.5 rounded-full text-[13px] font-semibold ring-1 whitespace-nowrap transition ${
-        active ? 'bg-brand-600 text-white ring-brand-600' : 'bg-white text-ink-800 ring-black/10 hover:bg-brand-50'
-      }`}
-    >
-      {children}
-    </button>
   );
 }
 
@@ -442,7 +411,7 @@ function PriceModal({ open, onClose, min, max, onApply }) {
           <button
             type="button"
             onClick={() => onApply(null, null)}
-            className="rounded-2xl bg-white ring-1 ring-black/10 px-4 py-3 text-sm font-semibold text-ink-700 hover:bg-slate-50"
+            className="btn-outline rounded-2xl px-4 py-3 text-sm"
           >
             Сбросить
           </button>
@@ -471,7 +440,7 @@ function NearbyBlock({ cityName, nearby, onOpen, onExpand, regionName }) {
         </div>
         <button
           onClick={onExpand}
-          className="ml-auto inline-flex items-center gap-1 rounded-full bg-white hover:bg-brand-50 ring-1 ring-black/10 text-xs font-semibold text-ink-800 px-3 py-1.5"
+          className="ml-auto btn-outline h-9 px-3 text-xs"
         >
           <Sparkles className="w-3.5 h-3.5 text-brand-600" />
           Показать все

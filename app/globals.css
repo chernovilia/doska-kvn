@@ -18,6 +18,30 @@ html, body {
 ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 8px; }
 ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
+/* Общие плашки. Выбор (фильтры, варианты в формах): серая .chip, выбранная .chip-on —
+   светлая заливка + рамка цвета бренда. Управление над лентой: белая .pill с тенью.
+   Второстепенная кнопка: .btn-outline — белая с серой рамкой. */
+@layer components {
+  .chip {
+    @apply inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-full border-[1.5px] border-transparent bg-slate-100 text-[14px] font-semibold text-ink-700 whitespace-nowrap transition-colors hover:bg-slate-200;
+  }
+  .chip-on {
+    @apply bg-brand-50 border-brand-400 text-brand-700 hover:bg-brand-50;
+  }
+  .chip-sm {
+    @apply h-8 px-3.5 text-[13px];
+  }
+  .pill {
+    @apply inline-flex items-center justify-center gap-1.5 h-10 px-4 rounded-full bg-white text-[15px] font-semibold text-ink-900 whitespace-nowrap ring-1 ring-black/[0.04] shadow-[0_1px_4px_rgba(15,23,42,0.08)] transition hover:bg-slate-50;
+  }
+  .pill-on {
+    @apply bg-brand-50 text-brand-700 ring-brand-300 hover:bg-brand-50;
+  }
+  .btn-outline {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-full border-2 border-slate-200 bg-white font-bold text-ink-900 transition-colors hover:bg-slate-50;
+  }
+}
+
 /* Хайд-скролл для горизонтальных чипсов */
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }

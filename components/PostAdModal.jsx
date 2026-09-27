@@ -217,11 +217,7 @@ export default function PostAdModal({ open, onClose }) {
                       <button
                         key={c.id}
                         onClick={() => setForm((f) => ({ ...f, city: c.id }))}
-                        className={`rounded-2xl px-2 py-3 text-sm font-semibold ring-1 transition ${
-                          form.city === c.id
-                            ? 'bg-brand-600 text-white ring-brand-600'
-                            : 'bg-white text-ink-800 ring-black/10 hover:bg-brand-50'
-                        }`}
+                        className={`chip h-11 w-full ${form.city === c.id ? 'chip-on' : ''}`}
                       >
                         {c.name}
                       </button>
@@ -238,10 +234,10 @@ export default function PostAdModal({ open, onClose }) {
                         <button
                           key={s.id}
                           onClick={() => setForm((f) => ({ ...f, section: s.id }))}
-                          className={`flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-2.5 rounded-2xl p-2.5 text-left ring-1 transition min-w-0 ${
+                          className={`flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-2.5 rounded-2xl p-2.5 text-left border-[1.5px] transition-colors min-w-0 ${
                             form.section === s.id
-                              ? 'bg-brand-50 ring-brand-300'
-                              : 'bg-white ring-black/10 hover:bg-brand-50'
+                              ? 'bg-brand-50 border-brand-400'
+                              : 'bg-slate-50 border-transparent hover:bg-slate-100'
                           }`}
                         >
                           <span className={`grid place-items-center w-10 h-10 rounded-xl shrink-0 ${s.tile}`}>
@@ -277,7 +273,7 @@ export default function PostAdModal({ open, onClose }) {
                         <button
                           key={g.name}
                           onClick={() => setForm((f) => ({ ...f, group: g.name }))}
-                          className="flex items-center justify-between gap-2 rounded-2xl px-4 py-3 text-left ring-1 ring-black/10 bg-white hover:bg-brand-50 transition"
+                          className="flex items-center justify-between gap-2 rounded-2xl px-4 py-3 text-left bg-slate-50 hover:bg-slate-100 transition-colors"
                         >
                           <div className="min-w-0">
                             <div className="font-semibold text-ink-900">{g.name}</div>
@@ -307,11 +303,7 @@ export default function PostAdModal({ open, onClose }) {
                           <button
                             key={c}
                             onClick={() => setForm((f) => ({ ...f, category: c }))}
-                            className={`rounded-full px-3 py-1.5 text-sm font-semibold ring-1 transition ${
-                              form.category === c
-                                ? 'bg-brand-600 text-white ring-brand-600'
-                                : 'bg-white text-ink-700 ring-black/10 hover:bg-brand-50'
-                            }`}
+                            className={`chip ${form.category === c ? 'chip-on' : ''}`}
                           >
                             {c}
                           </button>
@@ -406,7 +398,7 @@ export default function PostAdModal({ open, onClose }) {
             <button
               onClick={back}
               disabled={step === 0}
-              className="inline-flex items-center gap-1.5 rounded-2xl bg-white ring-1 ring-black/10 px-4 py-3 text-sm font-semibold text-ink-700 disabled:opacity-40"
+              className="btn-outline inline-flex items-center gap-1.5 rounded-2xl px-4 py-3 text-sm font-semibold text-ink-700 disabled:opacity-40"
             >
               <ArrowLeft className="w-4 h-4" />
               Назад
@@ -435,7 +427,7 @@ export default function PostAdModal({ open, onClose }) {
                 onClose?.();
                 setTimeout(reset, 300);
               }}
-              className="rounded-2xl bg-white ring-1 ring-black/10 text-ink-700 hover:bg-slate-50 px-4 py-3 text-sm font-semibold"
+              className="btn-outline rounded-2xl text-ink-700 px-4 py-3 text-sm font-semibold"
             >
               Закрыть
             </button>

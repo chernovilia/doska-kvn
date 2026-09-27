@@ -92,7 +92,7 @@ function Onboarding() {
         >
           <Field label="Тип аккаунта">
             <div className="inline-flex items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 px-3 h-9 rounded-full text-sm font-semibold bg-white shadow-card text-brand-700 ring-1 ring-brand-200">
+              <span className="chip chip-on">
                 <UserIcon className="w-4 h-4" />
                 Личный
               </span>
@@ -231,11 +231,7 @@ function Choice({ active, onClick, children }) {
     <button
       type="button"
       onClick={onClick}
-      className={`inline-flex items-center justify-center gap-1.5 rounded-2xl px-3 py-3 text-sm font-semibold ring-1 transition ${
-        active
-          ? 'bg-brand-600 text-white ring-brand-600'
-          : 'bg-white text-ink-800 ring-black/10 hover:bg-brand-50'
-      }`}
+      className={`chip h-11 w-full ${active ? 'chip-on' : ''}`}
     >
       {children}
     </button>

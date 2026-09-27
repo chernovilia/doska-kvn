@@ -16,25 +16,26 @@ import {
   Ticket
 } from 'lucide-react';
 
-// tile — классы плитки в ленте категорий (фон + цвет иконки), полными строками для Tailwind.
+// short — подпись под плиткой в ленте; tile — классы плитки (фон + цвет иконки), полными строками для Tailwind.
 export const SECTIONS = [
-  { id: 'auto', name: 'Авто', icon: Car, tile: 'bg-amber-100 text-amber-800', hint: 'Машины, мото, запчасти, шины' },
-  { id: 'realty', name: 'Недвижимость', icon: Building2, tile: 'bg-sky-100 text-sky-800', hint: 'Квартиры, дома, гаражи' },
-  { id: 'jobs', name: 'Работа', icon: Briefcase, tile: 'bg-emerald-100 text-emerald-800', hint: 'Вакансии и резюме' },
-  { id: 'services', name: 'Услуги', icon: Wrench, tile: 'bg-orange-100 text-orange-800', hint: 'Мастера и исполнители' },
-  { id: 'electronics', name: 'Электроника', icon: Smartphone, tile: 'bg-violet-100 text-violet-800', hint: 'Телефоны, ноутбуки, техника' },
-  { id: 'home', name: 'Дом и дача', icon: Sofa, tile: 'bg-lime-100 text-lime-800', hint: 'Мебель, ремонт, сад' },
-  { id: 'clothes', name: 'Одежда и обувь', icon: Shirt, tile: 'bg-pink-100 text-pink-800', hint: 'Женская, мужская, обувь' },
-  { id: 'kids', name: 'Детское', icon: Baby, tile: 'bg-yellow-100 text-yellow-800', hint: 'Коляски, игрушки, одежда' },
-  { id: 'pets', name: 'Животные', icon: PawPrint, tile: 'bg-teal-100 text-teal-800', hint: 'Кошки, собаки, товары' },
-  { id: 'hobby', name: 'Хобби и спорт', icon: Bike, tile: 'bg-indigo-100 text-indigo-800', hint: 'Спорт, туризм, книги' },
-  { id: 'events', name: 'Афиша', icon: Ticket, tile: 'bg-rose-100 text-rose-800', hint: 'Куда сходить в КВН' }
+  { id: 'auto', short: 'Авто', name: 'Авто', icon: Car, tile: 'bg-amber-100 text-amber-800', hint: 'Машины, мото, запчасти, шины' },
+  { id: 'realty', short: 'Недвижка', name: 'Недвижимость', icon: Building2, tile: 'bg-sky-100 text-sky-800', hint: 'Квартиры, дома, гаражи' },
+  { id: 'jobs', short: 'Работа', name: 'Работа', icon: Briefcase, tile: 'bg-emerald-100 text-emerald-800', hint: 'Вакансии и резюме' },
+  { id: 'services', short: 'Услуги', name: 'Услуги', icon: Wrench, tile: 'bg-orange-100 text-orange-800', hint: 'Мастера и исполнители' },
+  { id: 'electronics', short: 'Техника', name: 'Электроника', icon: Smartphone, tile: 'bg-violet-100 text-violet-800', hint: 'Телефоны, ноутбуки, техника' },
+  { id: 'home', short: 'Дом', name: 'Дом и дача', icon: Sofa, tile: 'bg-lime-100 text-lime-800', hint: 'Мебель, ремонт, сад' },
+  { id: 'clothes', short: 'Одежда', name: 'Одежда и обувь', icon: Shirt, tile: 'bg-pink-100 text-pink-800', hint: 'Женская, мужская, обувь' },
+  { id: 'kids', short: 'Детям', name: 'Детское', icon: Baby, tile: 'bg-yellow-100 text-yellow-800', hint: 'Коляски, игрушки, одежда' },
+  { id: 'pets', short: 'Животные', name: 'Животные', icon: PawPrint, tile: 'bg-teal-100 text-teal-800', hint: 'Кошки, собаки, товары' },
+  { id: 'hobby', short: 'Хобби', name: 'Хобби и спорт', icon: Bike, tile: 'bg-indigo-100 text-indigo-800', hint: 'Спорт, туризм, книги' },
+  { id: 'events', short: 'Афиша', name: 'Афиша', icon: Ticket, tile: 'bg-rose-100 text-rose-800', hint: 'Куда сходить в КВН' }
 ];
 
 // «Отдам даром» — не раздел, а фильтр ленты (цена 0 в разделах с вещами и животными).
 // Подать объявление «в даром» нельзя: его подают в свой раздел с ценой 0.
 export const FREE_SECTION = {
   id: 'free',
+  short: 'Даром',
   name: 'Отдам даром',
   icon: Gift,
   tile: 'bg-red-100 text-red-700',

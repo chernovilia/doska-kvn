@@ -21,12 +21,11 @@ import {
   MessageCircle,
   Phone,
   Share2,
-  Shield,
   Star,
   Trash2
 } from 'lucide-react';
-import { cityName, SECTIONS, deleteAd } from '@/lib/api';
-import { formatPrice, formatRelative, formatEventDate } from '@/lib/format';
+import { cityName, SECTIONS, deleteAd, getAdContact } from '@/lib/api';
+import { formatPrice, formatRelative, formatEventDate, formatMonthYear } from '@/lib/format';
 import { accountTypeLabel, accountTypeEmoji, accountTypeBadgeClass, isBusiness } from '@/lib/accountType';
 import { useAuth } from '@/lib/auth';
 import { shareOrCopy } from '@/lib/share';
@@ -42,7 +41,9 @@ export default function AdDetail({ ad, similar = [] }) {
   const { user, ready } = useAuth();
   const { toast } = useToast();
   const authed = ready && !!user;
-  const [phoneShown, setPhoneShown] = useState(false);
+  const [phone, setPhone] = useState(null);
+  const [phoneLoading, setPhoneLoading] = useState(false);
+  const acceptsPhone = ad.author?.contactMethod === 'phone';
   const [liked, setLiked] = useState(false);
   const [photoIdx, setPhotoIdx] = useState(0);
   const [postOpen, setPostOpen] = useState(false);
@@ -64,9 +65,17 @@ export default function AdDetail({ ad, similar = [] }) {
     router.push(`/messages?chat=new-${ad.id}&ad=${ad.id}`);
   }
 
-  function onShowPhone() {
+  async function onShowPhone() {
     if (!authed) return loginRedirect();
-    setPhoneShown(true);
+    setPhoneLoading(true);
+    try {
+      const res = await getAdContact(ad.id);
+      setPhone(res.phone);
+    } catch (err) {
+      toast(err.message || 'Не удалось получить телефон', { kind: 'error' });
+    } finally {
+      setPhoneLoading(false);
+    }
   }
 
   async function onDelete() {
@@ -248,9 +257,6 @@ export default function AdDetail({ ad, similar = [] }) {
                     <BadgeCheck className="w-3.5 h-3.5" /> Проверен через «Подслушано»
                   </span>
                 )}
-                <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-brand-700 bg-brand-50 ring-1 ring-brand-200 px-2 py-1 rounded-full">
-                  <Shield className="w-3.5 h-3.5" /> Прошло модерацию
-                </span>
                 {isEvent && ad.eventDate && (
                   <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-amber-700 bg-amber-50 ring-1 ring-amber-200 px-2 py-1 rounded-full">
                     <Calendar className="w-3.5 h-3.5" />
@@ -295,12 +301,15 @@ export default function AdDetail({ ad, similar = [] }) {
                       <BadgeCheck className="w-4 h-4 text-brand-600 shrink-0" />
                     )}
                   </div>
-                  <div className="text-[12px] text-ink-500 flex items-center gap-2 mt-0.5">
+                  <div className="text-[12px] text-ink-500 flex items-center gap-1.5 mt-0.5">
                     <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                    {ad.author?.rating?.toFixed?.(1) || '—'}
-                    <span className="text-ink-300">·</span>
-                    {ad.author?.dealsCount ?? 0} сделок
+                    {ad.author?.reviewsCount > 0 ? ad.author.rating.toFixed(1) : 'нет оценок'}
                   </div>
+                  {ad.author?.createdAt && (
+                    <div className="text-[12px] text-ink-500" suppressHydrationWarning>
+                      На Доске с {formatMonthYear(ad.author.createdAt)}
+                    </div>
+                  )}
                 </div>
                 {authorTypeIsBiz && ad.author?.businessProfile?.slug && (
                   <Link
@@ -331,7 +340,7 @@ export default function AdDetail({ ad, similar = [] }) {
               </div>
             ) : (
             <div className="rounded-2xl bg-white ring-1 ring-black/5 shadow-card p-4 space-y-2">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div className={`grid grid-cols-1 gap-2 ${acceptsPhone ? 'sm:grid-cols-2' : ''}`}>
                 <button
                   onClick={onWrite}
                   className="inline-flex items-center justify-center gap-2 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-semibold px-4 py-3"
@@ -339,27 +348,32 @@ export default function AdDetail({ ad, similar = [] }) {
                   <MessageCircle className="w-4 h-4" />
                   Написать
                 </button>
-                <button
-                  onClick={onShowPhone}
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white ring-1 ring-black/10 hover:bg-brand-50 font-semibold px-4 py-3 text-ink-900"
-                >
-                  {phoneShown && authed ? (
-                    <>
+                {acceptsPhone &&
+                  (phone ? (
+                    <a
+                      href={`tel:${phone.replace(/[^\d+]/g, '')}`}
+                      className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white ring-1 ring-brand-300 hover:bg-brand-50 font-semibold px-4 py-3 text-ink-900"
+                    >
                       <Phone className="w-4 h-4 text-brand-600" />
-                      {ad.phone || '+7 (___) ___-__-__'}
-                    </>
+                      {phone}
+                    </a>
                   ) : (
-                    <>
+                    <button
+                      onClick={onShowPhone}
+                      disabled={phoneLoading}
+                      className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white ring-1 ring-black/10 hover:bg-brand-50 font-semibold px-4 py-3 text-ink-900 disabled:opacity-60"
+                    >
                       {authed ? <Phone className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
-                      {authed ? 'Показать телефон' : 'Войти для звонка'}
-                    </>
-                  )}
-                </button>
+                      {phoneLoading ? 'Загружаем…' : authed ? 'Показать телефон' : 'Войти, чтобы позвонить'}
+                    </button>
+                  ))}
               </div>
 
-              {!authed && ready && (
+              {ready && (!acceptsPhone || !authed) && (
                 <div className="text-[11px] text-ink-500">
-                  Написать и увидеть телефон можно после входа. Защищает от спама и мошенников.
+                  {acceptsPhone
+                    ? 'Телефон и сообщения доступны после входа — это защищает продавцов от спама.'
+                    : 'Продавец отвечает только в сообщениях на сайте.'}
                 </div>
               )}
 
@@ -392,7 +406,7 @@ export default function AdDetail({ ad, similar = [] }) {
             </div>
 
             <p className="text-[11px] text-ink-500 px-1">
-              Мы никогда не берём предоплату без встречи. Соблюдайте правила безопасных сделок.
+              Не вносите предоплату до встречи с продавцом — так чаще всего действуют мошенники.
             </p>
           </div>
         </div>

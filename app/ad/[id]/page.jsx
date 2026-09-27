@@ -10,7 +10,7 @@ export async function generateMetadata({ params }) {
 
   if (!ad) {
     return {
-      title: 'Объявление не найдено — Доска/КВН',
+      title: 'Объявление не найдено',
       description: 'Такого объявления нет или оно было удалено.'
     };
   }
@@ -26,7 +26,7 @@ export async function generateMetadata({ params }) {
   const image = ad.image || ad.gallery?.[0];
 
   return {
-    title: `${title} — Доска/КВН`,
+    title,
     description,
     openGraph: {
       title,

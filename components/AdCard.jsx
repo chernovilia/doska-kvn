@@ -154,13 +154,11 @@ export default function AdCard({ ad, onOpen, showShare = false, onDelete }) {
 
         {/* Мета — прижата к низу, всегда одна строка */}
         <div className="mt-auto flex items-center gap-1.5">
-          {ad.verified ? (
+          {ad.verified && (
             <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700 ring-1 ring-emerald-200 md:text-[11px]">
               <BadgeCheck className="h-3 w-3" />
               Проверен
             </span>
-          ) : (
-            <span className="text-[10px] text-ink-300">·</span>
           )}
           <span
             className="ml-auto inline-flex items-center gap-0.5 whitespace-nowrap text-[10px] text-ink-500 md:text-[11px]"

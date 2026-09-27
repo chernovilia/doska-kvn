@@ -37,6 +37,8 @@ export default function AdsView({ place = DEFAULT_REGION_ID }) {
   const [nearby, setNearby] = useState([]);
   const [counts, setCounts] = useState({});
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   const [postOpen, setPostOpen] = useState(false);
   const [pricingOpen, setPricingOpen] = useState(false);
@@ -48,6 +50,7 @@ export default function AdsView({ place = DEFAULT_REGION_ID }) {
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
+    setLoadError(false);
     getAds({ place, section, chip, includeNearby: isCity })
       .then((r) => {
         if (cancelled) return;
@@ -59,13 +62,19 @@ export default function AdsView({ place = DEFAULT_REGION_ID }) {
           setNearby([]);
         }
       })
+      .catch(() => {
+        if (cancelled) return;
+        setPrimary([]);
+        setNearby([]);
+        setLoadError(true);
+      })
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
     return () => {
       cancelled = true;
     };
-  }, [place, section, chip, isCity]);
+  }, [place, section, chip, isCity, reloadKey]);
 
   // Счётчики разделов зависят от «места».
   useEffect(() => {
@@ -126,6 +135,8 @@ export default function AdsView({ place = DEFAULT_REGION_ID }) {
               <div className="text-base md:text-lg font-extrabold text-ink-900 leading-tight">
                 {loading ? (
                   <span className="text-ink-500">Загружаем объявления…</span>
+                ) : loadError ? (
+                  <span className="text-ink-500">Объявления не загрузились</span>
                 ) : (
                   <>
                     Найдено {primary.length} объявлен{plural(primary.length)}
@@ -180,7 +191,19 @@ export default function AdsView({ place = DEFAULT_REGION_ID }) {
                     </motion.div>
                   ))}
             </AnimatePresence>
-            {!loading && primary.length === 0 && (
+            {!loading && loadError && (
+              <div className="col-span-full rounded-2xl bg-white ring-1 ring-black/5 p-8 text-center">
+                <div className="font-extrabold text-ink-900">Не удалось загрузить объявления</div>
+                <div className="text-sm text-ink-500">Проверьте интернет и попробуйте ещё раз.</div>
+                <button
+                  onClick={() => setReloadKey((k) => k + 1)}
+                  className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-brand-600 hover:bg-brand-700 text-white font-semibold text-sm px-4 py-2"
+                >
+                  Повторить
+                </button>
+              </div>
+            )}
+            {!loading && !loadError && primary.length === 0 && (
               <div className="col-span-full rounded-2xl bg-white ring-1 ring-black/5 p-8 text-center">
                 <div className="text-2xl">🤷‍♂️</div>
                 <div className="mt-2 font-extrabold text-ink-900">Пока пусто</div>

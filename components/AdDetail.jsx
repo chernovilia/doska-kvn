@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   ArrowLeft,
@@ -24,7 +24,7 @@ import {
   Star,
   Trash2
 } from 'lucide-react';
-import { cityName, SECTIONS, deleteAd, getAdContact, openConversation } from '@/lib/api';
+import { cityName, SECTIONS, deleteAd, getAdContact, openConversation, getSimilarAds } from '@/lib/api';
 import { formatPrice, formatRelative, formatEventDate, formatMonthYear } from '@/lib/format';
 import { accountTypeLabel, accountTypeEmoji, accountTypeBadgeClass, isBusiness } from '@/lib/accountType';
 import { useAuth } from '@/lib/auth';
@@ -36,7 +36,7 @@ import Footer from './Footer';
 import PostAdModal from './PostAdModal';
 import BumpButton from './BumpButton';
 
-export default function AdDetail({ ad, similar = [] }) {
+export default function AdDetail({ ad }) {
   const router = useRouter();
   const { user, ready } = useAuth();
   const { toast } = useToast();
@@ -49,6 +49,18 @@ export default function AdDetail({ ad, similar = [] }) {
   const [postOpen, setPostOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const isOwner = authed && ad.authorId === user.id;
+
+  // Похожие — в браузере: на сервере они только задерживали открытие страницы.
+  const [similar, setSimilar] = useState([]);
+  useEffect(() => {
+    let cancelled = false;
+    getSimilarAds(ad, 4)
+      .then((items) => !cancelled && setSimilar(items))
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [ad]);
 
   const gallery = ad.gallery && ad.gallery.length ? ad.gallery : ad.image ? [ad.image] : [];
   const isEvent = ad.section === 'events';

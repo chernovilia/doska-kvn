@@ -7,7 +7,8 @@ import { formatPrice, formatRelative, formatEventDate } from '@/lib/format';
 import { accountTypeLabel, accountTypeEmoji, accountTypeBadgeClass, isBusiness } from '@/lib/accountType';
 import { shareOrCopy } from '@/lib/share';
 import { useToast } from './Toast';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 // Единый стиль карточки: одинаковые внешние/внутренние отступы,
 // одинаковая высота обложки (aspect-[4/3]), тело — flex-column с ровными gap.
@@ -21,6 +22,26 @@ import { useState } from 'react';
  */
 export default function AdCard({ ad, onOpen, showShare = false, onDelete }) {
   const [liked, setLiked] = useState(false);
+  const router = useRouter();
+  const cardRef = useRef(null);
+
+  // Карточка показалась на экране — заранее грузим оболочку страницы объявления,
+  // чтобы по нажатию сразу открылся экран загрузки (app/ad/[id]/loading.jsx).
+  useEffect(() => {
+    const el = cardRef.current;
+    if (!el || !('IntersectionObserver' in window)) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          router.prefetch(`/ad/${ad.id}`);
+          io.disconnect();
+        }
+      },
+      { rootMargin: '200px' }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [ad.id, router]);
   const { toast } = useToast();
   const isEvent = ad.section === 'events';
   // Тип автора — снапшот на момент публикации (frozen).
@@ -43,6 +64,7 @@ export default function AdCard({ ad, onOpen, showShare = false, onDelete }) {
 
   return (
     <motion.button
+      ref={cardRef}
       layout
       onClick={() => onOpen?.(ad)}
       whileHover={{ y: -3 }}

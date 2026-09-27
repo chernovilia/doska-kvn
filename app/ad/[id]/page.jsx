@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { getAd, getSimilarAds } from '@/lib/api';
+import { getAd } from '@/lib/api';
 import AdDetail from '@/components/AdDetail';
 
 // Server Component: делает SSR-fetch, генерит правильные Open Graph теги
@@ -52,7 +52,5 @@ export default async function AdPage({ params }) {
   const ad = await getAd(params.id).catch(() => null);
   if (!ad) notFound();
 
-  const similar = await getSimilarAds(ad.id, 4).catch(() => []);
-
-  return <AdDetail ad={ad} similar={similar} />;
+  return <AdDetail ad={ad} />;
 }

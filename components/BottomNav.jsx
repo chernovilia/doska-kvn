@@ -4,6 +4,8 @@ import { Home, LayoutGrid, MessageCircle, Plus, User, LogIn } from 'lucide-react
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
+import { useUnreadCount } from '@/lib/chats';
+import UnreadBadge from './UnreadBadge';
 
 // Нижняя навигация. Показывается только на мобильных.
 // Пропсы: onPost — открывает модалку подачи объявления (если залогинен).
@@ -11,11 +13,15 @@ export default function BottomNav({ onPost }) {
   const path = usePathname();
   const router = useRouter();
   const { user, ready } = useAuth();
+  const unread = useUnreadCount(!!user);
 
-  const Item = ({ href, icon: Icon, label, active, onClick }) => {
+  const Item = ({ href, icon: Icon, label, active, onClick, badge = 0 }) => {
     const content = (
       <>
-        <Icon className={`h-5 w-5 ${active ? 'text-brand-700' : 'text-ink-700'}`} />
+        <span className="relative">
+          <Icon className={`h-5 w-5 ${active ? 'text-brand-700' : 'text-ink-700'}`} />
+          {badge > 0 && <UnreadBadge count={badge} />}
+        </span>
         <span>{label}</span>
       </>
     );
@@ -75,6 +81,7 @@ export default function BottomNav({ onPost }) {
           label="Сообщения"
           active={path?.startsWith('/messages')}
           onClick={() => requireAuth('/messages', () => router.push('/messages'))}
+          badge={unread}
         />
 
         {user ? (

@@ -43,6 +43,12 @@ html, body {
   max-height: 85dvh;
 }
 
+/* Экран чата на всю видимую высоту: поле ввода должно оставаться над панелью браузера */
+.chat-h {
+  height: 100vh;
+  height: 100dvh;
+}
+
 /* Мерцающий бейдж TOP */
 @keyframes shine {
   0% { background-position: -200% 0; }

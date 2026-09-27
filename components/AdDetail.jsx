@@ -24,7 +24,7 @@ import {
   Star,
   Trash2
 } from 'lucide-react';
-import { cityName, SECTIONS, deleteAd, getAdContact } from '@/lib/api';
+import { cityName, SECTIONS, deleteAd, getAdContact, openConversation } from '@/lib/api';
 import { formatPrice, formatRelative, formatEventDate, formatMonthYear } from '@/lib/format';
 import { accountTypeLabel, accountTypeEmoji, accountTypeBadgeClass, isBusiness } from '@/lib/accountType';
 import { useAuth } from '@/lib/auth';
@@ -60,9 +60,18 @@ export default function AdDetail({ ad, similar = [] }) {
     router.push(`/login?returnTo=/ad/${ad.id}`);
   }
 
-  function onWrite() {
+  const [opening, setOpening] = useState(false);
+
+  async function onWrite() {
     if (!authed) return loginRedirect();
-    router.push(`/messages?chat=new-${ad.id}&ad=${ad.id}`);
+    setOpening(true);
+    try {
+      const { id } = await openConversation(ad.id);
+      router.push(`/messages?chat=${id}`);
+    } catch (err) {
+      toast(err.message || 'Не удалось открыть переписку', { kind: 'error' });
+      setOpening(false);
+    }
   }
 
   async function onShowPhone() {
@@ -343,10 +352,11 @@ export default function AdDetail({ ad, similar = [] }) {
               <div className={`grid grid-cols-1 gap-2 ${acceptsPhone ? 'sm:grid-cols-2' : ''}`}>
                 <button
                   onClick={onWrite}
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-semibold px-4 py-3"
+                  disabled={opening}
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-semibold px-4 py-3 disabled:opacity-60"
                 >
                   <MessageCircle className="w-4 h-4" />
-                  Написать
+                  {opening ? 'Открываем…' : 'Написать'}
                 </button>
                 {acceptsPhone &&
                   (phone ? (

@@ -6,9 +6,12 @@ import NotificationsButton from './NotificationsButton';
 import Link from 'next/link';
 import { MessageCircle, LogIn } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
+import { useUnreadCount } from '@/lib/chats';
+import UnreadBadge from './UnreadBadge';
 
 export default function Header({ place, onPlaceChange, onSearchSelect }) {
   const { user, ready } = useAuth();
+  const unread = useUnreadCount(!!user);
 
   return (
     <header className="sticky top-0 z-40 hero-gradient border-b border-black/5 backdrop-blur">
@@ -21,10 +24,11 @@ export default function Header({ place, onPlaceChange, onSearchSelect }) {
             {user && (
               <Link
                 href="/messages"
-                className="hidden md:grid w-10 h-10 place-items-center rounded-full bg-white ring-1 ring-black/5 hover:bg-brand-50 shadow-card"
-                aria-label="Сообщения"
+                className="relative hidden md:grid w-10 h-10 place-items-center rounded-full bg-white ring-1 ring-black/5 hover:bg-brand-50 shadow-card"
+                aria-label={unread ? `Сообщения, непрочитанных: ${unread}` : 'Сообщения'}
               >
                 <MessageCircle className="w-4.5 h-4.5 text-ink-800" />
+                {unread > 0 && <UnreadBadge count={unread} />}
               </Link>
             )}
 

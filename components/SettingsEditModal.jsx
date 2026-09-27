@@ -78,7 +78,7 @@ export default function SettingsEditModal({ open, kind, me, onClose }) {
             animate={{ y: 0, scale: 1, opacity: 1 }}
             exit={{ y: 40, scale: 0.98, opacity: 0 }}
             transition={{ type: 'spring', stiffness: 400, damping: 34 }}
-            className="relative w-full max-w-md bg-white rounded-t-3xl md:rounded-3xl shadow-soft overflow-hidden max-h-[92vh] flex flex-col"
+            className="relative w-full max-w-md bg-white rounded-t-3xl md:rounded-3xl shadow-soft overflow-hidden sheet-max-h flex flex-col"
           >
             <button
               onClick={onClose}
@@ -88,7 +88,7 @@ export default function SettingsEditModal({ open, kind, me, onClose }) {
               <X className="w-5 h-5 text-ink-700" />
             </button>
 
-            <div className="p-5 md:p-6">
+            <div className="p-5 pb-20 md:p-6 overflow-y-auto">
               <div className="text-xs uppercase tracking-wide text-brand-700 font-bold">
                 Настройки
               </div>
@@ -144,7 +144,7 @@ function PersonalFields({ form, setForm }) {
           type="text"
           value={form.name}
           onChange={(e) => setForm((f) => ({ ...f, name: e.target.value.slice(0, 80) }))}
-          className="w-full rounded-2xl bg-white ring-1 ring-black/10 focus:ring-brand-400 outline-none px-4 py-3 text-sm"
+          className="w-full rounded-2xl bg-white ring-1 ring-black/10 focus:ring-brand-400 outline-none px-4 py-3 text-base"
           autoFocus
         />
       </div>
@@ -156,7 +156,7 @@ function PersonalFields({ form, setForm }) {
           value={form.bio}
           onChange={(e) => setForm((f) => ({ ...f, bio: e.target.value.slice(0, 200) }))}
           rows={3}
-          className="w-full rounded-2xl bg-white ring-1 ring-black/10 focus:ring-brand-400 outline-none px-4 py-3 text-sm resize-none"
+          className="w-full rounded-2xl bg-white ring-1 ring-black/10 focus:ring-brand-400 outline-none px-4 py-3 text-base resize-none"
         />
         <div className="text-[11px] text-ink-500 mt-1 text-right">{form.bio.length}/200</div>
       </div>
@@ -208,7 +208,7 @@ function PhoneFields({ form, setForm }) {
           placeholder="+7 (999) 123-45-67"
           inputMode="tel"
           autoComplete="tel"
-          className="w-full rounded-2xl bg-white ring-1 ring-black/10 focus:ring-brand-400 outline-none px-4 py-3 text-sm"
+          className="w-full rounded-2xl bg-white ring-1 ring-black/10 focus:ring-brand-400 outline-none px-4 py-3 text-base"
         />
       </div>
     </>

@@ -52,7 +52,7 @@ export default function SearchBar({ onSelect }) {
           onFocus={() => setFocused(true)}
           onBlur={() => setTimeout(() => setFocused(false), 120)}
           placeholder="Найти в Кулебаках, Выксе, Навашино…"
-          className="w-full bg-transparent outline-none text-ink-900 placeholder:text-ink-500 text-sm md:text-base"
+          className="w-full bg-transparent outline-none text-ink-900 placeholder:text-ink-500 text-base"
         />
         {q && (
           <button

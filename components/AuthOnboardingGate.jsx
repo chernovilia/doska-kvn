@@ -1,15 +1,22 @@
 'use client';
 
-/**
- * Показывает OnboardingModal поверх любой страницы, если юзер залогинен,
- * но ещё не прошёл онбординг. Вешается один раз в app/layout.jsx.
- */
-
+import { useEffect } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
-import OnboardingModal from './OnboardingModal';
 
+// /login пропускаем: страница входа сама уводит на returnTo, а гейт сработает уже там.
+const ALLOWED = ['/onboarding', '/login', '/terms', '/privacy'];
+
+// Пока юзер не прошёл онбординг, с любой страницы уводим на /onboarding и потом возвращаем.
 export default function AuthOnboardingGate() {
   const { user, ready } = useAuth();
-  if (!ready || !user || user.onboardedAt) return null;
-  return <OnboardingModal me={user} />;
+  const pathname = usePathname();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!ready || !user || user.onboardedAt || ALLOWED.includes(pathname)) return;
+    router.replace(`/onboarding?returnTo=${encodeURIComponent(pathname)}`);
+  }, [ready, user, pathname, router]);
+
+  return null;
 }

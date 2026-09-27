@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Mail, ShieldCheck, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
+import { safeReturnTo } from '@/lib/site';
 
 export default function LoginPage() {
   return (
@@ -18,7 +19,7 @@ export default function LoginPage() {
 function LoginContent() {
   const router = useRouter();
   const params = useSearchParams();
-  const returnTo = params.get('returnTo') || '/';
+  const returnTo = safeReturnTo(params.get('returnTo'));
   const { requestCode, verifyCode } = useAuth();
 
   const [step, setStep] = useState('email'); // 'email' | 'code' | 'done'
@@ -137,7 +138,7 @@ function LoginContent() {
         </motion.div>
 
         <div className="mt-4 text-center text-[12px] text-ink-500">
-          Нажимая «Продолжить», вы соглашаетесь с{' '}
+          Входя на сайт, вы соглашаетесь с{' '}
           <Link href="/terms" className="underline hover:text-ink-800">
             условиями
           </Link>{' '}
@@ -183,7 +184,7 @@ function EmailStep({ email, setEmail, onSubmit, busy, error }) {
             autoFocus
             autoComplete="email"
             inputMode="email"
-            className="w-full rounded-2xl bg-white ring-1 ring-black/10 focus:ring-brand-400 outline-none pl-9 pr-4 py-3 text-sm"
+            className="w-full rounded-2xl bg-white ring-1 ring-black/10 focus:ring-brand-400 outline-none pl-9 pr-4 py-3 text-base"
           />
         </div>
       </label>

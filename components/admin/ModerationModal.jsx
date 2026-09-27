@@ -95,7 +95,7 @@ export default function ModerationModal({ open, adId, onClose, onChanged }) {
             animate={{ y: 0, scale: 1, opacity: 1 }}
             exit={{ y: 40, scale: 0.98, opacity: 0 }}
             transition={{ type: 'spring', stiffness: 400, damping: 34 }}
-            className="relative w-full max-w-4xl bg-white rounded-t-3xl md:rounded-3xl shadow-soft overflow-hidden max-h-[92vh] flex flex-col"
+            className="relative w-full max-w-4xl bg-white rounded-t-3xl md:rounded-3xl shadow-soft overflow-hidden sheet-max-h flex flex-col"
           >
             <button
               onClick={onClose}

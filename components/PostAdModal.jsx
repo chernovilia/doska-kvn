@@ -1,7 +1,7 @@
 'use client';
 
 import { AnimatePresence, motion } from 'framer-motion';
-import { CITIES, SECTIONS, getCategoryGroups, createAd, uploadAdPhoto } from '@/lib/api';
+import { CITIES, REGIONS, SECTIONS, getCategoryGroups, createAd, uploadAdPhoto } from '@/lib/api';
 import { CheckCircle2, Camera, Sparkles, ArrowLeft, ArrowRight, Download, ChevronRight, AlertCircle, X, ImagePlus } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -9,6 +9,10 @@ import Modal from './Modal';
 import { useAuth } from '@/lib/auth';
 
 const STEPS = ['Город', 'Раздел', 'Категория', 'Описание', 'Фото', 'Проверка'];
+
+// Публикуем только в запущенные регионы.
+const LAUNCHED = REGIONS.filter((r) => r.launched).map((r) => r.id);
+const POST_CITIES = CITIES.filter((c) => LAUNCHED.includes(c.regionId));
 
 function isAvitoLink(text) {
   if (!text) return false;
@@ -193,19 +197,18 @@ export default function PostAdModal({ open, onClose }) {
               ) : step === 0 ? (
                 <div>
                   <div className="text-sm font-semibold text-ink-700 mb-2">Выберите город</div>
-                  <div className="grid grid-cols-2 gap-2">
-                    {CITIES.filter((c) => c.id !== 'all').map((c) => (
+                  <div className="grid grid-cols-3 gap-2">
+                    {POST_CITIES.map((c) => (
                       <button
                         key={c.id}
                         onClick={() => setForm((f) => ({ ...f, city: c.id }))}
-                        className={`rounded-2xl px-4 py-4 text-left ring-1 transition ${
+                        className={`rounded-2xl px-2 py-3 text-sm font-semibold ring-1 transition ${
                           form.city === c.id
-                            ? 'bg-brand-50 ring-brand-300 text-brand-800'
-                            : 'bg-white ring-black/10 hover:bg-brand-50'
+                            ? 'bg-brand-600 text-white ring-brand-600'
+                            : 'bg-white text-ink-800 ring-black/10 hover:bg-brand-50'
                         }`}
                       >
-                        <div className="font-bold">{c.name}</div>
-                        <div className="text-[12px] text-ink-500">Ваш город размещения</div>
+                        {c.name}
                       </button>
                     ))}
                   </div>
@@ -330,7 +333,7 @@ export default function PostAdModal({ open, onClose }) {
                       value={form.title}
                       onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
                       placeholder="Например: Сдам 2-к квартиру в центре Выксы"
-                      className="mt-1 w-full rounded-2xl bg-white ring-1 ring-black/10 focus:ring-brand-400 outline-none px-4 py-3 text-sm"
+                      className="mt-1 w-full rounded-2xl bg-white ring-1 ring-black/10 focus:ring-brand-400 outline-none px-4 py-3 text-base"
                     />
                   </div>
                   <div>
@@ -340,7 +343,7 @@ export default function PostAdModal({ open, onClose }) {
                       onChange={(e) => setForm((f) => ({ ...f, price: e.target.value.replace(/\D/g, '') }))}
                       placeholder="18000"
                       inputMode="numeric"
-                      className="mt-1 w-full rounded-2xl bg-white ring-1 ring-black/10 focus:ring-brand-400 outline-none px-4 py-3 text-sm"
+                      className="mt-1 w-full rounded-2xl bg-white ring-1 ring-black/10 focus:ring-brand-400 outline-none px-4 py-3 text-base"
                     />
                   </div>
                   <div>
@@ -350,7 +353,7 @@ export default function PostAdModal({ open, onClose }) {
                       value={form.description}
                       onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
                       placeholder="Опишите товар или услугу, состояние, условия… Можно вставить ссылку с avito.ru — мы подтянем данные."
-                      className="mt-1 w-full rounded-2xl bg-white ring-1 ring-black/10 focus:ring-brand-400 outline-none px-4 py-3 text-sm"
+                      className="mt-1 w-full rounded-2xl bg-white ring-1 ring-black/10 focus:ring-brand-400 outline-none px-4 py-3 text-base"
                     />
                   </div>
                 </div>

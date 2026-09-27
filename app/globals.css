@@ -36,6 +36,13 @@ html, body {
   margin: 0 1px;
 }
 
+/* Высота выезжающих окон. dvh — видимая часть экрана (без панелей браузера),
+   vh — фолбэк для браузеров без поддержки dvh. */
+.sheet-max-h {
+  max-height: 85vh;
+  max-height: 85dvh;
+}
+
 /* Мерцающий бейдж TOP */
 @keyframes shine {
   0% { background-position: -200% 0; }

@@ -13,7 +13,10 @@ import {
   X, Check, XCircle, Trash2, User as UserIcon, Mail, Phone,
   MapPin, Calendar, ShieldCheck, AlertCircle, ExternalLink
 } from 'lucide-react';
-import { adminGetAd, adminSetAdStatus, adminDeleteAd } from '@/lib/api';
+import { adminGetAd, adminSetAdStatus, adminDeleteAd, cityName, getSection } from '@/lib/api';
+import { formatPrice } from '@/lib/format';
+import { describeAttributes } from '@/data/attributes';
+import { ReasonForm, StatusBadge } from './ui';
 
 export default function ModerationModal({ open, adId, onClose, onChanged }) {
   const [ad, setAd] = useState(null);
@@ -21,6 +24,7 @@ export default function ModerationModal({ open, adId, onClose, onChanged }) {
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
   const [activePhoto, setActivePhoto] = useState(0);
+  const [asking, setAsking] = useState(null); // 'reject' | 'delete' — открыта форма причины
 
   useEffect(() => {
     if (!open || !adId) return;
@@ -28,6 +32,7 @@ export default function ModerationModal({ open, adId, onClose, onChanged }) {
     setLoading(true);
     setError(null);
     setActivePhoto(0);
+    setAsking(null);
     adminGetAd(adId)
       .then((data) => { if (!cancelled) setAd(data); })
       .catch((err) => { if (!cancelled) setError(err.message); })
@@ -47,12 +52,12 @@ export default function ModerationModal({ open, adId, onClose, onChanged }) {
     };
   }, [open, onClose]);
 
-  async function setStatus(status) {
+  async function setStatus(status, note) {
     if (!ad) return;
     setBusy(true);
     setError(null);
     try {
-      await adminSetAdStatus(ad.id, status);
+      await adminSetAdStatus(ad.id, status, note);
       onChanged?.();
       onClose?.();
     } catch (err) {
@@ -62,12 +67,12 @@ export default function ModerationModal({ open, adId, onClose, onChanged }) {
     }
   }
 
-  async function remove() {
-    if (!ad || !window.confirm(`Удалить объявление «${ad.title}»?`)) return;
+  async function remove(reason) {
+    if (!ad) return;
     setBusy(true);
     setError(null);
     try {
-      await adminDeleteAd(ad.id);
+      await adminDeleteAd(ad.id, reason);
       onChanged?.();
       onClose?.();
     } catch (err) {
@@ -154,18 +159,26 @@ export default function ModerationModal({ open, adId, onClose, onChanged }) {
 
                   {/* Данные */}
                   <div className="space-y-4">
-                    <div>
+                    <div className="flex flex-wrap items-center gap-2">
                       <StatusBadge status={ad.status} />
+                      <span className="text-[12px] text-ink-500">
+                        {ad.viewsCount ?? 0} просм. · {ad.favoritesCount ?? 0} в избр. · {ad.reportsCount ?? 0} жалоб
+                      </span>
                     </div>
+                    {ad.status === 'rejected' && ad.moderationNotes && (
+                      <div className="rounded-xl bg-rose-50 text-rose-800 text-[13px] px-3 py-2">
+                        Причина отклонения: {ad.moderationNotes}
+                      </div>
+                    )}
 
                     <div>
                       <div className="text-[11px] uppercase tracking-wide text-ink-500 font-bold">
                         Раздел / категория
                       </div>
                       <div className="text-sm text-ink-900 mt-1">
-                        {ad.section}
-                        {ad.categoryGroup && <> → {ad.categoryGroup}</>}
-                        {ad.category && <> → {ad.category}</>}
+                        {getSection(ad.section)?.name || `${ad.section} (старый раздел)`}
+                        {ad.categoryGroup && <> › {ad.categoryGroup}</>}
+                        {ad.category && <> › {ad.category}</>}
                       </div>
                     </div>
 
@@ -173,14 +186,7 @@ export default function ModerationModal({ open, adId, onClose, onChanged }) {
                       <div className="text-[11px] uppercase tracking-wide text-ink-500 font-bold">
                         Цена
                       </div>
-                      <div className="text-lg font-extrabold text-ink-900 mt-1">
-                        {ad.price ? `${ad.price.toLocaleString('ru-RU')} ₽` : 'даром'}
-                        {ad.priceSuffix && (
-                          <span className="text-sm text-ink-500 font-normal ml-1">
-                            {ad.priceSuffix}
-                          </span>
-                        )}
-                      </div>
+                      <div className="text-lg font-extrabold text-ink-900 mt-1">{formatPrice(ad)}</div>
                     </div>
 
                     <div>
@@ -189,9 +195,20 @@ export default function ModerationModal({ open, adId, onClose, onChanged }) {
                       </div>
                       <div className="text-sm text-ink-900 mt-1 flex items-center gap-1">
                         <MapPin className="w-3.5 h-3.5 text-brand-600" />
-                        {ad.address || ad.cityId}
+                        {ad.address || cityName(ad.cityId)}
                       </div>
                     </div>
+
+                    {describeAttributes(ad).length > 0 && (
+                      <div>
+                        <div className="text-[11px] uppercase tracking-wide text-ink-500 font-bold">
+                          Характеристики
+                        </div>
+                        <div className="text-sm text-ink-900 mt-1">
+                          {describeAttributes(ad).map((r) => `${r.label}: ${r.value}`).join(' · ')}
+                        </div>
+                      </div>
+                    )}
 
                     {ad.description && (
                       <div>
@@ -274,21 +291,33 @@ export default function ModerationModal({ open, adId, onClose, onChanged }) {
             </div>
 
             {/* Действия */}
-            {ad && (
+            {ad && asking && (
+              <div className="p-4 border-t border-black/5 bg-white">
+                <ReasonForm
+                  title={asking === 'reject' ? 'Почему отклоняем?' : 'Почему удаляем? Вернуть будет нельзя'}
+                  confirmLabel={asking === 'reject' ? 'Отклонить' : 'Удалить навсегда'}
+                  tone={asking === 'reject' ? 'amber' : 'rose'}
+                  busy={busy}
+                  onCancel={() => setAsking(null)}
+                  onConfirm={(reason) => (asking === 'reject' ? setStatus('rejected', reason) : remove(reason))}
+                />
+              </div>
+            )}
+            {ad && !asking && (
               <div className="p-4 border-t border-black/5 bg-white flex flex-wrap items-center gap-2">
                 <button
-                  onClick={remove}
+                  onClick={() => setAsking('delete')}
                   disabled={busy}
                   className="inline-flex items-center gap-1.5 rounded-xl bg-white ring-1 ring-rose-200 text-rose-700 hover:bg-rose-50 px-3 py-2 text-sm font-semibold disabled:opacity-50"
                 >
                   <Trash2 className="w-4 h-4" />
-                  Удалить навсегда
+                  Удалить
                 </button>
 
                 <div className="ml-auto flex items-center gap-2">
                   {ad.status !== 'rejected' && (
                     <button
-                      onClick={() => setStatus('rejected')}
+                      onClick={() => setAsking('reject')}
                       disabled={busy}
                       className="inline-flex items-center gap-1.5 rounded-xl bg-white ring-1 ring-amber-200 text-amber-800 hover:bg-amber-50 px-4 py-2 text-sm font-semibold disabled:opacity-50"
                     >
@@ -327,20 +356,3 @@ function InfoRow({ icon: Icon, label, children }) {
   );
 }
 
-function StatusBadge({ status }) {
-  const map = {
-    approved: 'bg-emerald-100 text-emerald-800',
-    pending: 'bg-amber-100 text-amber-800',
-    rejected: 'bg-rose-100 text-rose-800',
-    archived: 'bg-slate-100 text-slate-700'
-  };
-  return (
-    <span
-      className={`text-[10px] font-bold uppercase px-2 py-1 rounded-full ${
-        map[status] || 'bg-slate-100 text-slate-700'
-      }`}
-    >
-      {status}
-    </span>
-  );
-}

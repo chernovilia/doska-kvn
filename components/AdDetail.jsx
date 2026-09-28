@@ -45,6 +45,7 @@ import BottomNav from './BottomNav';
 import Footer from './Footer';
 import PostAdModal from './PostAdModal';
 import BumpButton from './BumpButton';
+import ReportModal from './ReportModal';
 
 export default function AdDetail({ ad }) {
   const router = useRouter();
@@ -59,6 +60,7 @@ export default function AdDetail({ ad }) {
   const [opening, setOpening] = useState(false);
   const [postOpen, setPostOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
   const [views, setViews] = useState(ad.viewsCount ?? 0);
   const { isFavorite, toggle: toggleFavorite } = useFavorites();
   const liked = isFavorite(ad.id);
@@ -459,7 +461,10 @@ export default function AdDetail({ ad }) {
               <div className="flex items-center gap-3 text-[12px] text-ink-500">
                 {!isOwner && (
                   <>
-                    <button className="inline-flex items-center gap-1 hover:text-ink-800">
+                    <button
+                      onClick={() => (authed ? setReportOpen(true) : loginRedirect())}
+                      className="inline-flex items-center gap-1 hover:text-ink-800"
+                    >
                       <Flag className="w-3.5 h-3.5" />
                       Пожаловаться
                     </button>
@@ -489,6 +494,16 @@ export default function AdDetail({ ad }) {
       <div className="hidden md:block">
         <Footer />
       </div>
+
+      <ReportModal
+        open={reportOpen}
+        onClose={() => setReportOpen(false)}
+        adId={ad.id}
+        onDone={() => {
+          setReportOpen(false);
+          toast('Жалоба отправлена — спасибо');
+        }}
+      />
 
       {showActionBar ? (
         // Закреплённая панель связи на телефоне — вместо нижнего меню, как в приложениях

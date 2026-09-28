@@ -1,31 +1,29 @@
 'use client';
 
 /**
- * /admin — базовая админ-панель.
- * Доступ только у юзеров с me.isAdmin === true (бэк проверяет через ADMIN_EMAILS).
- *
- * MVP: счётчики + просмотр Users / Ads с пагинацией + удаление конкретных
- * записей + красная кнопка «Стереть всех юзеров».
- * Позже добавим: BusinessProfiles, Wallets, модерация Ads (approve/reject),
- * промо, платежи.
+ * /admin — админка. Доступ только у me.isAdmin (бэк проверяет ADMIN_EMAILS / role).
+ * Вкладки: обзор (метрики и рост), объявления (поиск, статусы, модерация), жалобы,
+ * пользователи (поиск, блокировка), отзывы, настройки. Списки — карточками: удобно и с телефона.
  */
 
-import { useEffect, useState } from 'react';
+import { Suspense, useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
-  ArrowLeft,
-  ShieldCheck,
-  Users,
-  ShoppingBag,
-  RefreshCw,
-  Trash2,
   AlertTriangle,
-  ChevronLeft,
-  ChevronRight,
-  Sliders,
-  Zap,
-  Filter
+  ArrowLeft,
+  Ban,
+  Eye,
+  Flag,
+  Heart,
+  MessageCircle,
+  RefreshCw,
+  Search,
+  ShieldCheck,
+  ShoppingBag,
+  Star,
+  Trash2,
+  Users
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import {
@@ -37,22 +35,71 @@ import {
   adminWipeAll,
   adminGetModeration,
   adminSetModeration,
-  adminSetAdStatus
+  adminSetAdStatus,
+  adminBlockUser,
+  adminListReports,
+  adminResolveReport,
+  adminListReviews,
+  adminDeleteReview,
+  cityName,
+  getSection
 } from '@/lib/api';
+import { formatPrice, formatRelative, pluralRu } from '@/lib/format';
 import ModerationModal from '@/components/admin/ModerationModal';
+import { Empty, ErrorBox, ListSkeleton, REPORT_REASONS, ReasonForm, StatusBadge } from '@/components/admin/ui';
+import { Stars } from '@/components/Reviews';
 
-const PAGE_SIZE = 50;
+const PAGE_SIZE = 30;
+
+const TABS = [
+  { id: 'overview', name: 'Обзор' },
+  { id: 'ads', name: 'Объявления' },
+  { id: 'reports', name: 'Жалобы' },
+  { id: 'users', name: 'Пользователи' },
+  { id: 'reviews', name: 'Отзывы' },
+  { id: 'settings', name: 'Настройки' }
+];
 
 export default function AdminPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen" />}>
+      <AdminContent />
+    </Suspense>
+  );
+}
+
+function AdminContent() {
   const router = useRouter();
+  const params = useSearchParams();
   const { user, ready } = useAuth();
-  const [tab, setTab] = useState('overview'); // 'overview' | 'users' | 'ads'
+  const tab = TABS.some((t) => t.id === params.get('tab')) ? params.get('tab') : 'overview';
+  const [stats, setStats] = useState(null);
+  const [statsError, setStatsError] = useState(null);
+  const [modAdId, setModAdId] = useState(null);
+  // Переход из «Пользователи» к объявлениям автора и из «Обзора» в нужный статус.
+  const [adsPreset, setAdsPreset] = useState(null);
+
+  const loadStats = useCallback(() => {
+    adminStats()
+      .then((s) => {
+        setStats(s);
+        setStatsError(null);
+      })
+      .catch((err) => setStatsError(err.message || 'Не удалось загрузить метрики'));
+  }, []);
 
   useEffect(() => {
-    if (ready && !user) {
-      router.push('/login?returnTo=/admin');
-    }
+    if (ready && !user) router.push('/login?returnTo=/admin');
   }, [ready, user, router]);
+
+  useEffect(() => {
+    if (user?.isAdmin) loadStats();
+  }, [user, loadStats]);
+
+  function go(id, preset = null) {
+    setAdsPreset(preset);
+    router.replace(id === 'overview' ? '/admin' : `/admin?tab=${id}`, { scroll: false });
+  }
 
   if (!ready) return <div className="min-h-screen" />;
   if (!user) return null;
@@ -64,17 +111,11 @@ export default function AdminPage() {
           <div className="mx-auto w-14 h-14 grid place-items-center rounded-2xl bg-rose-50 text-rose-600">
             <AlertTriangle className="w-7 h-7" />
           </div>
-          <h1 className="text-xl font-extrabold text-ink-900 mt-3">
-            Нет доступа
-          </h1>
+          <h1 className="text-xl font-extrabold text-ink-900 mt-3">Нет доступа</h1>
           <p className="text-sm text-ink-500 mt-1">
-            У вашего аккаунта нет прав администратора. Если это ошибка —
-            свяжитесь с владельцем сайта.
+            У вашего аккаунта нет прав администратора. Если это ошибка — свяжитесь с владельцем сайта.
           </p>
-          <Link
-            href="/"
-            className="mt-4 inline-flex items-center gap-1.5 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold px-5 py-2.5"
-          >
+          <Link href="/" className="mt-4 btn-outline h-10 px-4 text-sm">
             <ArrowLeft className="w-4 h-4" />
             На главную
           </Link>
@@ -83,178 +124,81 @@ export default function AdminPage() {
     );
   }
 
+  const badges = { ads: stats?.pendingAds, reports: stats?.pendingReports };
+
   return (
-    <div className="min-h-screen">
-      <header className="border-b border-black/5 bg-white">
-        <div className="max-w-6xl mx-auto px-4 md:px-6 py-3 flex items-center gap-3">
-          <Link
-            href="/"
-            className="btn-outline w-9 h-9 shrink-0"
-            aria-label="На главную"
-          >
-            <ArrowLeft className="w-4 h-4 text-ink-800" />
+    <div className="min-h-screen bg-slate-50">
+      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-slate-100">
+        <div className="max-w-6xl mx-auto px-2 md:px-6 h-14 flex items-center gap-1">
+          <Link href="/" className="w-10 h-10 grid place-items-center rounded-full text-ink-800 hover:bg-slate-100" aria-label="На главную">
+            <ArrowLeft className="w-[22px] h-[22px]" />
           </Link>
           <ShieldCheck className="w-5 h-5 text-brand-700" />
-          <div className="font-black tracking-tight text-lg text-ink-900">
-            Админка
-          </div>
-          <div className="ml-auto text-[12px] text-ink-500">
-            {user.email}
-          </div>
+          <div className="font-extrabold text-lg text-ink-900 ml-1">Админка</div>
+          <div className="ml-auto text-[12px] text-ink-500 truncate hidden sm:block">{user.email}</div>
         </div>
-        <div className="max-w-6xl mx-auto px-4 md:px-6 pb-2 flex gap-1">
-          <TabBtn active={tab === 'overview'} onClick={() => setTab('overview')}>
-            Обзор
-          </TabBtn>
-          <TabBtn active={tab === 'users'} onClick={() => setTab('users')}>
-            <Users className="w-4 h-4 inline mr-1 -mt-0.5" />
-            Пользователи
-          </TabBtn>
-          <TabBtn active={tab === 'ads'} onClick={() => setTab('ads')}>
-            <ShoppingBag className="w-4 h-4 inline mr-1 -mt-0.5" />
-            Объявления
-          </TabBtn>
-          <TabBtn active={tab === 'settings'} onClick={() => setTab('settings')}>
-            <Sliders className="w-4 h-4 inline mr-1 -mt-0.5" />
-            Настройки
-          </TabBtn>
+        <div className="max-w-6xl mx-auto overflow-x-auto no-scrollbar">
+          <div className="flex gap-1.5 px-4 md:px-6 pb-2.5 w-max">
+            {TABS.map((t) => (
+              <button key={t.id} onClick={() => go(t.id)} className={`chip chip-sm ${tab === t.id ? 'chip-on' : ''}`}>
+                {t.name}
+                {badges[t.id] > 0 && (
+                  <span className="min-w-[18px] h-[18px] px-1 grid place-items-center rounded-full bg-accent-500 text-white text-[10px] font-bold">
+                    {badges[t.id]}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-4 md:px-6 py-6">
-        {tab === 'overview' && <OverviewTab />}
-        {tab === 'users' && <UsersTab />}
-        {tab === 'ads' && <AdsTab />}
-        {tab === 'settings' && <SettingsTab />}
-      </main>
-    </div>
-  );
-}
-
-function SettingsTab() {
-  const [autoApprove, setAutoApprove] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState(null);
-
-  async function load() {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await adminGetModeration();
-      setAutoApprove(data.autoApprove);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }
-  useEffect(() => { load(); }, []);
-
-  async function toggle() {
-    setSaving(true);
-    setError(null);
-    try {
-      const data = await adminSetModeration(!autoApprove);
-      setAutoApprove(data.autoApprove);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  return (
-    <div className="space-y-4 max-w-2xl">
-      <h2 className="text-lg font-extrabold text-ink-900">Настройки платформы</h2>
-
-      {error && <ErrorRow message={error} />}
-
-      <div className="rounded-2xl bg-white ring-1 ring-black/5 shadow-card p-5">
-        <div className="flex items-start gap-3">
-          <div className={`w-10 h-10 grid place-items-center rounded-xl ${
-            autoApprove ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'
-          }`}>
-            {autoApprove ? <Zap className="w-5 h-5" /> : <Filter className="w-5 h-5" />}
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-sm font-extrabold text-ink-900">
-              Модерация объявлений
-            </div>
-            <div className="text-[12px] text-ink-500 mt-0.5">
-              {loading
-                ? 'Загрузка…'
-                : autoApprove
-                ? 'Автопубликация: новое объявление сразу видно всем.'
-                : 'Ручная модерация: новые объявления получают статус «pending» и не появляются в ленте, пока их не одобрят.'}
-            </div>
-            <div className="mt-3 flex items-center gap-3">
-              <button
-                onClick={toggle}
-                disabled={loading || saving || autoApprove === null}
-                className={`relative w-12 h-6 rounded-full transition ${
-                  autoApprove ? 'bg-emerald-500' : 'bg-slate-300'
-                } disabled:opacity-50`}
-              >
-                <span
-                  className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition ${
-                    autoApprove ? 'left-6' : 'left-0.5'
-                  }`}
-                />
+      <main className="max-w-6xl mx-auto px-4 md:px-6 py-4 md:py-6">
+        {tab === 'overview' &&
+          (statsError && !stats ? (
+            <div className="space-y-3">
+              <ErrorBox message={statsError} />
+              <button onClick={loadStats} className="btn-outline h-10 px-4 text-sm">
+                <RefreshCw className="w-4 h-4" />
+                Повторить
               </button>
-              <div className="text-sm font-semibold text-ink-900">
-                {autoApprove ? 'Автопубликация включена' : 'Требуется одобрение'}
-              </div>
-              {saving && <span className="text-[11px] text-ink-500">сохраняем…</span>}
             </div>
-          </div>
-        </div>
-      </div>
+          ) : (
+            <OverviewTab stats={stats} onReload={loadStats} go={go} />
+          ))}
+        {tab === 'ads' && <AdsTab preset={adsPreset} onOpen={setModAdId} onChanged={loadStats} />}
+        {tab === 'reports' && <ReportsTab onOpen={setModAdId} onChanged={loadStats} />}
+        {tab === 'users' && <UsersTab me={user} onShowAds={(u) => go('ads', { authorId: u.id, authorName: u.name || u.email })} onChanged={loadStats} />}
+        {tab === 'reviews' && <ReviewsTab onChanged={loadStats} />}
+        {tab === 'settings' && <SettingsTab onChanged={loadStats} />}
+      </main>
 
-      <div className="rounded-2xl bg-slate-50 ring-1 ring-black/5 p-4 text-[12px] text-ink-500">
-        <b className="text-ink-800">Следующим этапом</b> добавим ИИ-модерацию —
-        промежуточный режим, где нейросеть быстро проверяет объявление и
-        пропускает без ручной проверки, если всё чисто.
-      </div>
+      <ModerationModal
+        open={!!modAdId}
+        adId={modAdId}
+        onClose={() => setModAdId(null)}
+        onChanged={() => {
+          loadStats();
+          window.dispatchEvent(new Event('admin:changed'));
+        }}
+      />
     </div>
   );
 }
 
-function TabBtn({ active, onClick, children }) {
-  return (
-    <button
-      onClick={onClick}
-      className={`px-3 py-2 rounded-t-xl text-sm font-semibold border-b-2 ${
-        active
-          ? 'border-brand-600 text-brand-700'
-          : 'border-transparent text-ink-500 hover:text-ink-800'
-      }`}
-    >
-      {children}
-    </button>
-  );
+// Списки перезагружаются после действий в модалке модерации.
+function useAdminChanged(fn) {
+  useEffect(() => {
+    window.addEventListener('admin:changed', fn);
+    return () => window.removeEventListener('admin:changed', fn);
+  }, [fn]);
 }
 
-// ── Обзор + опасная зона ────────────────────────────────────────────
+// ── Обзор ──────────────────────────────────────────────────────────
 
-function OverviewTab() {
-  const [stats, setStats] = useState(null);
-  const [loading, setLoading] = useState(true);
+function OverviewTab({ stats, onReload, go }) {
   const [wiping, setWiping] = useState(false);
   const [error, setError] = useState(null);
-
-  async function load() {
-    setLoading(true);
-    setError(null);
-    try {
-      setStats(await adminStats());
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }
-  useEffect(() => { load(); }, []);
 
   async function wipe() {
     const confirmText = 'СТЕРЕТЬ';
@@ -265,9 +209,8 @@ function OverviewTab() {
     setWiping(true);
     setError(null);
     try {
-      const result = await adminWipeAll();
-      alert('Готово! Удалено:\n' + JSON.stringify(result.deleted, null, 2));
-      await load();
+      await adminWipeAll();
+      onReload();
     } catch (err) {
       setError(err.message);
     } finally {
@@ -275,455 +218,690 @@ function OverviewTab() {
     }
   }
 
+  if (!stats) return <ListSkeleton rows={3} />;
+  const maxDaily = Math.max(1, ...stats.daily.map((d) => Math.max(d.users, d.ads)));
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-2">
-        <h2 className="text-lg font-extrabold text-ink-900">Обзор</h2>
-        <button
-          onClick={load}
-          disabled={loading}
-          className="ml-auto inline-flex items-center gap-1 text-sm rounded-xl bg-white ring-1 ring-black/10 px-3 py-1.5 hover:bg-slate-50 disabled:opacity-50"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+    <div className="space-y-4">
+      <div className="flex items-center">
+        <h2 className="text-xl font-extrabold text-ink-900">Обзор</h2>
+        <button onClick={onReload} className="ml-auto btn-outline h-9 px-3 text-sm">
+          <RefreshCw className="w-4 h-4" />
           Обновить
         </button>
       </div>
 
-      {error && <ErrorRow message={error} />}
-
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Stat label="Пользователи" value={stats?.users} icon={Users} />
-        <Stat label="Объявления" value={stats?.ads} icon={ShoppingBag} />
-        <Stat label="Опубликованы" value={stats?.approvedAds} />
-        <Stat label="На модерации" value={stats?.pendingAds} />
-        <Stat label="Фото" value={stats?.adPhotos} />
-        <Stat label="Кошельки" value={stats?.wallets} />
-        <Stat label="Бизнес-профили" value={stats?.businessProfiles} />
-        <Stat label="Refresh-токены" value={stats?.refreshTokens} />
-        <Stat label="Email-коды (активные)" value={stats?.emailCodes} />
-        <Stat label="Подписки" value={stats?.subscriptions} />
-        <Stat label="Платежи" value={stats?.payments} />
-      </div>
-
-      <div className="rounded-2xl bg-rose-50 ring-1 ring-rose-200 p-4">
-        <div className="flex items-start gap-3">
-          <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
-          <div className="flex-1">
-            <div className="text-sm font-extrabold text-rose-900">
-              Опасная зона
-            </div>
-            <div className="text-[12px] text-rose-800 mt-0.5">
-              Полный сброс пользовательских данных. Справочники (Регионы, Города,
-              Тарифы, Настройки) не трогает — их снова насыпет seed при следующем
-              деплое.
-            </div>
-            <button
-              onClick={wipe}
-              disabled={wiping}
-              className="mt-3 inline-flex items-center gap-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-sm font-semibold px-4 py-2 disabled:opacity-50"
-            >
-              <Trash2 className="w-4 h-4" />
-              {wiping ? 'Удаляем…' : 'Стереть всех юзеров и объявления'}
+      {(stats.pendingAds > 0 || stats.pendingReports > 0) && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {stats.pendingAds > 0 && (
+            <button onClick={() => go('ads', { status: 'pending' })} className="rounded-2xl bg-amber-50 ring-1 ring-amber-200 p-3 text-left">
+              <div className="font-bold text-amber-900">
+                Ждут модерации: {stats.pendingAds}
+              </div>
+              <div className="text-[13px] text-amber-800">Открыть очередь →</div>
             </button>
-          </div>
+          )}
+          {stats.pendingReports > 0 && (
+            <button onClick={() => go('reports')} className="rounded-2xl bg-rose-50 ring-1 ring-rose-200 p-3 text-left">
+              <div className="font-bold text-rose-900">Новые жалобы: {stats.pendingReports}</div>
+              <div className="text-[13px] text-rose-800">Разобрать →</div>
+            </button>
+          )}
         </div>
+      )}
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+        <Kpi icon={Users} label="Пользователи" value={stats.users} delta={stats.usersNew7d} hint={`${stats.usersOnboarded} заполнили профиль`} />
+        <Kpi icon={ShoppingBag} label="Опубликовано" value={stats.approvedAds} delta={stats.adsNew7d} hint={`всего ${stats.ads}, откл. ${stats.rejectedAds}`} />
+        <Kpi icon={MessageCircle} label="Переписки" value={stats.conversations} hint={`${stats.messages7d} сообщ. за 7 дней`} />
+        <Kpi icon={Eye} label="Просмотры" value={stats.views} hint="всех объявлений" />
+        <Kpi icon={Heart} label="В избранном" value={stats.favorites} />
+        <Kpi icon={Star} label="Отзывы" value={stats.reviews} />
+        <Kpi icon={Flag} label="Жалобы" value={stats.pendingReports} hint="ждут разбора" />
+        <Kpi icon={Ban} label="Заблокированы" value={stats.blockedUsers} />
       </div>
+
+      <section className="rounded-2xl bg-white ring-1 ring-black/5 shadow-card p-4">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+          <h3 className="font-bold text-ink-900 w-full sm:w-auto sm:mr-auto">Новые за 14 дней</h3>
+          <span className="inline-flex items-center gap-1 text-[12px] text-ink-500">
+            <span className="w-2.5 h-2.5 rounded-sm bg-brand-500" /> пользователи
+          </span>
+          <span className="inline-flex items-center gap-1 text-[12px] text-ink-500">
+            <span className="w-2.5 h-2.5 rounded-sm bg-accent-400" /> объявления
+          </span>
+        </div>
+        <div className="mt-3 h-32 flex items-end gap-1">
+          {stats.daily.map((d) => (
+            <div key={d.day} className="flex-1 h-full flex flex-col justify-end" title={`${d.day}: ${d.users} польз., ${d.ads} объявл.`}>
+              <div className="flex items-end gap-px h-full">
+                <div className="flex-1 rounded-t bg-brand-500" style={{ height: `${(d.users / maxDaily) * 100}%` }} />
+                <div className="flex-1 rounded-t bg-accent-400" style={{ height: `${(d.ads / maxDaily) * 100}%` }} />
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="mt-1 flex justify-between text-[11px] text-ink-500">
+          <span>{stats.daily[0]?.day.slice(5).split('-').reverse().join('.')}</span>
+          <span>сегодня</span>
+        </div>
+      </section>
+
+      {stats.byCity.length > 0 && (
+        <section className="rounded-2xl bg-white ring-1 ring-black/5 shadow-card p-4">
+          <h3 className="font-bold text-ink-900 text-sm">Опубликованные по городам</h3>
+          <div className="mt-2 space-y-1.5">
+            {stats.byCity.map((c) => (
+              <div key={c.cityId} className="flex items-center gap-2 text-sm">
+                <span className="w-28 truncate text-ink-700">{cityName(c.cityId)}</span>
+                <div className="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden">
+                  <div className="h-full bg-brand-500" style={{ width: `${(c.count / stats.byCity[0].count) * 100}%` }} />
+                </div>
+                <span className="w-10 text-right tabular-nums text-ink-900 font-semibold">{c.count}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      <p className="text-[12px] text-ink-500">
+        Техническое: фото {stats.tech.adPhotos}, активных сессий {stats.tech.refreshTokens}, кодов входа {stats.tech.emailCodes}.
+      </p>
+
+      <ErrorBox message={error} />
+      <details className="rounded-2xl bg-rose-50 ring-1 ring-rose-200 p-4">
+        <summary className="text-sm font-bold text-rose-900 cursor-pointer">Опасная зона</summary>
+        <p className="mt-2 text-[13px] text-rose-800">
+          Полный сброс пользовательских данных. Справочники (регионы, города, тарифы, настройки) не трогает.
+        </p>
+        <button
+          onClick={wipe}
+          disabled={wiping}
+          className="mt-3 inline-flex items-center gap-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-sm font-semibold px-4 py-2 disabled:opacity-50"
+        >
+          <Trash2 className="w-4 h-4" />
+          {wiping ? 'Удаляем…' : 'Стереть всех пользователей и объявления'}
+        </button>
+      </details>
     </div>
   );
 }
 
-function Stat({ label, value, icon: Icon }) {
+function Kpi({ icon: Icon, label, value, delta, hint }) {
   return (
     <div className="rounded-2xl bg-white ring-1 ring-black/5 shadow-card p-3">
-      <div className="text-[11px] uppercase tracking-wide text-ink-500 font-bold flex items-center gap-1.5">
-        {Icon && <Icon className="w-3.5 h-3.5" />}
+      <div className="flex items-center gap-1.5 text-[12px] text-ink-500 font-semibold">
+        <Icon className="w-3.5 h-3.5" />
         {label}
       </div>
-      <div className="text-2xl font-black text-ink-900 mt-1 tabular-nums">
-        {value ?? '—'}
+      <div className="mt-1 flex items-baseline gap-1.5">
+        <span className="text-2xl font-black text-ink-900 tabular-nums">{value ?? '—'}</span>
+        {delta > 0 && <span className="text-[12px] font-bold text-emerald-600">+{delta} за 7 дн.</span>}
       </div>
+      {hint && <div className="text-[11px] text-ink-500 truncate">{hint}</div>}
     </div>
   );
 }
 
-// ── Пользователи ─────────────────────────────────────────────────────
+// ── Поиск и пагинация ──────────────────────────────────────────────
 
-function UsersTab() {
-  const [items, setItems] = useState([]);
-  const [total, setTotal] = useState(0);
-  const [offset, setOffset] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  async function load() {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await adminListUsers({ limit: PAGE_SIZE, offset });
-      setItems(data.items);
-      setTotal(data.total);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [offset]);
-
-  async function onDelete(id, email) {
-    if (!window.confirm(`Удалить пользователя ${email || id}? Все его объявления тоже будут удалены.`)) return;
-    try {
-      await adminDeleteUser(id);
-      await load();
-    } catch (err) {
-      alert(err.message);
-    }
-  }
-
+function SearchBox({ value, onChange, placeholder }) {
+  const [draft, setDraft] = useState(value);
+  useEffect(() => setDraft(value), [value]);
   return (
-    <div className="space-y-3">
-      <TableHead
-        title="Пользователи"
-        total={total}
-        offset={offset}
-        pageSize={PAGE_SIZE}
-        onPrev={() => setOffset((o) => Math.max(0, o - PAGE_SIZE))}
-        onNext={() => setOffset((o) => o + PAGE_SIZE)}
-        onReload={load}
-        loading={loading}
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        onChange(draft.trim());
+      }}
+      className="flex-1 min-w-[200px] flex items-center gap-2 h-10 px-3 rounded-xl bg-white ring-1 ring-black/10 focus-within:ring-brand-400"
+    >
+      <Search className="w-4 h-4 text-ink-500 shrink-0" />
+      <input
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={() => draft.trim() !== value && onChange(draft.trim())}
+        placeholder={placeholder}
+        className="flex-1 min-w-0 bg-transparent outline-none text-[15px]"
       />
+    </form>
+  );
+}
 
-      {error && <ErrorRow message={error} />}
-
-      <div className="rounded-2xl bg-white ring-1 ring-black/5 shadow-card overflow-hidden overflow-x-auto">
-        <table className="min-w-full text-[13px]">
-          <thead className="bg-slate-50 text-ink-500 uppercase text-[10px] tracking-wide">
-            <tr>
-              <Th>Email</Th>
-              <Th>Имя</Th>
-              <Th>Роль</Th>
-              <Th>Город</Th>
-              <Th>Связь</Th>
-              <Th>Онбординг</Th>
-              <Th>Создан</Th>
-              <Th></Th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((u) => (
-              <tr key={u.id} className="border-t border-black/5 hover:bg-brand-50/40">
-                <Td>{u.email || '—'}</Td>
-                <Td>{u.name || <span className="text-ink-400">не заполнено</span>}</Td>
-                <Td>
-                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
-                    u.role === 'admin' || u.role === 'owner'
-                      ? 'bg-amber-100 text-amber-800'
-                      : 'bg-slate-100 text-slate-700'
-                  }`}>
-                    {u.role}
-                  </span>
-                </Td>
-                <Td>{u.homeCityId || '—'}</Td>
-                <Td>{u.contactMethod}</Td>
-                <Td>{u.onboardedAt ? '✓' : '—'}</Td>
-                <Td>{new Date(u.createdAt).toLocaleString('ru-RU')}</Td>
-                <Td>
-                  <button
-                    onClick={() => onDelete(u.id, u.email)}
-                    className="text-rose-600 hover:text-rose-800"
-                    title="Удалить"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </Td>
-              </tr>
-            ))}
-            {!loading && items.length === 0 && (
-              <tr><td colSpan={8} className="text-center py-8 text-ink-400">Пусто</td></tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+function Pager({ total, offset, onOffset }) {
+  if (total <= PAGE_SIZE) return null;
+  const to = Math.min(total, offset + PAGE_SIZE);
+  return (
+    <div className="flex items-center justify-center gap-2 pt-2">
+      <button disabled={offset === 0} onClick={() => onOffset(Math.max(0, offset - PAGE_SIZE))} className="btn-outline h-9 px-3 text-sm disabled:opacity-40">
+        Назад
+      </button>
+      <span className="text-[13px] text-ink-500 tabular-nums">
+        {offset + 1}–{to} из {total}
+      </span>
+      <button disabled={to >= total} onClick={() => onOffset(offset + PAGE_SIZE)} className="btn-outline h-9 px-3 text-sm disabled:opacity-40">
+        Дальше
+      </button>
     </div>
   );
 }
 
-// ── Объявления ───────────────────────────────────────────────────────
+// ── Объявления ─────────────────────────────────────────────────────
 
-function AdsTab() {
-  const [items, setItems] = useState([]);
-  const [total, setTotal] = useState(0);
+const STATUS_FILTERS = [
+  { key: '', label: 'Все' },
+  { key: 'pending', label: 'На модерации' },
+  { key: 'approved', label: 'Опубликованы' },
+  { key: 'rejected', label: 'Отклонены' },
+  { key: 'archived', label: 'В архиве' }
+];
+
+function AdsTab({ preset, onOpen, onChanged }) {
+  const [status, setStatus] = useState(preset?.status || '');
+  const [q, setQ] = useState('');
+  const [author, setAuthor] = useState(preset?.authorId ? { id: preset.authorId, name: preset.authorName } : null);
   const [offset, setOffset] = useState(0);
-  const [status, setStatus] = useState('');
-  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState(null);
   const [error, setError] = useState(null);
-  const [modAdId, setModAdId] = useState(null);
+  const [asking, setAsking] = useState(null); // { id, action: 'reject' | 'delete' }
+  const [busy, setBusy] = useState(false);
 
-  async function load() {
-    setLoading(true);
+  const load = useCallback(async () => {
     setError(null);
     try {
-      const data = await adminListAds({ limit: PAGE_SIZE, offset, status: status || null });
-      setItems(data.items);
-      setTotal(data.total);
+      setData(await adminListAds({ limit: PAGE_SIZE, offset, status, q, authorId: author?.id }));
     } catch (err) {
       setError(err.message);
+    }
+  }, [offset, status, q, author]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+  useAdminChanged(load);
+
+  async function act(fn) {
+    setBusy(true);
+    try {
+      await fn();
+      setAsking(null);
+      await load();
+      onChanged();
+    } catch (err) {
+      alert(err.message);
     } finally {
-      setLoading(false);
+      setBusy(false);
     }
   }
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [offset, status]);
-
-  // Сбрасываем offset при смене фильтра.
-  useEffect(() => { setOffset(0); }, [status]);
-
-  async function onDelete(id, title) {
-    if (!window.confirm(`Удалить объявление «${title}»?`)) return;
-    try {
-      await adminDeleteAd(id);
-      await load();
-    } catch (err) {
-      alert(err.message);
-    }
-  }
-
-  async function onSetStatus(id, newStatus) {
-    try {
-      await adminSetAdStatus(id, newStatus);
-      await load();
-    } catch (err) {
-      alert(err.message);
-    }
-  }
-
-  const filters = [
-    { key: '', label: 'Все' },
-    { key: 'pending', label: 'На модерации' },
-    { key: 'approved', label: 'Одобрены' },
-    { key: 'rejected', label: 'Отклонены' },
-    { key: 'archived', label: 'В архиве' }
-  ];
 
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
-        <h2 className="text-lg font-extrabold text-ink-900">
-          Объявления <span className="text-ink-400 font-bold">· {total}</span>
-        </h2>
-        <div className="flex flex-wrap gap-1 ml-2">
-          {filters.map((f) => (
-            <button
-              key={f.key || 'all'}
-              onClick={() => setStatus(f.key)}
-              className={`chip chip-sm ${status === f.key ? 'chip-on' : ''}`}
-            >
+        <SearchBox value={q} onChange={(v) => { setOffset(0); setQ(v); }} placeholder="Заголовок, описание или ID" />
+      </div>
+      <div className="-mx-4 md:mx-0 overflow-x-auto no-scrollbar">
+        <div className="flex gap-1.5 px-4 md:px-0 w-max">
+          {STATUS_FILTERS.map((f) => (
+            <button key={f.key || 'all'} onClick={() => { setOffset(0); setStatus(f.key); }} className={`chip chip-sm ${status === f.key ? 'chip-on' : ''}`}>
               {f.label}
             </button>
           ))}
         </div>
-        <div className="ml-auto flex items-center gap-2">
-          <TableNav
-            total={total}
-            offset={offset}
-            pageSize={PAGE_SIZE}
-            onPrev={() => setOffset((o) => Math.max(0, o - PAGE_SIZE))}
-            onNext={() => setOffset((o) => o + PAGE_SIZE)}
-            onReload={load}
-            loading={loading}
-          />
-        </div>
       </div>
+      {author && (
+        <div className="flex items-center gap-2 text-sm">
+          <span className="text-ink-500">Автор:</span>
+          <span className="font-semibold text-ink-900">{author.name}</span>
+          <button onClick={() => { setOffset(0); setAuthor(null); }} className="text-brand-700 font-semibold">
+            сбросить
+          </button>
+        </div>
+      )}
 
-      {error && <ErrorRow message={error} />}
+      <ErrorBox message={error} />
+      {!data ? (
+        <ListSkeleton />
+      ) : data.items.length === 0 ? (
+        <Empty>Ничего не нашлось.</Empty>
+      ) : (
+        <ul className="space-y-2">
+          <li className="text-[13px] text-ink-500 px-0.5">
+            {data.total} {pluralRu(data.total, ['объявление', 'объявления', 'объявлений'])}
+          </li>
+          {data.items.map((a) => (
+            <li key={a.id} className="rounded-2xl bg-white ring-1 ring-black/5 shadow-card p-3">
+              <button onClick={() => onOpen(a.id)} className="w-full flex gap-3 text-left">
+                <div className="w-16 h-16 rounded-xl bg-slate-100 overflow-hidden shrink-0">
+                  {a.photos?.[0]?.url && <img src={a.photos[0].url} alt="" className="w-full h-full object-cover" />}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start gap-2">
+                    <div className="font-semibold text-ink-900 line-clamp-2 flex-1">{a.title}</div>
+                    <StatusBadge status={a.status} />
+                  </div>
+                  <div className="text-[13px] text-ink-900 font-bold">{formatPrice(a, { compact: true })}</div>
+                  <div className="text-[12px] text-ink-500 truncate">
+                    {getSection(a.section)?.name || a.section} · {cityName(a.cityId)} · {a.author?.name || a.author?.email}
+                    {a.author?.blockedAt && <span className="text-rose-600 font-semibold"> · заблокирован</span>}
+                  </div>
+                  <div className="text-[12px] text-ink-500" suppressHydrationWarning>
+                    {formatRelative(a.createdAt)} · {a.viewsCount} просм. · {a.favoritesCount} ♥
+                    {a.reportsCount > 0 && <span className="text-rose-600 font-semibold"> · {a.reportsCount} жалоб</span>}
+                  </div>
+                  {a.status === 'rejected' && a.moderationNotes && (
+                    <div className="text-[12px] text-rose-700 truncate">Причина: {a.moderationNotes}</div>
+                  )}
+                </div>
+              </button>
 
-      <div className="rounded-2xl bg-white ring-1 ring-black/5 shadow-card overflow-hidden overflow-x-auto">
-        <table className="min-w-full text-[13px]">
-          <thead className="bg-slate-50 text-ink-500 uppercase text-[10px] tracking-wide">
-            <tr>
-              <Th>Заголовок</Th>
-              <Th>Автор</Th>
-              <Th>Раздел</Th>
-              <Th>Цена</Th>
-              <Th>Город</Th>
-              <Th>Статус</Th>
-              <Th>Создано</Th>
-              <Th></Th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((a) => (
-              <tr
-                key={a.id}
-                onClick={() => setModAdId(a.id)}
-                className="border-t border-black/5 hover:bg-brand-50/40 cursor-pointer"
-              >
-                <Td>
-                  <span className="text-brand-700 hover:underline">
-                    {a.title}
+              {asking?.id === a.id ? (
+                <div className="mt-2">
+                  <ReasonForm
+                    title={asking.action === 'reject' ? 'Почему отклоняем?' : 'Почему удаляем? Вернуть будет нельзя'}
+                    confirmLabel={asking.action === 'reject' ? 'Отклонить' : 'Удалить'}
+                    tone={asking.action === 'reject' ? 'amber' : 'rose'}
+                    busy={busy}
+                    onCancel={() => setAsking(null)}
+                    onConfirm={(reason) =>
+                      act(() => (asking.action === 'reject' ? adminSetAdStatus(a.id, 'rejected', reason) : adminDeleteAd(a.id, reason)))
+                    }
+                  />
+                </div>
+              ) : (
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {a.status !== 'approved' && (
+                    <button onClick={() => act(() => adminSetAdStatus(a.id, 'approved'))} disabled={busy} className="h-8 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[13px] font-semibold">
+                      Одобрить
+                    </button>
+                  )}
+                  {a.status !== 'rejected' && (
+                    <button onClick={() => setAsking({ id: a.id, action: 'reject' })} className="h-8 px-3 rounded-lg ring-1 ring-amber-300 text-amber-800 hover:bg-amber-50 text-[13px] font-semibold">
+                      Отклонить
+                    </button>
+                  )}
+                  <Link href={`/ad/${a.id}`} target="_blank" className="h-8 px-3 rounded-lg ring-1 ring-black/10 text-ink-700 hover:bg-slate-50 text-[13px] font-semibold inline-flex items-center">
+                    На сайте
+                  </Link>
+                  <button onClick={() => setAsking({ id: a.id, action: 'delete' })} className="ml-auto h-8 w-8 grid place-items-center rounded-lg text-rose-600 hover:bg-rose-50" aria-label="Удалить">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+      {data && <Pager total={data.total} offset={offset} onOffset={setOffset} />}
+    </div>
+  );
+}
+
+// ── Жалобы ─────────────────────────────────────────────────────────
+
+const REPORT_FILTERS = [
+  { key: 'pending', label: 'Новые' },
+  { key: 'resolved', label: 'Меры приняты' },
+  { key: 'dismissed', label: 'Отклонённые' }
+];
+
+function ReportsTab({ onOpen, onChanged }) {
+  const [status, setStatus] = useState('pending');
+  const [items, setItems] = useState(null);
+  const [error, setError] = useState(null);
+  const [busy, setBusy] = useState(false);
+
+  const load = useCallback(async () => {
+    setError(null);
+    try {
+      setItems((await adminListReports(status)).items);
+    } catch (err) {
+      setError(err.message);
+    }
+  }, [status]);
+  useEffect(() => {
+    setItems(null);
+    load();
+  }, [load]);
+  useAdminChanged(load);
+
+  async function act(fn) {
+    setBusy(true);
+    try {
+      await fn();
+      await load();
+      onChanged();
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex gap-1.5">
+        {REPORT_FILTERS.map((f) => (
+          <button key={f.key} onClick={() => setStatus(f.key)} className={`chip chip-sm ${status === f.key ? 'chip-on' : ''}`}>
+            {f.label}
+          </button>
+        ))}
+      </div>
+      <ErrorBox message={error} />
+      {!items ? (
+        <ListSkeleton />
+      ) : items.length === 0 ? (
+        <Empty>{status === 'pending' ? 'Новых жалоб нет 🎉' : 'Пусто.'}</Empty>
+      ) : (
+        <ul className="space-y-2">
+          {items.map((r) => (
+            <li key={r.id} className="rounded-2xl bg-white ring-1 ring-black/5 shadow-card p-3 space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center gap-1 text-[12px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-800">
+                  <Flag className="w-3 h-3" />
+                  {REPORT_REASONS[r.reason] || r.reason}
+                </span>
+                <span className="text-[12px] text-ink-500" suppressHydrationWarning>
+                  {formatRelative(r.createdAt)} · от {r.reporter?.name || r.reporter?.email || 'пользователя'}
+                </span>
+              </div>
+              {r.comment && <p className="text-sm text-ink-800 whitespace-pre-line">«{r.comment}»</p>}
+              {r.ad ? (
+                <button onClick={() => onOpen(r.ad.id)} className="w-full flex items-center gap-3 rounded-xl bg-slate-50 p-2 text-left hover:bg-slate-100">
+                  <div className="w-12 h-12 rounded-lg bg-slate-200 overflow-hidden shrink-0">
+                    {r.ad.photos?.[0]?.url && <img src={r.ad.photos[0].url} alt="" className="w-full h-full object-cover" />}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-semibold text-ink-900 truncate">{r.ad.title}</div>
+                    <div className="text-[12px] text-ink-500 truncate">
+                      {r.ad.author?.name || r.ad.author?.email} · всего жалоб: {r.ad.reportsCount}
+                    </div>
+                  </div>
+                  <StatusBadge status={r.ad.status} />
+                </button>
+              ) : (
+                <div className="text-sm text-ink-500">Объявление уже удалено</div>
+              )}
+              {status === 'pending' && (
+                <div className="flex flex-wrap gap-1.5">
+                  {r.ad && (
+                    <button onClick={() => onOpen(r.ad.id)} className="h-8 px-3 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-[13px] font-semibold">
+                      Открыть и принять меры
+                    </button>
+                  )}
+                  <button onClick={() => act(() => adminResolveReport(r.id, 'resolved'))} disabled={busy} className="h-8 px-3 rounded-lg ring-1 ring-black/10 text-ink-700 hover:bg-slate-50 text-[13px] font-semibold">
+                    Меры приняты
+                  </button>
+                  <button onClick={() => act(() => adminResolveReport(r.id, 'dismissed'))} disabled={busy} className="h-8 px-3 rounded-lg ring-1 ring-black/10 text-ink-700 hover:bg-slate-50 text-[13px] font-semibold">
+                    Жалоба не подтвердилась
+                  </button>
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+// ── Пользователи ───────────────────────────────────────────────────
+
+function UsersTab({ me, onShowAds, onChanged }) {
+  const [q, setQ] = useState('');
+  const [blockedOnly, setBlockedOnly] = useState(false);
+  const [offset, setOffset] = useState(0);
+  const [data, setData] = useState(null);
+  const [error, setError] = useState(null);
+  const [blocking, setBlocking] = useState(null); // id пользователя, для которого открыта форма
+  const [busy, setBusy] = useState(false);
+
+  const load = useCallback(async () => {
+    setError(null);
+    try {
+      setData(await adminListUsers({ limit: PAGE_SIZE, offset, q, blocked: blockedOnly }));
+    } catch (err) {
+      setError(err.message);
+    }
+  }, [offset, q, blockedOnly]);
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  async function act(fn) {
+    setBusy(true);
+    try {
+      await fn();
+      setBlocking(null);
+      await load();
+      onChanged();
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function onDelete(u) {
+    if (!window.confirm(`Удалить ${u.name || u.email}? Его объявления, переписки и отзывы тоже удалятся. Вернуть нельзя.`)) return;
+    act(() => adminDeleteUser(u.id));
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <SearchBox value={q} onChange={(v) => { setOffset(0); setQ(v); }} placeholder="Имя, почта или ID" />
+        <button onClick={() => { setOffset(0); setBlockedOnly((v) => !v); }} className={`chip chip-sm ${blockedOnly ? 'chip-on' : ''}`}>
+          <Ban className="w-3.5 h-3.5" />
+          Заблокированные
+        </button>
+      </div>
+      <ErrorBox message={error} />
+      {!data ? (
+        <ListSkeleton />
+      ) : data.items.length === 0 ? (
+        <Empty>Никого не нашлось.</Empty>
+      ) : (
+        <ul className="space-y-2">
+          <li className="text-[13px] text-ink-500 px-0.5">
+            {data.total} {pluralRu(data.total, ['пользователь', 'пользователя', 'пользователей'])}
+          </li>
+          {data.items.map((u) => (
+            <li key={u.id} className={`rounded-2xl bg-white ring-1 shadow-card p-3 ${u.blockedAt ? 'ring-rose-200' : 'ring-black/5'}`}>
+              <div className="flex items-center gap-3">
+                {u.avatar ? (
+                  <img src={u.avatar} alt="" className="w-11 h-11 rounded-full object-cover shrink-0" />
+                ) : (
+                  <span className="w-11 h-11 rounded-full bg-brand-600 text-white grid place-items-center font-bold shrink-0">
+                    {(u.name || u.email || '?')[0].toUpperCase()}
                   </span>
-                </Td>
-                <Td className="text-ink-500 text-[11px]">
-                  {a.author?.name || '—'}
-                  <div className="text-ink-400">{a.author?.email}</div>
-                </Td>
-                <Td>{a.section}</Td>
-                <Td className="tabular-nums">{a.price ? `${a.price} ₽` : 'даром'}</Td>
-                <Td>{a.cityId}</Td>
-                <Td>
-                  <StatusBadge status={a.status} />
-                </Td>
-                <Td>{new Date(a.createdAt).toLocaleString('ru-RU')}</Td>
-                <Td onClick={(e) => e.stopPropagation()}>
-                  <div className="flex items-center gap-1">
-                    {a.status !== 'approved' && (
-                      <button
-                        onClick={() => onSetStatus(a.id, 'approved')}
-                        className="text-emerald-700 hover:text-emerald-900 text-[11px] font-bold px-2 py-1 rounded-lg hover:bg-emerald-50"
-                        title="Одобрить"
-                      >
-                        ✓ Одобрить
-                      </button>
+                )}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="font-semibold text-ink-900 truncate">{u.name || 'Без имени'}</span>
+                    {(u.role === 'admin' || u.role === 'owner') && (
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800">админ</span>
                     )}
-                    {a.status !== 'rejected' && a.status === 'pending' && (
-                      <button
-                        onClick={() => onSetStatus(a.id, 'rejected')}
-                        className="text-amber-700 hover:text-amber-900 text-[11px] font-bold px-2 py-1 rounded-lg hover:bg-amber-50"
-                        title="Отклонить"
-                      >
-                        ✕ Откл.
-                      </button>
+                    {u.blockedAt && (
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-rose-100 text-rose-800">заблокирован</span>
                     )}
-                    <button
-                      onClick={() => onDelete(a.id, a.title)}
-                      className="text-rose-600 hover:text-rose-800 p-1"
-                      title="Удалить"
-                    >
+                    {!u.onboardedAt && (
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-700">без профиля</span>
+                    )}
+                  </div>
+                  <div className="text-[12px] text-ink-500 truncate">{u.email || u.phone || u.id}</div>
+                  <div className="text-[12px] text-ink-500" suppressHydrationWarning>
+                    {u.homeCityId ? cityName(u.homeCityId) : 'город не указан'} · {u._count?.ads ?? 0} объявл.
+                    {u.reviewsCount > 0 && ` · ★ ${u.rating.toFixed(1)} (${u.reviewsCount})`} · с {new Date(u.createdAt).toLocaleDateString('ru-RU')}
+                  </div>
+                  {u.blockedAt && u.blockReason && <div className="text-[12px] text-rose-700">Причина: {u.blockReason}</div>}
+                </div>
+              </div>
+
+              {blocking === u.id ? (
+                <div className="mt-2">
+                  <ReasonForm
+                    title="Заблокировать: не сможет публиковать, писать и оценивать"
+                    confirmLabel="Заблокировать"
+                    busy={busy}
+                    onCancel={() => setBlocking(null)}
+                    onConfirm={(reason) => act(() => adminBlockUser(u.id, true, reason))}
+                  />
+                </div>
+              ) : (
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  <button onClick={() => onShowAds(u)} className="h-8 px-3 rounded-lg ring-1 ring-black/10 text-ink-700 hover:bg-slate-50 text-[13px] font-semibold">
+                    Объявления
+                  </button>
+                  {u.onboardedAt && !u.blockedAt && (
+                    <Link href={`/user/${u.id}`} target="_blank" className="h-8 px-3 rounded-lg ring-1 ring-black/10 text-ink-700 hover:bg-slate-50 text-[13px] font-semibold inline-flex items-center">
+                      Страница
+                    </Link>
+                  )}
+                  {u.id !== me.id &&
+                    (u.blockedAt ? (
+                      <button onClick={() => act(() => adminBlockUser(u.id, false))} disabled={busy} className="h-8 px-3 rounded-lg ring-1 ring-emerald-300 text-emerald-800 hover:bg-emerald-50 text-[13px] font-semibold">
+                        Разблокировать
+                      </button>
+                    ) : (
+                      <button onClick={() => setBlocking(u.id)} className="h-8 px-3 rounded-lg ring-1 ring-rose-200 text-rose-700 hover:bg-rose-50 text-[13px] font-semibold">
+                        Заблокировать
+                      </button>
+                    ))}
+                  {u.id !== me.id && (
+                    <button onClick={() => onDelete(u)} disabled={busy} className="ml-auto h-8 w-8 grid place-items-center rounded-lg text-rose-600 hover:bg-rose-50" aria-label="Удалить пользователя">
                       <Trash2 className="w-4 h-4" />
                     </button>
-                  </div>
-                </Td>
-              </tr>
-            ))}
-            {!loading && items.length === 0 && (
-              <tr><td colSpan={8} className="text-center py-8 text-ink-400">Пусто</td></tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      <ModerationModal
-        open={!!modAdId}
-        adId={modAdId}
-        onClose={() => setModAdId(null)}
-        onChanged={load}
-      />
+                  )}
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+      {data && <Pager total={data.total} offset={offset} onOffset={setOffset} />}
     </div>
   );
 }
 
-// Компактная навигация без заголовка (используется когда заголовок кастомный)
-function TableNav({ total, offset, pageSize, onPrev, onNext, onReload, loading }) {
-  const from = total === 0 ? 0 : offset + 1;
-  const to = Math.min(total, offset + pageSize);
+// ── Отзывы ─────────────────────────────────────────────────────────
+
+function ReviewsTab({ onChanged }) {
+  const [items, setItems] = useState(null);
+  const [error, setError] = useState(null);
+
+  const load = useCallback(async () => {
+    setError(null);
+    try {
+      setItems((await adminListReviews()).items);
+    } catch (err) {
+      setError(err.message);
+    }
+  }, []);
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  async function remove(r) {
+    if (!window.confirm('Удалить отзыв? Рейтинг пользователя пересчитается.')) return;
+    try {
+      await adminDeleteReview(r.id);
+      await load();
+      onChanged();
+    } catch (err) {
+      alert(err.message);
+    }
+  }
+
   return (
-    <div className="flex items-center gap-1">
-      <div className="text-[12px] text-ink-500 mr-2 tabular-nums">
-        {from}–{to} из {total}
-      </div>
-      <button
-        onClick={onPrev}
-        disabled={offset === 0}
-        className="w-8 h-8 grid place-items-center rounded-full ring-1 ring-black/10 hover:bg-slate-50 disabled:opacity-40"
-      >
-        <ChevronLeft className="w-4 h-4" />
-      </button>
-      <button
-        onClick={onNext}
-        disabled={to >= total}
-        className="w-8 h-8 grid place-items-center rounded-full ring-1 ring-black/10 hover:bg-slate-50 disabled:opacity-40"
-      >
-        <ChevronRight className="w-4 h-4" />
-      </button>
-      <button
-        onClick={onReload}
-        disabled={loading}
-        className="w-8 h-8 grid place-items-center rounded-full ring-1 ring-black/10 hover:bg-slate-50 disabled:opacity-40"
-      >
-        <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-      </button>
+    <div className="space-y-3">
+      <ErrorBox message={error} />
+      {!items ? (
+        <ListSkeleton />
+      ) : items.length === 0 ? (
+        <Empty>Отзывов пока нет.</Empty>
+      ) : (
+        <ul className="space-y-2">
+          {items.map((r) => (
+            <li key={r.id} className="rounded-2xl bg-white ring-1 ring-black/5 shadow-card p-3">
+              <div className="flex items-center gap-2 text-sm">
+                <Stars value={r.rating} size="w-3.5 h-3.5" />
+                <span className="text-ink-500 text-[12px]" suppressHydrationWarning>
+                  {formatRelative(r.createdAt)}
+                </span>
+                <button onClick={() => remove(r)} className="ml-auto h-8 w-8 grid place-items-center rounded-lg text-rose-600 hover:bg-rose-50" aria-label="Удалить отзыв">
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="text-[13px] text-ink-700 mt-1">
+                <Link href={`/user/${r.author.id}`} target="_blank" className="font-semibold hover:text-brand-700">
+                  {r.author.name || 'Пользователь'}
+                </Link>{' '}
+                →{' '}
+                <Link href={`/user/${r.target.id}`} target="_blank" className="font-semibold hover:text-brand-700">
+                  {r.target.name || 'Пользователь'}
+                </Link>
+                <span className="text-ink-500"> · «{r.adTitle}»</span>
+              </div>
+              {r.text && <p className="mt-1 text-sm text-ink-800 whitespace-pre-line break-words">{r.text}</p>}
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
 
-function StatusBadge({ status }) {
-  const map = {
-    approved: 'bg-emerald-100 text-emerald-800',
-    pending: 'bg-amber-100 text-amber-800',
-    rejected: 'bg-rose-100 text-rose-800',
-    archived: 'bg-slate-100 text-slate-700'
-  };
-  return (
-    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${map[status] || 'bg-slate-100 text-slate-700'}`}>
-      {status}
-    </span>
-  );
-}
+// ── Настройки ──────────────────────────────────────────────────────
 
-// ── Общие кусочки ────────────────────────────────────────────────────
+function SettingsTab({ onChanged }) {
+  const [autoApprove, setAutoApprove] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
 
-function TableHead({ title, total, offset, pageSize, onPrev, onNext, onReload, loading }) {
-  const from = total === 0 ? 0 : offset + 1;
-  const to = Math.min(total, offset + pageSize);
+  useEffect(() => {
+    adminGetModeration()
+      .then((r) => setAutoApprove(r.autoApprove))
+      .catch((err) => setError(err.message));
+  }, []);
+
+  async function toggle() {
+    setSaving(true);
+    setError(null);
+    try {
+      const r = await adminSetModeration(!autoApprove);
+      setAutoApprove(r.autoApprove);
+      onChanged();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
-    <div className="flex items-center gap-3">
-      <h2 className="text-lg font-extrabold text-ink-900">
-        {title} <span className="text-ink-400 font-bold">· {total}</span>
-      </h2>
-      <div className="ml-auto flex items-center gap-1 text-[12px] text-ink-500">
-        {from}–{to} из {total}
+    <div className="space-y-3">
+      <ErrorBox message={error} />
+      <div className="rounded-2xl bg-white ring-1 ring-black/5 shadow-card p-4 flex items-start gap-4">
+        <div className="flex-1">
+          <div className="font-bold text-ink-900">Автопубликация объявлений</div>
+          <p className="text-sm text-ink-500 mt-0.5">
+            {autoApprove === null
+              ? 'Загружаем…'
+              : autoApprove
+              ? 'Новые объявления сразу попадают в ленту. Проверяйте жалобы.'
+              : 'Новые объявления ждут одобрения во вкладке «Объявления → На модерации». Автор получит уведомление о решении.'}
+          </p>
+        </div>
+        <button
+          onClick={toggle}
+          disabled={autoApprove === null || saving}
+          role="switch"
+          aria-checked={!!autoApprove}
+          className={`relative w-12 h-7 rounded-full transition-colors shrink-0 disabled:opacity-50 ${autoApprove ? 'bg-emerald-500' : 'bg-slate-300'}`}
+        >
+          <span className={`absolute top-0.5 w-6 h-6 rounded-full bg-white shadow transition-all ${autoApprove ? 'left-[22px]' : 'left-0.5'}`} />
+        </button>
       </div>
-      <button
-        onClick={onPrev}
-        disabled={offset === 0}
-        className="w-8 h-8 grid place-items-center rounded-full ring-1 ring-black/10 hover:bg-slate-50 disabled:opacity-40"
-      >
-        <ChevronLeft className="w-4 h-4" />
-      </button>
-      <button
-        onClick={onNext}
-        disabled={to >= total}
-        className="w-8 h-8 grid place-items-center rounded-full ring-1 ring-black/10 hover:bg-slate-50 disabled:opacity-40"
-      >
-        <ChevronRight className="w-4 h-4" />
-      </button>
-      <button
-        onClick={onReload}
-        disabled={loading}
-        className="w-8 h-8 grid place-items-center rounded-full ring-1 ring-black/10 hover:bg-slate-50 disabled:opacity-40"
-        title="Обновить"
-      >
-        <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-      </button>
-    </div>
-  );
-}
-
-function Th({ children }) {
-  return <th className="text-left px-3 py-2 font-bold">{children}</th>;
-}
-function Td({ children, className = '', onClick }) {
-  return (
-    <td onClick={onClick} className={`px-3 py-2 align-middle ${className}`}>
-      {children}
-    </td>
-  );
-}
-function ErrorRow({ message }) {
-  return (
-    <div className="flex items-start gap-2 rounded-xl bg-rose-50 ring-1 ring-rose-200 px-3 py-2 text-[13px] text-rose-800">
-      <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-      <div>{message}</div>
     </div>
   );
 }

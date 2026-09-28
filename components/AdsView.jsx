@@ -14,7 +14,7 @@ import PostAdModal from '@/components/PostAdModal';
 import PricingModal from '@/components/PricingModal';
 import Footer from '@/components/Footer';
 import BottomNav from '@/components/BottomNav';
-import { ChevronDown, ListFilter, MapPin, Sparkles, X } from 'lucide-react';
+import { ChevronDown, ListFilter, MapPin, SlidersHorizontal, Sparkles, X } from 'lucide-react';
 import {
   DEFAULT_REGION_ID,
   FREE_SECTION,
@@ -23,6 +23,7 @@ import {
   resolvePlace
 } from '@/lib/api';
 import { pluralRu } from '@/lib/format';
+import { getAttributeFields, parseAttributeInput } from '@/data/attributes';
 
 const SORTS = [
   { id: 'top', name: 'Рекомендуемые' },
@@ -65,15 +66,29 @@ function readFilters(params) {
     q: get('q'),
     sort: SORTS.some((s) => s.id === get('sort')) ? get('sort') : 'top',
     priceMin: num('pmin'),
-    priceMax: num('pmax')
+    priceMax: num('pmax'),
+    attr: section ? readAttr(get('attr')) : {}
   };
+}
+
+// ?attr= — JSON фильтров по характеристикам. Битый JSON из чужой ссылки — просто без фильтров.
+function readAttr(raw) {
+  if (!raw) return {};
+  try {
+    const v = JSON.parse(raw);
+    return v && typeof v === 'object' && !Array.isArray(v) ? v : {};
+  } catch {
+    return {};
+  }
 }
 
 function Feed({ place, params }) {
   const router = useRouter();
   const pathname = usePathname();
   const filters = readFilters(params);
-  const { section, group, q, sort, priceMin, priceMax } = filters;
+  const { section, group, q, sort, priceMin, priceMax, attr } = filters;
+  const attrKey = Object.keys(attr).length ? JSON.stringify(attr) : null;
+  const attrFields = section ? getAttributeFields(section, group).filter((f) => f.type !== 'text') : [];
 
   const [primary, setPrimary] = useState([]);
   const [nearby, setNearby] = useState([]);
@@ -84,6 +99,7 @@ function Feed({ place, params }) {
   const [postOpen, setPostOpen] = useState(false);
   const [pricingOpen, setPricingOpen] = useState(false);
   const [priceOpen, setPriceOpen] = useState(false);
+  const [attrOpen, setAttrOpen] = useState(false);
   const [catalogOpen, setCatalogOpen] = useState(false);
 
   const resolved = resolvePlace(place) || resolvePlace(DEFAULT_REGION_ID);
@@ -103,6 +119,7 @@ function Feed({ place, params }) {
       sort,
       priceMin,
       priceMax,
+      attr: attrKey,
       includeNearby: isCity
     })
       .then((r) => {
@@ -127,7 +144,7 @@ function Feed({ place, params }) {
     return () => {
       cancelled = true;
     };
-  }, [ready, place, section, group, q, sort, priceMin, priceMax, isCity, reloadKey]);
+  }, [ready, place, section, group, q, sort, priceMin, priceMax, attrKey, isCity, reloadKey]);
 
   // Меняем только query через History API: Next 14 синхронизирует useSearchParams,
   // а запроса к серверу за страницей нет — фильтр переключается мгновенно.
@@ -155,7 +172,8 @@ function Feed({ place, params }) {
 
   const sectionInfo = getSection(section);
   const hasPrice = priceMin != null || priceMax != null;
-  const hasFilters = !!(section || q || hasPrice || sort !== 'top');
+  const attrCount = Object.keys(attr).length;
+  const hasFilters = !!(section || q || hasPrice || sort !== 'top' || attrCount);
   const sortName = SORTS.find((s) => s.id === sort)?.name;
 
   const title = q ? `«${q}»` : sectionInfo ? sectionInfo.name : 'Все объявления';
@@ -173,8 +191,8 @@ function Feed({ place, params }) {
       <CategoryStrip
         value={section}
         group={group}
-        onChange={(id) => setFilters({ section: id, group: null })}
-        onGroupChange={(g) => setFilters({ group: g })}
+        onChange={(id) => setFilters({ section: id, group: null, attr: null })}
+        onGroupChange={(g) => setFilters({ group: g, attr: null })}
         onMore={() => setCatalogOpen(true)}
       />
 
@@ -227,6 +245,18 @@ function Feed({ place, params }) {
                 <button onClick={() => setPriceOpen(true)} className={`pill ${hasPrice ? 'pill-on' : ''}`}>
                   {hasPrice ? priceLabel(priceMin, priceMax) : 'Цена'}
                   <ChevronDown className="w-4 h-4" strokeWidth={2.2} />
+                </button>
+              )}
+
+              {attrFields.length > 0 && (
+                <button onClick={() => setAttrOpen(true)} className={`pill ${attrCount ? 'pill-on' : ''}`}>
+                  <SlidersHorizontal className="w-4 h-4" strokeWidth={2.2} />
+                  Фильтры
+                  {attrCount > 0 && (
+                    <span className="min-w-[20px] h-5 px-1 grid place-items-center rounded-full bg-accent-500 text-white text-[11px] font-bold">
+                      {attrCount}
+                    </span>
+                  )}
                 </button>
               )}
 
@@ -356,7 +386,17 @@ function Feed({ place, params }) {
         onClose={() => setCatalogOpen(false)}
         onPick={(id, g) => {
           setCatalogOpen(false);
-          setFilters({ section: id, group: g, q: null });
+          setFilters({ section: id, group: g, q: null, attr: null });
+        }}
+      />
+      <AttrFiltersModal
+        open={attrOpen}
+        onClose={() => setAttrOpen(false)}
+        fields={attrFields}
+        value={attr}
+        onApply={(next) => {
+          setAttrOpen(false);
+          setFilters({ attr: Object.keys(next).length ? JSON.stringify(next) : null });
         }}
       />
       <PostAdModal open={postOpen} onClose={() => setPostOpen(false)} />
@@ -372,6 +412,120 @@ function priceLabel(min, max) {
   if (min != null && max != null) return `${fmt(min)} – ${fmt(max)} ₽`;
   if (min != null) return `от ${fmt(min)} ₽`;
   return `до ${fmt(max)} ₽`;
+}
+
+// Фильтры по характеристикам подгруппы: варианты — плашками (один на поле), числа — от/до.
+function AttrFiltersModal({ open, onClose, fields, value, onApply }) {
+  const [draft, setDraft] = useState({});
+
+  // Черновик — строки из полей ввода; при открытии берём текущие фильтры из URL.
+  useEffect(() => {
+    if (!open) return;
+    const d = {};
+    for (const f of fields) {
+      const v = value[f.key];
+      if (v == null) continue;
+      if (f.type === 'number' && typeof v === 'object') {
+        d[f.key] = { gte: v.gte != null ? String(v.gte) : '', lte: v.lte != null ? String(v.lte) : '' };
+      } else {
+        d[f.key] = String(v);
+      }
+    }
+    setDraft(d);
+    // Только при открытии: fields и value пересобираются на каждом рендере ленты.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  function build() {
+    const out = {};
+    for (const f of fields) {
+      const v = draft[f.key];
+      if (v == null) continue;
+      if (f.type === 'number') {
+        const gte = parseAttributeInput(f, v.gte);
+        const lte = parseAttributeInput(f, v.lte);
+        if (gte != null || lte != null) {
+          out[f.key] = {};
+          if (gte != null) out[f.key].gte = gte;
+          if (lte != null) out[f.key].lte = lte;
+        }
+      } else if (v) {
+        out[f.key] = v;
+      }
+    }
+    return out;
+  }
+
+  const input =
+    'w-full rounded-2xl bg-white ring-1 ring-black/10 focus:ring-brand-400 outline-none px-4 py-2.5 text-base';
+
+  return (
+    <Modal open={open} onClose={onClose} size="md">
+      <form
+        className="p-5 md:p-6"
+        onSubmit={(e) => {
+          e.preventDefault();
+          onApply(build());
+        }}
+      >
+        <h3 className="text-xl font-extrabold text-ink-900">Фильтры</h3>
+        <div className="mt-4 space-y-4">
+          {fields.map((f) => (
+            <div key={f.key}>
+              <div className="text-sm font-semibold text-ink-700">
+                {f.label}
+                {f.unit && <span className="font-normal text-ink-500">, {f.unit}</span>}
+              </div>
+              {f.type === 'select' ? (
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  {f.options.map((o) => (
+                    <button
+                      key={o}
+                      type="button"
+                      onClick={() => setDraft((d) => ({ ...d, [f.key]: d[f.key] === o ? '' : o }))}
+                      className={`chip ${draft[f.key] === o ? 'chip-on' : ''}`}
+                    >
+                      {o}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="mt-1.5 grid grid-cols-2 gap-2">
+                  {['gte', 'lte'].map((op) => (
+                    <input
+                      key={op}
+                      value={draft[f.key]?.[op] ?? ''}
+                      onChange={(e) =>
+                        setDraft((d) => ({
+                          ...d,
+                          [f.key]: { gte: '', lte: '', ...d[f.key], [op]: e.target.value.slice(0, 12) }
+                        }))
+                      }
+                      inputMode={f.decimals ? 'decimal' : 'numeric'}
+                      placeholder={op === 'gte' ? 'от' : 'до'}
+                      aria-label={`${f.label} ${op === 'gte' ? 'от' : 'до'}`}
+                      className={input}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+        <div className="mt-5 flex gap-2">
+          <button type="button" onClick={() => onApply({})} className="btn-outline rounded-2xl px-4 py-3 text-sm">
+            Сбросить
+          </button>
+          <button
+            type="submit"
+            className="flex-1 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white px-4 py-3 text-sm font-semibold"
+          >
+            Показать
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
 }
 
 function PriceModal({ open, onClose, min, max, onApply }) {

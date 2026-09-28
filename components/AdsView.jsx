@@ -402,7 +402,7 @@ function Feed({ place, params }) {
       <PostAdModal open={postOpen} onClose={() => setPostOpen(false)} />
       <PricingModal open={pricingOpen} onClose={() => setPricingOpen(false)} />
 
-      <BottomNav onPost={() => setPostOpen(true)} feedPath={pathname} />
+      <BottomNav onPost={() => setPostOpen(true)} />
     </div>
   );
 }

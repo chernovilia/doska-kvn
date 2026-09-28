@@ -13,11 +13,10 @@ import {
   Settings,
   ShieldCheck,
   Star,
-  Pencil,
   User as UserIcon,
   ShoppingBag,
   MapPin,
-  Heart
+  Briefcase
 } from 'lucide-react';
 
 import VkIcon from '@/components/icons/VkIcon';
@@ -26,16 +25,15 @@ import AdCard from '@/components/AdCard';
 import PostAdModal from '@/components/PostAdModal';
 import SettingsEditModal from '@/components/SettingsEditModal';
 import BumpButton from '@/components/BumpButton';
+import { useToast } from '@/components/Toast';
 import { useAuth } from '@/lib/auth';
 import { getCity } from '@/data/regions';
 
-import { getMyAds, getReviews, deleteAd, getFavorites } from '@/lib/api';
-import { useFavorites } from '@/lib/favorites';
+import { getMyAds, getReviews, deleteAd } from '@/lib/api';
 import { formatRelative } from '@/lib/format';
 
 const TABS = [
   { id: 'ads', name: 'Объявления', icon: ShoppingBag },
-  { id: 'favorites', name: 'Избранное', icon: Heart },
   { id: 'reviews', name: 'Отзывы', icon: Star },
   { id: 'settings', name: 'Настройки', icon: Settings }
 ];
@@ -55,6 +53,7 @@ function ProfileContent() {
   const [tab, setTab] = useState(initialTab);
 
   const { user: me, ready, signOut } = useAuth();
+  const { toast } = useToast();
   const [myAds, setMyAds] = useState([]);
   const [postOpen, setPostOpen] = useState(false);
 
@@ -178,13 +177,15 @@ function ProfileContent() {
                   <UserIcon className="w-4 h-4" />
                   Личный
                 </span>
+                {/* Бизнес-аккаунт пока в разработке: плашка видна, но выбрать нельзя */}
                 <button
                   type="button"
-                  disabled
-                  title="Смена типа аккаунта — скоро"
-                  className="w-8 h-8 grid place-items-center rounded-full text-ink-400 cursor-not-allowed opacity-60"
+                  aria-disabled="true"
+                  onClick={() => toast('Бизнес-аккаунты в разработке — скоро')}
+                  className="chip opacity-50"
                 >
-                  <Pencil className="w-4 h-4" />
+                  <Briefcase className="w-4 h-4" />
+                  Бизнес
                 </button>
               </div>
               <div className="mt-1 text-[11px] text-ink-500">
@@ -243,7 +244,6 @@ function ProfileContent() {
                 onReload={() => getMyAds().then(setMyAds).catch(() => {})}
               />
             )}
-            {tab === 'favorites' && <FavoritesTab />}
             {tab === 'reviews' && <ReviewsTab me={me} />}
             {tab === 'settings' && <SettingsTab me={me} />}
           </motion.section>
@@ -264,51 +264,6 @@ function Metric({ value, label, icon }) {
         {value}
       </div>
       <div className="text-[11px] text-ink-500 mt-0.5">{label}</div>
-    </div>
-  );
-}
-
-// Избранное: список с сервера, а снятые сердечки пропадают сразу — по общему стору.
-function FavoritesTab() {
-  const [items, setItems] = useState(null);
-  const [failed, setFailed] = useState(false);
-  const { isFavorite } = useFavorites();
-
-  useEffect(() => {
-    getFavorites()
-      .then(setItems)
-      .catch(() => setFailed(true));
-  }, []);
-
-  if (failed) {
-    return <div className="rounded-2xl bg-white ring-1 ring-black/5 p-6 text-center text-sm text-ink-500">Не удалось загрузить избранное.</div>;
-  }
-  if (!items) {
-    return <div className="h-40 rounded-2xl bg-white ring-1 ring-black/5 animate-pulse" />;
-  }
-  const visible = items.filter((ad) => isFavorite(ad.id));
-  if (!visible.length) {
-    return (
-      <div className="rounded-2xl bg-white ring-1 ring-black/5 p-8 text-center">
-        <Heart className="w-8 h-8 mx-auto text-ink-300" />
-        <div className="mt-2 font-extrabold text-ink-900">Пока пусто</div>
-        <div className="text-sm text-ink-500">Нажмите на сердечко в объявлении — оно появится здесь.</div>
-        <Link href="/" className="mt-3 btn-outline h-10 px-4 text-sm">
-          К объявлениям
-        </Link>
-      </div>
-    );
-  }
-  return (
-    <div className="space-y-3">
-      <div className="text-sm font-bold text-ink-900 px-0.5">Избранное · {visible.length}</div>
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 auto-rows-fr">
-        {visible.map((ad) => (
-          <div key={ad.id} className="h-full">
-            <AdCard ad={ad} />
-          </div>
-        ))}
-      </div>
     </div>
   );
 }
@@ -359,9 +314,6 @@ function MyAdsTab({ ads, onPost, onReload }) {
         >
           + Добавить
         </button>
-      </div>
-      <div className="text-[11px] text-ink-500 px-0.5 -mt-1">
-        Кнопка со скрепкой копирует ссылку на объявление — для ВК или мессенджера.
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 auto-rows-fr">
         {ads.map((ad) => (

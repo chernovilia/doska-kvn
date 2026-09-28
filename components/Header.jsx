@@ -4,7 +4,7 @@ import PlacePicker from './PlacePicker';
 import SearchBar from './SearchBar';
 import NotificationsButton from './NotificationsButton';
 import Link from 'next/link';
-import { MessageCircle } from 'lucide-react';
+import { Heart, MessageCircle } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { useUnreadCount } from '@/lib/chats';
 import UnreadBadge from './UnreadBadge';
@@ -16,7 +16,7 @@ export default function Header({ place, onPlaceChange, search, onSearchSubmit, o
   const unread = useUnreadCount(!!user);
 
   return (
-    <header className="bg-white">
+    <header className="sticky top-0 z-40 bg-white shadow-[0_1px_0_rgba(15,23,42,0.06)]">
       <div className="max-w-6xl mx-auto px-4 md:px-6 pt-2 md:pt-3 pb-3">
         <div className="flex items-center gap-2 h-12">
           <Link
@@ -31,6 +31,15 @@ export default function Header({ place, onPlaceChange, search, onSearchSubmit, o
           <div className="ml-auto flex items-center gap-1.5 md:gap-2.5 min-w-0">
             <PlacePicker value={place} onChange={onPlaceChange} />
             {user && <NotificationsButton />}
+            {user && (
+              <Link
+                href="/favorites"
+                className="hidden md:grid w-9 h-9 place-items-center rounded-full hover:bg-slate-100"
+                aria-label="Избранное"
+              >
+                <Heart className="w-[22px] h-[22px] text-ink-700" strokeWidth={1.8} />
+              </Link>
+            )}
             {user && (
               <Link
                 href="/messages"

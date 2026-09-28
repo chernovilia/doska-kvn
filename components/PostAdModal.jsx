@@ -89,7 +89,8 @@ export default function PostAdModal({ open, onClose }) {
     'city',
     'section',
     'category',
-    ...(attrFields.length || isEvent || askAddress ? ['details'] : []),
+    // Всегда: число шагов не должно прыгать с 6 на 7 после выбора раздела.
+    'details',
     'text',
     'photos',
     'review'
@@ -621,7 +622,9 @@ function DetailsStep({ fields, values, errors, onChange, isEvent, eventDate, onE
         </div>
       ))}
       <p className="text-[12px] text-ink-500">
-        {isEvent ? 'Остальное' : 'Всё'} необязательно, но с характеристиками объявление находят и понимают быстрее.
+        {fields.length || askAddress
+          ? `${isEvent ? 'Остальное' : 'Всё'} необязательно, но с характеристиками объявление находят и понимают быстрее.`
+          : 'Для этой категории характеристик нет — просто нажмите «Далее».'}
       </p>
     </div>
   );

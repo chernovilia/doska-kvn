@@ -158,7 +158,7 @@ function Feed({ place, params }) {
   const hasFilters = !!(section || q || hasPrice || sort !== 'top');
   const sortName = SORTS.find((s) => s.id === sort)?.name;
 
-  const title = q ? `«${q}»` : sectionInfo ? sectionInfo.name : sort === 'top' ? 'Рекомендуем' : 'Все объявления';
+  const title = q ? `«${q}»` : sectionInfo ? sectionInfo.name : 'Все объявления';
 
   return (
     <div className="min-h-screen pb-24 md:pb-0">
@@ -326,7 +326,10 @@ function Feed({ place, params }) {
         </section>
       </main>
 
-      <Footer />
+      {/* На телефоне лента без подвала: навигация — в нижнем меню */}
+      <div className="hidden md:block">
+        <Footer />
+      </div>
 
       <PriceModal
         open={priceOpen}

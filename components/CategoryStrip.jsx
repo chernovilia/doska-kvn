@@ -30,7 +30,7 @@ export default function CategoryStrip({ value, group, onChange, onGroupChange, o
           ref={scrollerRef}
           className="relative max-w-6xl mx-auto overflow-x-auto no-scrollbar"
         >
-          <div className="flex md:justify-between gap-0.5 px-2.5 md:px-4 py-2 w-max md:w-auto">
+          <div className="flex md:justify-between gap-0.5 px-2 md:px-4 py-1.5 md:py-2 w-max md:w-auto">
             <Tile label="Ещё" tile="bg-slate-100 text-ink-700" icon={Menu} onClick={onMore} />
             {FEED_SECTIONS.map((s) => {
               const active = value === s.id;
@@ -54,7 +54,7 @@ export default function CategoryStrip({ value, group, onChange, onGroupChange, o
       {groups.length > 0 && (
         <div className="bg-slate-50 border-b border-slate-100">
           <div className="max-w-6xl mx-auto overflow-x-auto no-scrollbar">
-            <div className="flex gap-2 px-4 md:px-6 py-2.5 w-max">
+            <div className="flex gap-1.5 md:gap-2 px-4 md:px-6 py-2 md:py-2.5 w-max">
               <button
                 onClick={() => onGroupChange(null)}
                 className={`chip chip-sm ${!group ? 'chip-on' : ''}`}
@@ -88,20 +88,20 @@ const Tile = forwardRef(function Tile({ label, title, tile, icon: Icon, active, 
       onClick={onClick}
       title={title}
       aria-pressed={active}
-      className={`shrink-0 w-[66px] md:w-[76px] flex flex-col items-center gap-1 rounded-2xl py-1.5 transition-colors ${
-        active ? 'bg-brand-50' : 'hover:bg-slate-50'
+      className={`shrink-0 w-[54px] md:w-[76px] flex flex-col items-center gap-0.5 md:gap-1 rounded-xl md:rounded-2xl py-1 md:py-1.5 transition-colors ${
+        active ? 'bg-accent-50' : 'hover:bg-slate-50'
       }`}
     >
       <span
-        className={`grid place-items-center w-[52px] h-[52px] rounded-2xl ${tile} ${
-          active ? 'ring-2 ring-inset ring-brand-500' : ''
+        className={`grid place-items-center w-10 h-10 md:w-[52px] md:h-[52px] rounded-xl md:rounded-2xl ${tile} ${
+          active ? 'ring-2 ring-inset ring-accent-500' : ''
         }`}
       >
-        <Icon className="w-6 h-6" strokeWidth={1.8} />
+        <Icon className="w-5 h-5 md:w-6 md:h-6" strokeWidth={1.8} />
       </span>
       <span
-        className={`text-[12px] leading-tight whitespace-nowrap ${
-          active ? 'font-bold text-brand-700' : 'font-medium text-ink-700'
+        className={`text-[11px] md:text-[12px] leading-tight whitespace-nowrap ${
+          active ? 'font-bold text-accent-700' : 'font-medium text-ink-700'
         }`}
       >
         {label}

@@ -10,12 +10,7 @@
 
 ## Документация
 
-- [STATE.md](STATE.md) — что работает в проде, что заглушки, env-переменные
-- [ROADMAP.md](ROADMAP.md) — порядок следующих работ
-- [RANKING-AND-PROMO.md](RANKING-AND-PROMO.md) — ранкинг ленты, VIP, звёзды, монетизация
-- [ARCHITECTURE.md](ARCHITECTURE.md) — архитектура (см. блок «Расхождения с реальностью»)
-- [BUSINESS-MODEL.md](BUSINESS-MODEL.md) — типы аккаунтов и тарифы
-- [ADMIN.md](ADMIN.md) — целевой дизайн админки
+Вся документация — в папке [`documents/`](documents/README.md): состояние ([STATE](documents/STATE.md)), структура кода ([STRUCTURE](documents/STRUCTURE.md)), эндпоинты ([API](documents/API.md)), админка, ранжирование, дорожная карта.
 
 ## Локальный запуск
 
@@ -38,7 +33,10 @@ node node_modules/next/dist/bin/next dev
 
 ## Структура
 
-- `app/` — страницы: `/`, `/[place]`, `/ad/[id]`, `/u/[slug]`, `/login`, `/profile`, `/messages`, `/admin`, `/terms`, `/privacy`
-- `components/` — UI-компоненты; `components/admin/` — части админки
-- `lib/api.js` — все запросы к API; `lib/auth.js` — `AuthProvider` и `useAuth()`
-- `data/` — статичные справочники (разделы, категории, регионы, слайды)
+- `app/` — страницы: лента `/` и `/[place]`, `/ad/[id]`, `/user/[id]`, `/favorites`, `/messages`, `/profile`, `/help`, `/admin`, `/login`, `/onboarding`, `/terms`, `/privacy`
+- `components/` — UI; `components/admin/` — части админки
+- `lib/` — `api.js` (все запросы к API), `auth.js`, счётчики и избранное, форматирование
+- `data/` — справочники: разделы и категории, характеристики, регионы
+- `documents/` — документация
+
+Подробно — [documents/STRUCTURE.md](documents/STRUCTURE.md).

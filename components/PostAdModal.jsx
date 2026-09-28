@@ -6,7 +6,7 @@ import { FREE_FROM_SECTIONS } from '@/data/categories';
 import { formatPrice } from '@/lib/format';
 import { getAttributeFields, describeAttributes, parseAttributeInput } from '@/data/attributes';
 import { CheckCircle2, Sparkles, ArrowLeft, ArrowRight, ChevronRight, AlertCircle, X, ImagePlus } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Modal from './Modal';
 import { useAuth } from '@/lib/auth';
@@ -78,6 +78,7 @@ export default function PostAdModal({ open, onClose }) {
   const [done, setDone] = useState(false);
   const [publishedAdId, setPublishedAdId] = useState(null);
   const [error, setError] = useState(null);
+  const headerRef = useRef(null);
 
   const groups = getCategoryGroups(form.section);
   const priceCfg = priceConfig(form);
@@ -94,6 +95,12 @@ export default function PostAdModal({ open, onClose }) {
     'review'
   ];
   const stepId = steps[step];
+
+  // Новый шаг открываем с начала, а не с места, где прокрутили предыдущий.
+  useEffect(() => {
+    const box = headerRef.current?.closest('.overflow-y-auto');
+    if (box) box.scrollTop = 0;
+  }, [stepId, done]);
   const attrErrors = attributeErrors(attrFields, form.attrs);
 
   // При смене раздела — сбрасываем выбор подкатегории.
@@ -184,37 +191,40 @@ export default function PostAdModal({ open, onClose }) {
       }}
       size="md"
     >
-      <div className="p-5 md:p-6">
-        <div className="text-xs uppercase tracking-wide text-brand-700 font-bold">
-          Подать объявление
-        </div>
-        <h3 className="text-xl md:text-2xl font-extrabold text-ink-900 mt-1">
-          Займёт меньше минуты
-        </h3>
+      <div className="px-5 md:px-6 pb-5 md:pb-6">
+        {/* Шапка с шагами закреплена, прокручивается только содержимое шага.
+            z-[5] — ниже крестика модалки (z-10), чтобы он оставался кликабельным. */}
+        <div
+          ref={headerRef}
+          className="sticky top-0 z-[5] -mx-5 md:-mx-6 px-5 md:px-6 pt-5 md:pt-6 pb-3 pr-14 bg-white border-b border-slate-100"
+        >
+          <div className="text-xs uppercase tracking-wide text-brand-700 font-bold">
+            Подать объявление{!done && ` · шаг ${step + 1} из ${steps.length}`}
+          </div>
+          <h3 className="text-xl md:text-2xl font-extrabold text-ink-900 mt-1">
+            {done ? 'Готово' : STEP_LABELS[stepId]}
+          </h3>
 
-        {/* Steps */}
-        <div className="mt-4 flex items-center gap-1 overflow-x-auto no-scrollbar">
-          {steps.map((s, i) => (
-            <div key={s} title={STEP_LABELS[s]} className="flex items-center gap-1 shrink-0">
-              <div
-                className={`w-7 h-7 grid place-items-center rounded-full text-xs font-bold shrink-0 ${
-                  i <= step ? 'bg-brand-600 text-white' : 'bg-slate-100 text-ink-500'
-                }`}
-              >
-                {i + 1}
+          <div className="mt-3 flex items-center gap-0.5 md:gap-1 overflow-x-auto no-scrollbar">
+            {steps.map((s, i) => (
+              <div key={s} title={STEP_LABELS[s]} className="flex items-center gap-0.5 md:gap-1 shrink-0">
+                <div
+                  className={`w-6 h-6 md:w-7 md:h-7 grid place-items-center rounded-full text-[11px] md:text-xs font-bold shrink-0 ${
+                    i <= step ? 'bg-brand-600 text-white' : 'bg-slate-100 text-ink-500'
+                  }`}
+                >
+                  {i + 1}
+                </div>
+                {i < steps.length - 1 && (
+                  <div className={`w-2.5 md:w-4 h-[2px] rounded shrink-0 ${i < step ? 'bg-brand-600' : 'bg-slate-200'}`} />
+                )}
               </div>
-              {i < steps.length - 1 && (
-                <div className={`w-4 h-[2px] rounded shrink-0 ${i < step ? 'bg-brand-600' : 'bg-slate-200'}`} />
-              )}
-            </div>
-          ))}
-          <div className="ml-auto text-xs text-ink-500 shrink-0 pl-2">
-            {step + 1} / {steps.length}
+            ))}
           </div>
         </div>
 
         {/* Body */}
-        <div className="mt-5 min-h-[280px]">
+        <div className="mt-4 min-h-[280px]">
           {/* Шаг меняется сразу, без ожидания анимации ухода: AnimatePresence mode="wait"
               застревал на старом шаге, если анимации тормозились (фоновая вкладка, встроенный браузер). */}
           <motion.div

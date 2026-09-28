@@ -32,16 +32,40 @@ function useFitToVisualViewport(ref, enabled) {
       el.style.height = `${vv.height}px`;
       el.style.transform = `translateY(${vv.offsetTop}px)`;
     };
+    // iOS сдвигает экран, пока выезжает клавиатура, а resize/scroll приходят только в конце —
+    // из-за этого экран на мгновение уезжал вверх. Пока клавиатура едет, подстраиваемся каждый кадр.
+    let raf = 0;
+    let until = 0;
+    const follow = () => {
+      update();
+      if (performance.now() < until) raf = requestAnimationFrame(follow);
+      else raf = 0;
+    };
+    const track = () => {
+      until = performance.now() + 800;
+      if (!raf) raf = requestAnimationFrame(follow);
+    };
+    // iOS прокручивает и саму страницу к полю ввода — возвращаем её на место.
+    const pinScroll = () => {
+      if (window.scrollY) window.scrollTo(0, 0);
+    };
     update();
     vv.addEventListener('resize', update);
     vv.addEventListener('scroll', update);
     window.addEventListener('resize', update);
+    window.addEventListener('scroll', pinScroll);
+    el.addEventListener('focusin', track);
+    el.addEventListener('focusout', track);
     const prevOverflow = document.documentElement.style.overflow;
     document.documentElement.style.overflow = 'hidden';
     return () => {
+      cancelAnimationFrame(raf);
       vv.removeEventListener('resize', update);
       vv.removeEventListener('scroll', update);
       window.removeEventListener('resize', update);
+      window.removeEventListener('scroll', pinScroll);
+      el.removeEventListener('focusin', track);
+      el.removeEventListener('focusout', track);
       document.documentElement.style.overflow = prevOverflow;
     };
   }, [ref, enabled]);

@@ -242,7 +242,8 @@ function Feed({ place, params }) {
             </div>
           </div>
 
-          <motion.div layout className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 auto-rows-fr">
+          {/* Сетка без layout-анимации: она масштабировала всё содержимое, и плашка «пусто» растягивалась */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 auto-rows-fr">
             <AnimatePresence mode="popLayout">
               {loading || !ready
                 ? Array.from({ length: 8 }).map((_, i) => (
@@ -273,7 +274,12 @@ function Feed({ place, params }) {
                   ))}
             </AnimatePresence>
             {ready && !loading && loadError && (
-              <div className="col-span-full rounded-2xl bg-white ring-1 ring-black/5 p-8 text-center">
+              <motion.div
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.2 }}
+                className="col-span-full rounded-2xl bg-white ring-1 ring-black/5 p-8 text-center"
+              >
                 <div className="font-extrabold text-ink-900">Не удалось загрузить объявления</div>
                 <div className="text-sm text-ink-500">Проверьте интернет и попробуйте ещё раз.</div>
                 <button
@@ -282,10 +288,15 @@ function Feed({ place, params }) {
                 >
                   Повторить
                 </button>
-              </div>
+              </motion.div>
             )}
             {ready && !loading && !loadError && primary.length === 0 && (
-              <div className="col-span-full rounded-2xl bg-white ring-1 ring-black/5 p-8 text-center">
+              <motion.div
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.2 }}
+                className="col-span-full rounded-2xl bg-white ring-1 ring-black/5 p-8 text-center"
+              >
                 <div className="font-extrabold text-ink-900">
                   {hasFilters ? 'Ничего не нашлось' : 'Пока пусто'}
                 </div>
@@ -309,9 +320,9 @@ function Feed({ place, params }) {
                     + Подать объявление
                   </button>
                 )}
-              </div>
+              </motion.div>
             )}
-          </motion.div>
+          </div>
 
           {/* «В соседних городах» — только когда выбран конкретный город */}
           {isCity && nearby.length > 0 && (

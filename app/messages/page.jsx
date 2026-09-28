@@ -71,6 +71,36 @@ function useFitToVisualViewport(ref, enabled) {
   }, [ref, enabled]);
 }
 
+// iPhone/iPad (и iPad, который притворяется Mac).
+function isIOS() {
+  if (typeof navigator === 'undefined') return false;
+  return /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
+// Фокус без сдвига экрана на iOS.
+// Когда поле внизу получает фокус, iOS сама сдвигает страницу вверх, чтобы поле не закрыла
+// клавиатура, — до всех наших событий, поэтому подстроиться «после» нельзя: виден прыжок.
+// Прячем поле наверху экрана на время фокуса — iOS видит, что поле и так над клавиатурой,
+// и ничего не двигает. Возвращаем его, когда экран уже ужат до высоты над клавиатурой.
+function focusWithoutPan(el) {
+  const vv = window.visualViewport;
+  el.style.transform = `translateY(${-el.getBoundingClientRect().top}px)`;
+  el.style.opacity = '0';
+  el.focus({ preventScroll: true });
+  let done = false;
+  const restore = () => {
+    if (done) return;
+    done = true;
+    el.style.transform = '';
+    el.style.opacity = '';
+    vv?.removeEventListener('resize', onResize);
+  };
+  // useFitToVisualViewport слушает resize раньше нас — даём ему применить высоту.
+  const onResize = () => setTimeout(restore, 50);
+  vv?.addEventListener('resize', onResize);
+  setTimeout(restore, 700); // клавиатура не выехала (внешняя клавиатура) — всё равно вернём
+}
+
 // Опрос сервера: замирает на свёрнутой вкладке и сразу обновляется при возврате на неё.
 function useVisiblePolling(fn, ms, enabled) {
   useEffect(() => {
@@ -266,6 +296,23 @@ function ChatView({ chatId, me, onActivity }) {
   const listRef = useRef(null);
   const lastAtRef = useRef(null);
   const inputRef = useRef(null);
+  const touchRef = useRef(null);
+
+  // Тап по полю на iOS — фокусируем сами, без сдвига экрана (см. focusWithoutPan).
+  // Свайп по полю и тап по уже активному полю (переставить курсор) не трогаем.
+  function onInputTouchStart(e) {
+    const t = e.touches[0];
+    touchRef.current = { x: t.clientX, y: t.clientY };
+  }
+  function onInputTouchEnd(e) {
+    const el = inputRef.current;
+    const start = touchRef.current;
+    const t = e.changedTouches[0];
+    if (!el || !start || !isIOS() || document.activeElement === el) return;
+    if (Math.abs(t.clientX - start.x) > 10 || Math.abs(t.clientY - start.y) > 10) return;
+    e.preventDefault();
+    focusWithoutPan(el);
+  }
 
   // Поле растёт вместе с текстом до max-h-32, дальше прокручивается.
   function fitInput() {
@@ -439,6 +486,8 @@ function ChatView({ chatId, me, onActivity }) {
             ref={inputRef}
             value={draft}
             onChange={(e) => setDraft(e.target.value.slice(0, 2000))}
+            onTouchStart={onInputTouchStart}
+            onTouchEnd={onInputTouchEnd}
             onKeyDown={(e) => {
               // Enter — отправить, Shift+Enter — перенос строки (на телефоне Enter переносит).
               if (e.key === 'Enter' && !e.shiftKey && window.matchMedia('(hover: hover)').matches) {

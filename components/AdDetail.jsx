@@ -200,8 +200,8 @@ export default function AdDetail({ ad }) {
             <Link href={`/${ad.city}`} className="hover:text-brand-700 truncate">
               {cityName(ad.city)}
             </Link>
-            {path.slice(0, 2).map((p) => (
-              <span key={p.label} className="contents">
+            {path.filter((p) => p.href).map((p, i) => (
+              <span key={i} className="contents">
                 <span>›</span>
                 <Link href={p.href} className="hover:text-brand-700 truncate">
                   {p.label}
@@ -262,7 +262,7 @@ export default function AdDetail({ ad }) {
               {path.length > 0 && (
                 <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[13px] text-ink-500">
                   {path.map((p, i) => (
-                    <span key={p.label} className="inline-flex items-center gap-1.5">
+                    <span key={i} className="inline-flex items-center gap-1.5">
                       {i > 0 && <span className="text-ink-300">›</span>}
                       {p.href ? (
                         <Link href={p.href} className="hover:text-brand-700">

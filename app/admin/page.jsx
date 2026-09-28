@@ -33,8 +33,11 @@ import {
   adminDeleteUser,
   adminDeleteAd,
   adminWipeAll,
-  adminGetModeration,
-  adminSetModeration,
+  adminGetSettings,
+  adminSetSetting,
+  adminListSupport,
+  adminReplySupport,
+  adminSetSupportStatus,
   adminSetAdStatus,
   adminBlockUser,
   adminListReports,
@@ -55,6 +58,7 @@ const TABS = [
   { id: 'overview', name: 'Обзор' },
   { id: 'ads', name: 'Объявления' },
   { id: 'reports', name: 'Жалобы' },
+  { id: 'support', name: 'Поддержка' },
   { id: 'users', name: 'Пользователи' },
   { id: 'reviews', name: 'Отзывы' },
   { id: 'settings', name: 'Настройки' }
@@ -77,7 +81,10 @@ function AdminContent() {
   const [statsError, setStatsError] = useState(null);
   const [modAdId, setModAdId] = useState(null);
   // Переход из «Пользователи» к объявлениям автора и из «Обзора» в нужный статус.
-  const [adsPreset, setAdsPreset] = useState(null);
+  // Ссылки из уведомлений приходят параметрами: ?tab=ads&status=pending, ?tab=support&ticket=…
+  const [adsPreset, setAdsPreset] = useState(() =>
+    params.get('status') ? { status: params.get('status') } : null
+  );
 
   const loadStats = useCallback(() => {
     adminStats()
@@ -124,7 +131,7 @@ function AdminContent() {
     );
   }
 
-  const badges = { ads: stats?.pendingAds, reports: stats?.pendingReports };
+  const badges = { ads: stats?.pendingAds, reports: stats?.pendingReports, support: stats?.openTickets };
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -170,6 +177,7 @@ function AdminContent() {
         {tab === 'reports' && <ReportsTab onOpen={setModAdId} onChanged={loadStats} />}
         {tab === 'users' && <UsersTab me={user} onShowAds={(u) => go('ads', { authorId: u.id, authorName: u.name || u.email })} onChanged={loadStats} />}
         {tab === 'reviews' && <ReviewsTab onChanged={loadStats} />}
+        {tab === 'support' && <SupportTab focusId={params.get('ticket')} onChanged={loadStats} />}
         {tab === 'settings' && <SettingsTab onChanged={loadStats} />}
       </main>
 
@@ -231,7 +239,7 @@ function OverviewTab({ stats, onReload, go }) {
         </button>
       </div>
 
-      {(stats.pendingAds > 0 || stats.pendingReports > 0) && (
+      {(stats.pendingAds > 0 || stats.pendingReports > 0 || stats.openTickets > 0) && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           {stats.pendingAds > 0 && (
             <button onClick={() => go('ads', { status: 'pending' })} className="rounded-2xl bg-amber-50 ring-1 ring-amber-200 p-3 text-left">
@@ -247,12 +255,18 @@ function OverviewTab({ stats, onReload, go }) {
               <div className="text-[13px] text-rose-800">Разобрать →</div>
             </button>
           )}
+          {stats.openTickets > 0 && (
+            <button onClick={() => go('support')} className="rounded-2xl bg-accent-50 ring-1 ring-accent-300 p-3 text-left">
+              <div className="font-bold text-ink-900">Обращения ждут ответа: {stats.openTickets}</div>
+              <div className="text-[13px] text-ink-700">Ответить →</div>
+            </button>
+          )}
         </div>
       )}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
         <Kpi icon={Users} label="Пользователи" value={stats.users} delta={stats.usersNew7d} hint={`${stats.usersOnboarded} заполнили профиль`} />
-        <Kpi icon={ShoppingBag} label="Опубликовано" value={stats.approvedAds} delta={stats.adsNew7d} hint={`всего ${stats.ads}, откл. ${stats.rejectedAds}`} />
+        <Kpi icon={ShoppingBag} label="Опубликовано" value={stats.approvedAds} delta={stats.adsNew7d} hint={`всего ${stats.ads}, откл. ${stats.rejectedAds}, скрыто ${stats.hiddenAds}`} />
         <Kpi icon={MessageCircle} label="Переписки" value={stats.conversations} hint={`${stats.messages7d} сообщ. за 7 дней`} />
         <Kpi icon={Eye} label="Просмотры" value={stats.views} hint="всех объявлений" />
         <Kpi icon={Heart} label="В избранном" value={stats.favorites} />
@@ -388,12 +402,18 @@ function Pager({ total, offset, onOffset }) {
 
 // ── Объявления ─────────────────────────────────────────────────────
 
+const ASK = {
+  reject: { title: 'Почему отклоняем?', confirm: 'Отклонить' },
+  hide: { title: 'Почему скрываем из ленты? Автор увидит причину', confirm: 'Скрыть' },
+  delete: { title: 'Почему удаляем? Вернуть будет нельзя', confirm: 'Удалить' }
+};
+
 const STATUS_FILTERS = [
   { key: '', label: 'Все' },
   { key: 'pending', label: 'На модерации' },
   { key: 'approved', label: 'Опубликованы' },
   { key: 'rejected', label: 'Отклонены' },
-  { key: 'archived', label: 'В архиве' }
+  { key: 'hidden', label: 'Скрытые' }
 ];
 
 function AdsTab({ preset, onOpen, onChanged }) {
@@ -488,7 +508,7 @@ function AdsTab({ preset, onOpen, onChanged }) {
                     {formatRelative(a.createdAt)} · {a.viewsCount} просм. · {a.favoritesCount} ♥
                     {a.reportsCount > 0 && <span className="text-rose-600 font-semibold"> · {a.reportsCount} жалоб</span>}
                   </div>
-                  {a.status === 'rejected' && a.moderationNotes && (
+                  {(a.status === 'rejected' || a.status === 'hidden') && a.moderationNotes && (
                     <div className="text-[12px] text-rose-700 truncate">Причина: {a.moderationNotes}</div>
                   )}
                 </div>
@@ -497,13 +517,17 @@ function AdsTab({ preset, onOpen, onChanged }) {
               {asking?.id === a.id ? (
                 <div className="mt-2">
                   <ReasonForm
-                    title={asking.action === 'reject' ? 'Почему отклоняем?' : 'Почему удаляем? Вернуть будет нельзя'}
-                    confirmLabel={asking.action === 'reject' ? 'Отклонить' : 'Удалить'}
-                    tone={asking.action === 'reject' ? 'amber' : 'rose'}
+                    title={ASK[asking.action].title}
+                    confirmLabel={ASK[asking.action].confirm}
+                    tone={asking.action === 'delete' ? 'rose' : 'amber'}
                     busy={busy}
                     onCancel={() => setAsking(null)}
                     onConfirm={(reason) =>
-                      act(() => (asking.action === 'reject' ? adminSetAdStatus(a.id, 'rejected', reason) : adminDeleteAd(a.id, reason)))
+                      act(() =>
+                        asking.action === 'delete'
+                          ? adminDeleteAd(a.id, reason)
+                          : adminSetAdStatus(a.id, asking.action === 'reject' ? 'rejected' : 'hidden', reason)
+                      )
                     }
                   />
                 </div>
@@ -511,12 +535,17 @@ function AdsTab({ preset, onOpen, onChanged }) {
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {a.status !== 'approved' && (
                     <button onClick={() => act(() => adminSetAdStatus(a.id, 'approved'))} disabled={busy} className="h-8 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[13px] font-semibold">
-                      Одобрить
+                      {a.status === 'pending' ? 'Одобрить' : 'Вернуть в ленту'}
                     </button>
                   )}
-                  {a.status !== 'rejected' && (
+                  {a.status === 'pending' && (
                     <button onClick={() => setAsking({ id: a.id, action: 'reject' })} className="h-8 px-3 rounded-lg ring-1 ring-amber-300 text-amber-800 hover:bg-amber-50 text-[13px] font-semibold">
                       Отклонить
+                    </button>
+                  )}
+                  {a.status === 'approved' && (
+                    <button onClick={() => setAsking({ id: a.id, action: 'hide' })} className="h-8 px-3 rounded-lg ring-1 ring-amber-300 text-amber-800 hover:bg-amber-50 text-[13px] font-semibold">
+                      Скрыть
                     </button>
                   )}
                   <Link href={`/ad/${a.id}`} target="_blank" className="h-8 px-3 rounded-lg ring-1 ring-black/10 text-ink-700 hover:bg-slate-50 text-[13px] font-semibold inline-flex items-center">
@@ -852,56 +881,245 @@ function ReviewsTab({ onChanged }) {
 }
 
 // ── Настройки ──────────────────────────────────────────────────────
+// Всё, что управляет лентой и модерацией; ключи и диапазоны задаёт API (/admin/settings).
 
 function SettingsTab({ onChanged }) {
-  const [autoApprove, setAutoApprove] = useState(null);
-  const [saving, setSaving] = useState(false);
+  const [items, setItems] = useState(null);
   const [error, setError] = useState(null);
+  const [saving, setSaving] = useState(null);
+  const [draft, setDraft] = useState({});
 
-  useEffect(() => {
-    adminGetModeration()
-      .then((r) => setAutoApprove(r.autoApprove))
-      .catch((err) => setError(err.message));
+  const load = useCallback(async () => {
+    try {
+      const data = await adminGetSettings();
+      setItems(data.items);
+      setDraft(Object.fromEntries(data.items.map((i) => [i.key, i.value])));
+    } catch (err) {
+      setError(err.message);
+    }
   }, []);
+  useEffect(() => {
+    load();
+  }, [load]);
 
-  async function toggle() {
-    setSaving(true);
+  async function save(key, value) {
+    setSaving(key);
     setError(null);
     try {
-      const r = await adminSetModeration(!autoApprove);
-      setAutoApprove(r.autoApprove);
+      await adminSetSetting(key, value);
+      await load();
       onChanged();
     } catch (err) {
       setError(err.message);
     } finally {
-      setSaving(false);
+      setSaving(null);
     }
   }
+
+  if (!items) return error ? <ErrorBox message={error} /> : <ListSkeleton rows={3} />;
+  const [toggles, numbers] = [items.filter((i) => i.type === 'bool'), items.filter((i) => i.type === 'number')];
 
   return (
     <div className="space-y-3">
       <ErrorBox message={error} />
-      <div className="rounded-2xl bg-white ring-1 ring-black/5 shadow-card p-4 flex items-start gap-4">
-        <div className="flex-1">
-          <div className="font-bold text-ink-900">Автопубликация объявлений</div>
-          <p className="text-sm text-ink-500 mt-0.5">
-            {autoApprove === null
-              ? 'Загружаем…'
-              : autoApprove
-              ? 'Новые объявления сразу попадают в ленту. Проверяйте жалобы.'
-              : 'Новые объявления ждут одобрения во вкладке «Объявления → На модерации». Автор получит уведомление о решении.'}
-          </p>
+      {toggles.map((s) => {
+        const on = s.value === 'true';
+        return (
+          <div key={s.key} className="rounded-2xl bg-white ring-1 ring-black/5 shadow-card p-4 flex items-start gap-4">
+            <div className="flex-1">
+              <div className="font-bold text-ink-900">{s.label}</div>
+              <p className="text-sm text-ink-500 mt-0.5">
+                {s.key === 'moderation.autoApprove'
+                  ? on
+                    ? 'Включено: новые объявления сразу попадают в ленту. Следите за жалобами.'
+                    : 'Выключено: новые объявления ждут одобрения в «Объявления → На модерации», вам приходит уведомление.'
+                  : s.hint}
+              </p>
+            </div>
+            <button
+              onClick={() => save(s.key, !on)}
+              disabled={saving === s.key}
+              role="switch"
+              aria-checked={on}
+              aria-label={s.label}
+              className={`relative w-12 h-7 rounded-full transition-colors shrink-0 disabled:opacity-50 ${on ? 'bg-emerald-500' : 'bg-slate-300'}`}
+            >
+              <span className={`absolute top-0.5 w-6 h-6 rounded-full bg-white shadow transition-all ${on ? 'left-[22px]' : 'left-0.5'}`} />
+            </button>
+          </div>
+        );
+      })}
+
+      <section className="rounded-2xl bg-white ring-1 ring-black/5 shadow-card p-4">
+        <h3 className="font-bold text-ink-900">Лента и подъём</h3>
+        <p className="text-[13px] text-ink-500 mt-0.5">
+          Рейтинг объявления = свежесть × вес + качество × вес + доверие × вес + интерес × вес. Новые и поднятые
+          первые сутки получают бонус. Изменения применяются в течение минуты.
+        </p>
+        <div className="mt-3 divide-y divide-slate-100">
+          {numbers.map((s) => {
+            const changed = String(draft[s.key]) !== String(s.value);
+            return (
+              <div key={s.key} className="py-3 flex items-center gap-3">
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-semibold text-ink-900">{s.label}</div>
+                  {s.hint && <div className="text-[12px] text-ink-500">{s.hint}</div>}
+                  <div className="text-[11px] text-ink-400">
+                    от {s.min} до {s.max}, по умолчанию {s.default}
+                  </div>
+                </div>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  min={s.min}
+                  max={s.max}
+                  step={s.step || 'any'}
+                  value={draft[s.key] ?? ''}
+                  onChange={(e) => setDraft((d) => ({ ...d, [s.key]: e.target.value }))}
+                  className="w-20 h-9 rounded-xl bg-white ring-1 ring-black/10 focus:ring-brand-400 outline-none px-2 text-right tabular-nums"
+                />
+                <button
+                  onClick={() => save(s.key, draft[s.key])}
+                  disabled={!changed || saving === s.key}
+                  className="h-9 px-3 rounded-xl bg-brand-600 hover:bg-brand-700 disabled:bg-slate-200 disabled:text-ink-400 text-white text-[13px] font-semibold"
+                >
+                  {saving === s.key ? '…' : 'OK'}
+                </button>
+              </div>
+            );
+          })}
         </div>
-        <button
-          onClick={toggle}
-          disabled={autoApprove === null || saving}
-          role="switch"
-          aria-checked={!!autoApprove}
-          className={`relative w-12 h-7 rounded-full transition-colors shrink-0 disabled:opacity-50 ${autoApprove ? 'bg-emerald-500' : 'bg-slate-300'}`}
-        >
-          <span className={`absolute top-0.5 w-6 h-6 rounded-full bg-white shadow transition-all ${autoApprove ? 'left-[22px]' : 'left-0.5'}`} />
-        </button>
-      </div>
+      </section>
     </div>
+  );
+}
+
+// ── Поддержка ──────────────────────────────────────────────────────
+
+const TICKET_TOPICS = { question: 'Вопрос', problem: 'Проблема', complaint: 'Жалоба на пользователя', idea: 'Предложение' };
+const TICKET_FILTERS = [
+  { key: 'open', label: 'Ждут ответа' },
+  { key: 'answered', label: 'Отвечено' },
+  { key: 'closed', label: 'Закрытые' },
+  { key: '', label: 'Все' }
+];
+
+function SupportTab({ focusId, onChanged }) {
+  const [status, setStatus] = useState('open');
+  const [items, setItems] = useState(null);
+  const [error, setError] = useState(null);
+
+  const load = useCallback(async () => {
+    setError(null);
+    try {
+      setItems((await adminListSupport(status)).items);
+    } catch (err) {
+      setError(err.message);
+    }
+  }, [status]);
+  useEffect(() => {
+    setItems(null);
+    load();
+  }, [load]);
+
+  // Пришли по ссылке из уведомления — прокручиваем к обращению.
+  useEffect(() => {
+    if (!focusId || !items) return;
+    document.getElementById(`ticket-${focusId}`)?.scrollIntoView({ block: 'center' });
+  }, [focusId, items]);
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap gap-1.5">
+        {TICKET_FILTERS.map((f) => (
+          <button key={f.key || 'all'} onClick={() => setStatus(f.key)} className={`chip chip-sm ${status === f.key ? 'chip-on' : ''}`}>
+            {f.label}
+          </button>
+        ))}
+      </div>
+      <ErrorBox message={error} />
+      {!items ? (
+        <ListSkeleton />
+      ) : items.length === 0 ? (
+        <Empty>{status === 'open' ? 'Все обращения отвечены 🎉' : 'Пусто.'}</Empty>
+      ) : (
+        <ul className="space-y-2">
+          {items.map((t) => (
+            <SupportTicket key={t.id} ticket={t} focused={t.id === focusId} onChanged={() => { load(); onChanged(); }} />
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function SupportTicket({ ticket, focused, onChanged }) {
+  const [reply, setReply] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  async function run(fn) {
+    setBusy(true);
+    try {
+      await fn();
+      onChanged();
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <li id={`ticket-${ticket.id}`} className={`rounded-2xl bg-white ring-1 shadow-card p-3 space-y-2 ${focused ? 'ring-accent-400' : 'ring-black/5'}`}>
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="font-semibold text-ink-900">{TICKET_TOPICS[ticket.topic] || ticket.topic}</span>
+        <span className="text-[12px] text-ink-500" suppressHydrationWarning>
+          {ticket.user?.name || ticket.user?.email} · {formatRelative(ticket.updatedAt)}
+        </span>
+        {ticket.user?.blockedAt && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-rose-100 text-rose-800">заблокирован</span>}
+      </div>
+      <div className="space-y-1.5">
+        {ticket.messages.map((m) => (
+          <div key={m.id} className={`flex ${m.fromAdmin ? 'justify-end' : 'justify-start'}`}>
+            <div
+              className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap break-words ${
+                m.fromAdmin ? 'bg-brand-600 text-white rounded-br-sm' : 'bg-slate-100 text-ink-900 rounded-bl-sm'
+              }`}
+            >
+              {m.text}
+            </div>
+          </div>
+        ))}
+      </div>
+      {ticket.status !== 'closed' ? (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (reply.trim()) run(async () => { await adminReplySupport(ticket.id, reply.trim()); setReply(''); });
+          }}
+          className="space-y-2"
+        >
+          <textarea
+            value={reply}
+            onChange={(e) => setReply(e.target.value.slice(0, 2000))}
+            rows={2}
+            placeholder="Ответ — придёт пользователю в уведомления и на почту"
+            className="w-full rounded-xl bg-white ring-1 ring-black/10 focus:ring-brand-400 outline-none px-3 py-2 text-sm resize-none"
+          />
+          <div className="flex gap-1.5">
+            <button type="submit" disabled={busy || !reply.trim()} className="h-8 px-3 rounded-lg bg-brand-600 hover:bg-brand-700 disabled:bg-slate-300 text-white text-[13px] font-semibold">
+              Ответить
+            </button>
+            <button type="button" onClick={() => run(() => adminSetSupportStatus(ticket.id, 'closed'))} disabled={busy} className="h-8 px-3 rounded-lg ring-1 ring-black/10 text-ink-700 hover:bg-slate-50 text-[13px] font-semibold">
+              Закрыть
+            </button>
+          </div>
+        </form>
+      ) : (
+        <button onClick={() => run(() => adminSetSupportStatus(ticket.id, 'open'))} disabled={busy} className="h-8 px-3 rounded-lg ring-1 ring-black/10 text-ink-700 hover:bg-slate-50 text-[13px] font-semibold">
+          Открыть заново
+        </button>
+      )}
+    </li>
   );
 }

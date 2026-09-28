@@ -1,6 +1,6 @@
 'use client';
 
-import { Bell, CheckCircle2, Star, Trash2, XCircle } from 'lucide-react';
+import { Bell, CheckCircle2, Clock, EyeOff, LifeBuoy, Star, Trash2, XCircle } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -11,8 +11,12 @@ import { formatRelative } from '@/lib/format';
 const ICONS = {
   ad_approved: [CheckCircle2, 'text-emerald-600 bg-emerald-50'],
   ad_rejected: [XCircle, 'text-rose-600 bg-rose-50'],
+  ad_hidden: [EyeOff, 'text-rose-600 bg-rose-50'],
   ad_removed: [Trash2, 'text-rose-600 bg-rose-50'],
-  review_new: [Star, 'text-amber-600 bg-amber-50']
+  ad_pending: [Clock, 'text-amber-600 bg-amber-50'],
+  review_new: [Star, 'text-amber-600 bg-amber-50'],
+  support_new: [LifeBuoy, 'text-accent-600 bg-accent-50'],
+  support_reply: [LifeBuoy, 'text-accent-600 bg-accent-50']
 };
 
 // Колокольчик: счётчик непрочитанных опрашивается раз в минуту, список — при открытии.

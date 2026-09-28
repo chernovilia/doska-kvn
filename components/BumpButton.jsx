@@ -39,30 +39,34 @@ export default function BumpButton({ ad, compact = false }) {
     }
   }
 
-  const label = busy
-    ? 'Поднимаем…'
-    : onCooldown
-    ? `Снова через ${timeLeft}`
-    : compact
-    ? 'Поднять'
-    : 'Поднять в ленте';
+  // Кнопки нет, пока подъём недоступен (через ranking.bump_cooldown_days после публикации
+  // или прошлого подъёма, настраивается в админке) — только тихая подсказка когда.
+  if (onCooldown) {
+    return (
+      <div
+        className={`w-full inline-flex items-center justify-center gap-1.5 text-ink-500 ${
+          compact ? 'py-1.5 text-[12px]' : 'py-2 text-[13px]'
+        }`}
+        suppressHydrationWarning
+      >
+        <ArrowUpCircle className={compact ? 'w-3.5 h-3.5' : 'w-4 h-4'} />
+        Поднять можно через {timeLeft}
+      </div>
+    );
+  }
 
   return (
     <button
       type="button"
       onClick={onClick}
-      disabled={busy || onCooldown}
-      title={onCooldown ? 'Бесплатный подъём снова доступен после паузы' : 'Бесплатно'}
-      className={`w-full inline-flex items-center justify-center gap-1.5 font-semibold disabled:cursor-not-allowed ${
+      disabled={busy}
+      title="Бесплатно: сутки объявление будет выше в ленте"
+      className={`w-full inline-flex items-center justify-center gap-1.5 font-semibold bg-brand-600 hover:bg-brand-700 text-white disabled:opacity-60 ${
         compact ? 'rounded-xl px-2 py-1.5 text-[12px]' : 'rounded-2xl px-4 py-3'
-      } ${
-        onCooldown
-          ? 'bg-slate-100 text-ink-500'
-          : 'bg-brand-600 hover:bg-brand-700 text-white disabled:opacity-60'
       }`}
     >
       <ArrowUpCircle className={compact ? 'w-3.5 h-3.5' : 'w-4 h-4'} />
-      {label}
+      {busy ? 'Поднимаем…' : compact ? 'Поднять' : 'Поднять в ленте'}
     </button>
   );
 }

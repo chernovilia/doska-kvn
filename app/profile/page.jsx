@@ -16,7 +16,8 @@ import {
   User as UserIcon,
   ShoppingBag,
   MapPin,
-  Briefcase
+  Briefcase,
+  LifeBuoy
 } from 'lucide-react';
 
 import VkIcon from '@/components/icons/VkIcon';
@@ -207,7 +208,7 @@ function ProfileContent() {
             />
             <Metric value={me.reviewsCount ?? 0} label="Отзывы" />
             <Metric value={me.dealsCount ?? 0} label="Сделки" />
-            <Metric value={me.activeAdsCount ?? myAds.length} label="Активных" />
+            <Metric value={myAds.filter((a) => a.status === 'approved').length} label="В ленте" />
           </div>
         </section>
 
@@ -323,6 +324,7 @@ function MyAdsTab({ ads, onPost, onReload }) {
               <AdCard
                 ad={ad}
                 showShare
+                showStatus
                 onDelete={handleDelete}
               />
             </div>
@@ -361,6 +363,7 @@ function ReviewsTab({ me }) {
 }
 
 function SettingsTab({ me }) {
+  const router = useRouter();
   const [editKind, setEditKind] = useState(null);
 
   const phoneHint = (() => {
@@ -376,20 +379,35 @@ function SettingsTab({ me }) {
     { kind: null, label: 'Тип аккаунта', hint: 'Личный (приватный)', disabled: true },
     { kind: null, label: 'Способы оплаты', hint: 'Не подключены', disabled: true },
     { kind: 'notifications', label: 'Уведомления', hint: me.notifyEmail ? 'E-mail включён' : 'Отключены' },
-    { kind: null, label: 'Правила и политика', hint: 'v. 1.4', disabled: true }
+    { href: '/terms', label: 'Правила и политика', hint: 'Условия использования и обработка данных' }
   ];
 
   return (
     <>
+      {/* Помощь — отдельной яркой карточкой: обращение уходит администрации */}
+      <Link
+        href="/help"
+        className="mb-3 flex items-center gap-3 rounded-2xl bg-accent-50 ring-1 ring-accent-300 p-4 hover:bg-accent-100/60"
+      >
+        <span className="w-11 h-11 rounded-2xl bg-accent-500 text-white grid place-items-center shrink-0">
+          <LifeBuoy className="w-6 h-6" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block font-bold text-ink-900">Помощь</span>
+          <span className="block text-[13px] text-ink-700">Вопрос, проблема или жалоба — напишите нам, ответим здесь и на почту</span>
+        </span>
+        <ChevronRight className="w-5 h-5 text-ink-500 shrink-0" />
+      </Link>
+
       <div className="rounded-2xl bg-white ring-1 ring-black/5 shadow-card overflow-hidden">
         <ul>
           {rows.map((r, i) => (
             <li
               key={r.label}
-              onClick={() => r.kind && setEditKind(r.kind)}
+              onClick={() => (r.kind ? setEditKind(r.kind) : r.href ? router.push(r.href) : null)}
               className={`px-4 py-3 flex items-center gap-3 ${
                 i < rows.length - 1 ? 'border-b border-black/5' : ''
-              } ${r.kind ? 'hover:bg-brand-50 cursor-pointer' : 'opacity-60 cursor-not-allowed'}`}
+              } ${r.kind || r.href ? 'hover:bg-brand-50 cursor-pointer' : 'opacity-60 cursor-not-allowed'}`}
             >
               <div className="min-w-0">
                 <div className="text-sm font-semibold text-ink-900">{r.label}</div>

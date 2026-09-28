@@ -10,13 +10,19 @@ import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import Link from 'next/link';
 import {
-  X, Check, XCircle, Trash2, User as UserIcon, Mail, Phone,
+  X, Check, XCircle, Trash2, EyeOff, User as UserIcon, Mail, Phone,
   MapPin, Calendar, ShieldCheck, AlertCircle, ExternalLink
 } from 'lucide-react';
 import { adminGetAd, adminSetAdStatus, adminDeleteAd, cityName, getSection } from '@/lib/api';
 import { formatPrice } from '@/lib/format';
 import { describeAttributes } from '@/data/attributes';
 import { ReasonForm, StatusBadge } from './ui';
+
+const ASK = {
+  reject: { title: 'Почему отклоняем?', confirm: 'Отклонить' },
+  hide: { title: 'Почему скрываем из ленты? Автор увидит причину', confirm: 'Скрыть' },
+  delete: { title: 'Почему удаляем? Вернуть будет нельзя', confirm: 'Удалить навсегда' }
+};
 
 export default function ModerationModal({ open, adId, onClose, onChanged }) {
   const [ad, setAd] = useState(null);
@@ -165,9 +171,9 @@ export default function ModerationModal({ open, adId, onClose, onChanged }) {
                         {ad.viewsCount ?? 0} просм. · {ad.favoritesCount ?? 0} в избр. · {ad.reportsCount ?? 0} жалоб
                       </span>
                     </div>
-                    {ad.status === 'rejected' && ad.moderationNotes && (
+                    {(ad.status === 'rejected' || ad.status === 'hidden') && ad.moderationNotes && (
                       <div className="rounded-xl bg-rose-50 text-rose-800 text-[13px] px-3 py-2">
-                        Причина отклонения: {ad.moderationNotes}
+                        Причина: {ad.moderationNotes}
                       </div>
                     )}
 
@@ -294,12 +300,14 @@ export default function ModerationModal({ open, adId, onClose, onChanged }) {
             {ad && asking && (
               <div className="p-4 border-t border-black/5 bg-white">
                 <ReasonForm
-                  title={asking === 'reject' ? 'Почему отклоняем?' : 'Почему удаляем? Вернуть будет нельзя'}
-                  confirmLabel={asking === 'reject' ? 'Отклонить' : 'Удалить навсегда'}
-                  tone={asking === 'reject' ? 'amber' : 'rose'}
+                  title={ASK[asking].title}
+                  confirmLabel={ASK[asking].confirm}
+                  tone={asking === 'delete' ? 'rose' : 'amber'}
                   busy={busy}
                   onCancel={() => setAsking(null)}
-                  onConfirm={(reason) => (asking === 'reject' ? setStatus('rejected', reason) : remove(reason))}
+                  onConfirm={(reason) =>
+                    asking === 'delete' ? remove(reason) : setStatus(asking === 'reject' ? 'rejected' : 'hidden', reason)
+                  }
                 />
               </div>
             )}
@@ -315,7 +323,7 @@ export default function ModerationModal({ open, adId, onClose, onChanged }) {
                 </button>
 
                 <div className="ml-auto flex items-center gap-2">
-                  {ad.status !== 'rejected' && (
+                  {ad.status === 'pending' && (
                     <button
                       onClick={() => setAsking('reject')}
                       disabled={busy}
@@ -325,6 +333,16 @@ export default function ModerationModal({ open, adId, onClose, onChanged }) {
                       Отклонить
                     </button>
                   )}
+                  {ad.status === 'approved' && (
+                    <button
+                      onClick={() => setAsking('hide')}
+                      disabled={busy}
+                      className="inline-flex items-center gap-1.5 rounded-xl bg-white ring-1 ring-amber-200 text-amber-800 hover:bg-amber-50 px-4 py-2 text-sm font-semibold disabled:opacity-50"
+                    >
+                      <EyeOff className="w-4 h-4" />
+                      Скрыть из ленты
+                    </button>
+                  )}
                   {ad.status !== 'approved' && (
                     <button
                       onClick={() => setStatus('approved')}
@@ -332,7 +350,7 @@ export default function ModerationModal({ open, adId, onClose, onChanged }) {
                       className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 text-sm font-semibold disabled:opacity-50"
                     >
                       <Check className="w-4 h-4" />
-                      Одобрить
+                      {ad.status === 'pending' ? 'Одобрить' : 'Вернуть в ленту'}
                     </button>
                   )}
                 </div>

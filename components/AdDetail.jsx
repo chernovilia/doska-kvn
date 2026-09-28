@@ -194,7 +194,8 @@ export default function AdDetail({ ad }) {
     ad.category && { label: ad.category }
   ].filter(Boolean);
 
-  const showActionBar = !isOwner;
+  // Связаться можно только по опубликованному: чужое неопубликованное видит лишь админ.
+  const showActionBar = !isOwner && ad.status === 'approved';
 
   return (
     <div className={`min-h-screen bg-slate-50 md:pb-0 ${showActionBar ? 'pb-28' : 'pb-24'}`}>
@@ -226,9 +227,12 @@ export default function AdDetail({ ad }) {
           </nav>
 
           <div className="ml-auto flex items-center gap-0.5">
-            <IconBtn label="Поделиться" onClick={onShare}>
-              <Share2 className="w-5 h-5" />
-            </IconBtn>
+            {/* Неопубликованное по ссылке никто, кроме автора, не откроет — делиться нечем */}
+            {ad.status === 'approved' && (
+              <IconBtn label="Поделиться" onClick={onShare}>
+                <Share2 className="w-5 h-5" />
+              </IconBtn>
+            )}
             {!isOwner && (
               <IconBtn label={liked ? 'Убрать из избранного' : 'В избранное'} onClick={onToggleFavorite}>
                 <Heart className={`w-[22px] h-[22px] ${liked ? 'fill-rose-500 text-rose-500' : ''}`} />
@@ -239,6 +243,7 @@ export default function AdDetail({ ad }) {
       </div>
 
       <main className="max-w-5xl mx-auto px-0 md:px-6 py-0 md:py-6">
+        <StatusBanner ad={ad} />
         <div className="md:grid md:grid-cols-[1.4fr_1fr] md:gap-6">
           {/* Левая колонка — галерея */}
           <div className="md:sticky md:top-20 md:self-start">
@@ -323,7 +328,7 @@ export default function AdDetail({ ad }) {
             </div>
 
             {/* Связь — на компьютере; на телефоне те же кнопки в панели снизу */}
-            {!isOwner && (
+            {showActionBar && (
               <div className="hidden md:block rounded-2xl bg-white ring-1 ring-black/5 shadow-card p-4 space-y-2">
                 <div className="flex gap-2">
                   {writeBtn}
@@ -345,11 +350,6 @@ export default function AdDetail({ ad }) {
                   <div className="text-sm font-bold text-ink-900">Это ваше объявление</div>
                   <OwnerStatus status={ad.status} />
                 </div>
-                {ad.status === 'rejected' && ad.moderationNotes && (
-                  <div className="rounded-xl bg-rose-50 text-rose-800 text-[13px] px-3 py-2">
-                    Причина: {ad.moderationNotes}
-                  </div>
-                )}
                 <BumpButton ad={ad} />
                 <button
                   onClick={onDelete}
@@ -639,8 +639,34 @@ const OWNER_STATUS = {
   approved: ['Опубликовано', 'bg-emerald-50 text-emerald-700 ring-emerald-200'],
   pending: ['На модерации', 'bg-amber-50 text-amber-800 ring-amber-200'],
   rejected: ['Отклонено', 'bg-rose-50 text-rose-700 ring-rose-200'],
-  archived: ['В архиве', 'bg-slate-100 text-slate-700 ring-slate-200']
+  hidden: ['Скрыто модератором', 'bg-rose-50 text-rose-700 ring-rose-200'],
+  expired: ['Истёк срок', 'bg-slate-100 text-slate-700 ring-slate-200']
 };
+
+// Плашка над объявлением, которого нет в ленте: его видят только автор и админы.
+const STATUS_BANNER = {
+  pending: ['bg-amber-50 ring-amber-200 text-amber-900', 'Объявление на проверке', 'Оно появится в ленте после одобрения модератором — пришлём уведомление.'],
+  rejected: ['bg-rose-50 ring-rose-200 text-rose-900', 'Объявление отклонено', 'Его не видно в ленте и поиске.'],
+  hidden: ['bg-rose-50 ring-rose-200 text-rose-900', 'Объявление скрыто модератором', 'Его не видно в ленте и поиске. Если это ошибка — напишите в поддержку.']
+};
+
+function StatusBanner({ ad }) {
+  const b = STATUS_BANNER[ad.status];
+  if (!b) return null;
+  const [cls, title, text] = b;
+  return (
+    <div className={`mx-4 md:mx-0 mt-3 md:mt-0 md:mb-4 rounded-2xl ring-1 px-4 py-3 ${cls}`}>
+      <div className="font-bold">{title}</div>
+      {ad.moderationNotes && <div className="text-sm mt-0.5">Причина: {ad.moderationNotes}</div>}
+      <div className="text-[13px] mt-0.5 opacity-80">{text}</div>
+      {ad.status !== 'pending' && (
+        <Link href="/help" className="inline-block mt-1.5 text-[13px] font-semibold underline">
+          Написать в поддержку
+        </Link>
+      )}
+    </div>
+  );
+}
 
 function OwnerStatus({ status }) {
   const [label, cls] = OWNER_STATUS[status] || OWNER_STATUS.approved;

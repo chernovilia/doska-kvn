@@ -20,8 +20,9 @@ import { useToast } from './Toast';
  * @param {Object}   props.ad
  * @param {boolean}  [props.showShare] — кнопка «скопировать ссылку» (в профиле)
  * @param {Function} [props.onDelete]  — кнопка удаления (в профиле)
+ * @param {boolean}  [props.showStatus] — плашка статуса, если объявление не в ленте (в профиле)
  */
-export default function AdCard({ ad, showShare = false, onDelete }) {
+export default function AdCard({ ad, showShare = false, onDelete, showStatus = false }) {
   const { toast } = useToast();
   const { isFavorite, toggle, userId } = useFavorites();
   const liked = isFavorite(ad.id);
@@ -73,6 +74,9 @@ export default function AdCard({ ad, showShare = false, onDelete }) {
           )}
 
           <div className="absolute left-2 top-2 flex flex-col items-start gap-1">
+            {showStatus && OWN_STATUS[ad.status] && (
+              <Badge className={OWN_STATUS[ad.status][1]}>{OWN_STATUS[ad.status][0]}</Badge>
+            )}
             {ad.top && (
               <Badge className="top-badge">
                 <Crown className="h-3 w-3" />
@@ -135,7 +139,7 @@ export default function AdCard({ ad, showShare = false, onDelete }) {
             <Heart className={`h-4 w-4 ${liked ? 'fill-rose-500 text-rose-500' : 'text-ink-700'}`} />
           </IconButton>
         )}
-        {showShare && (
+        {showShare && ad.status !== 'pending' && ad.status !== 'rejected' && ad.status !== 'hidden' && (
           <IconButton label="Скопировать ссылку" onClick={onCopyLink}>
             <LinkIcon className="h-4 w-4 text-ink-700" />
           </IconButton>
@@ -149,6 +153,14 @@ export default function AdCard({ ad, showShare = false, onDelete }) {
     </div>
   );
 }
+
+// Статусы своих объявлений, которых нет в ленте.
+const OWN_STATUS = {
+  pending: ['На проверке', 'bg-amber-400 text-amber-950'],
+  rejected: ['Отклонено', 'bg-rose-600 text-white'],
+  hidden: ['Скрыто', 'bg-rose-600 text-white'],
+  expired: ['Истёк срок', 'bg-slate-600 text-white']
+};
 
 function Badge({ className = '', children }) {
   return (

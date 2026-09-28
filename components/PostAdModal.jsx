@@ -5,7 +5,7 @@ import { CITIES, REGIONS, SECTIONS, getCategoryGroups, getSection, createAd, upl
 import { FREE_FROM_SECTIONS } from '@/data/categories';
 import { formatPrice, formatEventDate } from '@/lib/format';
 import { getAttributeFields, describeAttributes, parseAttributeInput } from '@/data/attributes';
-import { CheckCircle2, Sparkles, ArrowLeft, ArrowRight, ChevronRight, AlertCircle, X, ImagePlus } from 'lucide-react';
+import { CheckCircle2, Clock, Sparkles, ArrowLeft, ArrowRight, ChevronRight, AlertCircle, X, ImagePlus } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Modal from './Modal';
@@ -77,6 +77,7 @@ export default function PostAdModal({ open, onClose }) {
   const [checking, setChecking] = useState(false);
   const [done, setDone] = useState(false);
   const [publishedAdId, setPublishedAdId] = useState(null);
+  const [publishedStatus, setPublishedStatus] = useState(null);
   const [error, setError] = useState(null);
   const headerRef = useRef(null);
 
@@ -128,6 +129,7 @@ export default function PostAdModal({ open, onClose }) {
     setChecking(false);
     setDone(false);
     setPublishedAdId(null);
+    setPublishedStatus(null);
     setError(null);
     setUploading(0);
   }
@@ -154,6 +156,7 @@ export default function PostAdModal({ open, onClose }) {
       };
       const ad = await createAd(payload);
       setPublishedAdId(ad.id);
+      setPublishedStatus(ad.status);
       setDone(true);
     } catch (err) {
       setError(err.message || 'Не удалось опубликовать');
@@ -237,14 +240,23 @@ export default function PostAdModal({ open, onClose }) {
           >
             {done ? (
               <div className="text-center py-6">
-                <div className="mx-auto w-14 h-14 grid place-items-center rounded-full bg-emerald-100 text-emerald-700">
-                  <CheckCircle2 className="w-8 h-8" />
-                </div>
+                {publishedStatus === 'pending' ? (
+                  <div className="mx-auto w-14 h-14 grid place-items-center rounded-full bg-amber-100 text-amber-700">
+                    <Clock className="w-8 h-8" />
+                  </div>
+                ) : (
+                  <div className="mx-auto w-14 h-14 grid place-items-center rounded-full bg-emerald-100 text-emerald-700">
+                    <CheckCircle2 className="w-8 h-8" />
+                  </div>
+                )}
+                {/* Статус — из ответа API: при выключенной автопубликации объявление ждёт проверки */}
                 <div className="mt-3 text-lg font-extrabold text-ink-900">
-                  Объявление опубликовано!
+                  {publishedStatus === 'pending' ? 'Отправлено на проверку' : 'Объявление опубликовано!'}
                 </div>
                 <div className="mt-1 text-sm text-ink-500">
-                  Оно уже видно всем в вашем городе.
+                  {publishedStatus === 'pending'
+                    ? 'Модератор посмотрит его в ближайшее время — пришлём уведомление, когда оно появится в ленте.'
+                    : 'Оно уже видно всем в вашем городе.'}
                 </div>
               </div>
             ) : checking ? (

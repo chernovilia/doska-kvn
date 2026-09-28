@@ -1,13 +1,20 @@
 import { formatPrice } from '@/lib/format';
 import { notFound } from 'next/navigation';
+import { cookies } from 'next/headers';
 import { getAd } from '@/lib/api';
 import AdDetail from '@/components/AdDetail';
 
 // Server Component: делает SSR-fetch, генерит правильные Open Graph теги
 // для шэринга в VK/TG/поисковики. Клиент получает уже готовый HTML.
 
+// Токен входа пробрасываем в API: своё неопубликованное объявление автор тоже должен видеть.
+function authCookie() {
+  const token = cookies().get('access_token')?.value;
+  return token ? `access_token=${token}` : undefined;
+}
+
 export async function generateMetadata({ params }) {
-  const ad = await getAd(params.id).catch(() => null);
+  const ad = await getAd(params.id, { cookie: authCookie() }).catch(() => null);
 
   if (!ad) {
     return {
@@ -47,7 +54,7 @@ export async function generateMetadata({ params }) {
 }
 
 export default async function AdPage({ params }) {
-  const ad = await getAd(params.id).catch(() => null);
+  const ad = await getAd(params.id, { cookie: authCookie() }).catch(() => null);
   if (!ad) notFound();
 
   return <AdDetail ad={ad} />;

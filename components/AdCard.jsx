@@ -7,6 +7,7 @@ import { cityName, getSection } from '@/lib/api';
 import { formatPrice, formatRelative, formatEventDate } from '@/lib/format';
 import { accountTypeLabel, accountTypeEmoji, accountTypeBadgeClass, isBusiness } from '@/lib/accountType';
 import { shareOrCopy } from '@/lib/share';
+import { attributesSummary } from '@/data/attributes';
 import { useToast } from './Toast';
 
 /**
@@ -28,6 +29,7 @@ export default function AdCard({ ad, showShare = false, onDelete }) {
   // Тип автора — снапшот на момент публикации.
   const authorType = ad.authorType || ad.author?.type || null;
   const showType = isBusiness(authorType) && accountTypeLabel(authorType);
+  const summary = attributesSummary(ad);
 
   async function onCopyLink() {
     const status = await shareOrCopy({
@@ -101,6 +103,7 @@ export default function AdCard({ ad, showShare = false, onDelete }) {
           <div className="line-clamp-2 min-h-[2.5em] text-[13px] leading-snug text-ink-800 md:text-sm">
             {ad.title}
           </div>
+          {summary && <div className="truncate text-[12px] text-ink-500">{summary}</div>}
           <div
             className="mt-auto flex items-center gap-1 pt-0.5 text-[11px] text-ink-500 md:text-[12px]"
             suppressHydrationWarning

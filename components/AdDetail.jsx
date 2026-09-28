@@ -36,6 +36,7 @@ import {
 import { formatPrice, formatRelative, formatEventDate, formatMonthYear, pluralRu } from '@/lib/format';
 import { accountTypeLabel, accountTypeEmoji, accountTypeBadgeClass, isBusiness } from '@/lib/accountType';
 import { useAuth } from '@/lib/auth';
+import { describeAttributes } from '@/data/attributes';
 import { shareOrCopy } from '@/lib/share';
 import { useToast } from './Toast';
 import AdCard from './AdCard';
@@ -83,6 +84,7 @@ export default function AdDetail({ ad }) {
   }, [ad.id]);
 
   const gallery = ad.gallery?.length ? ad.gallery : ad.image ? [ad.image] : [];
+  const specs = describeAttributes(ad);
   const isEvent = ad.section === 'events';
   // У старых объявлений раздел 'market' — его в справочнике уже нет.
   const sectionInfo = getSection(ad.section);
@@ -339,6 +341,20 @@ export default function AdDetail({ ad }) {
                   <Trash2 className="w-4 h-4" />
                   {deleting ? 'Удаляем…' : 'Удалить объявление'}
                 </button>
+              </div>
+            )}
+
+            {specs.length > 0 && (
+              <div className="rounded-2xl bg-white ring-1 ring-black/5 shadow-card p-4">
+                <h2 className="text-base font-bold text-ink-900 mb-1">Характеристики</h2>
+                <dl className="divide-y divide-slate-100">
+                  {specs.map((r) => (
+                    <div key={r.label} className="flex items-baseline justify-between gap-4 py-2 text-[15px]">
+                      <dt className="text-ink-500">{r.label}</dt>
+                      <dd className="font-semibold text-ink-900 text-right break-words min-w-0">{r.value}</dd>
+                    </div>
+                  ))}
+                </dl>
               </div>
             )}
 

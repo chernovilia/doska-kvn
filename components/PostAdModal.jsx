@@ -4,13 +4,25 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { CITIES, REGIONS, SECTIONS, getCategoryGroups, getSection, createAd, uploadAdPhoto } from '@/lib/api';
 import { FREE_FROM_SECTIONS } from '@/data/categories';
 import { formatPrice } from '@/lib/format';
+import { getAttributeFields, describeAttributes, parseAttributeInput } from '@/data/attributes';
 import { CheckCircle2, Sparkles, ArrowLeft, ArrowRight, ChevronRight, AlertCircle, X, ImagePlus } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Modal from './Modal';
 import { useAuth } from '@/lib/auth';
 
-const STEPS = ['Город', 'Раздел', 'Категория', 'Описание', 'Фото', 'Проверка'];
+const STEP_LABELS = {
+  city: 'Город',
+  section: 'Раздел',
+  category: 'Категория',
+  details: 'Характеристики',
+  text: 'Описание',
+  photos: 'Фото',
+  review: 'Проверка'
+};
+
+// Адрес спрашиваем там, где он важен для покупателя.
+const ADDRESS_SECTIONS = ['realty', 'events'];
 
 // Публикуем только в запущенные регионы.
 const LAUNCHED = REGIONS.filter((r) => r.launched).map((r) => r.id);
@@ -44,6 +56,9 @@ function emptyForm(user) {
     title: '',
     price: '',
     priceTo: '',
+    attrs: {}, // Характеристики как ввёл пользователь (строки), разбираются при отправке
+    eventDate: '', // datetime-local у афиши
+    address: '',
     description: '',
     photos: [] // Массив { url } с бэка
   };
@@ -66,11 +81,30 @@ export default function PostAdModal({ open, onClose }) {
 
   const groups = getCategoryGroups(form.section);
   const priceCfg = priceConfig(form);
+  const attrFields = getAttributeFields(form.section, form.group);
+  const isEvent = form.section === 'events';
+  const askAddress = ADDRESS_SECTIONS.includes(form.section);
+  const steps = [
+    'city',
+    'section',
+    'category',
+    ...(attrFields.length || isEvent || askAddress ? ['details'] : []),
+    'text',
+    'photos',
+    'review'
+  ];
+  const stepId = steps[step];
+  const attrErrors = attributeErrors(attrFields, form.attrs);
 
   // При смене раздела — сбрасываем выбор подкатегории.
   useEffect(() => {
     setForm((f) => ({ ...f, group: null, category: null }));
   }, [form.section]);
+
+  // Другая подгруппа — другой набор характеристик.
+  useEffect(() => {
+    setForm((f) => ({ ...f, attrs: {} }));
+  }, [form.section, form.group]);
 
   // Если юзер загрузился позже и у него есть homeCityId — подставим дефолт.
   useEffect(() => {
@@ -103,6 +137,9 @@ export default function PostAdModal({ open, onClose }) {
         price: form.price ? Number(form.price) : 0,
         priceTo: priceCfg.range && form.priceTo ? Number(form.priceTo) : undefined,
         priceSuffix: priceCfg.suffix,
+        attributes: buildAttributes(attrFields, form.attrs),
+        eventDate: isEvent && form.eventDate ? new Date(form.eventDate).toISOString() : undefined,
+        address: askAddress ? form.address.trim() || undefined : undefined,
         description: form.description?.trim() || undefined,
         photoUrls: form.photos.map((p) => p.url)
       };
@@ -117,11 +154,11 @@ export default function PostAdModal({ open, onClose }) {
   }
 
   function next() {
-    if (step === STEPS.length - 1) {
+    if (step === steps.length - 1) {
       publish();
       return;
     }
-    setStep((s) => Math.min(s + 1, STEPS.length - 1));
+    setStep((s) => Math.min(s + 1, steps.length - 1));
   }
 
   function back() {
@@ -130,12 +167,13 @@ export default function PostAdModal({ open, onClose }) {
 
   const canNext =
     uploading === 0 &&
-    ((step === 0 && form.city) ||
-      (step === 1 && form.section) ||
-      (step === 2 && form.category) ||
-      (step === 3 && form.title.trim().length > 3) ||
-      step === 4 ||
-      step === 5);
+    ((stepId === 'city' && form.city) ||
+      (stepId === 'section' && form.section) ||
+      (stepId === 'category' && form.category) ||
+      (stepId === 'details' && !Object.keys(attrErrors).length && (!isEvent || form.eventDate)) ||
+      (stepId === 'text' && form.title.trim().length > 3) ||
+      stepId === 'photos' ||
+      stepId === 'review');
 
   return (
     <Modal
@@ -156,8 +194,8 @@ export default function PostAdModal({ open, onClose }) {
 
         {/* Steps */}
         <div className="mt-4 flex items-center gap-1 overflow-x-auto no-scrollbar">
-          {STEPS.map((s, i) => (
-            <div key={s} className="flex items-center gap-1 shrink-0">
+          {steps.map((s, i) => (
+            <div key={s} title={STEP_LABELS[s]} className="flex items-center gap-1 shrink-0">
               <div
                 className={`w-7 h-7 grid place-items-center rounded-full text-xs font-bold shrink-0 ${
                   i <= step ? 'bg-brand-600 text-white' : 'bg-slate-100 text-ink-500'
@@ -165,13 +203,13 @@ export default function PostAdModal({ open, onClose }) {
               >
                 {i + 1}
               </div>
-              {i < STEPS.length - 1 && (
+              {i < steps.length - 1 && (
                 <div className={`w-4 h-[2px] rounded shrink-0 ${i < step ? 'bg-brand-600' : 'bg-slate-200'}`} />
               )}
             </div>
           ))}
           <div className="ml-auto text-xs text-ink-500 shrink-0 pl-2">
-            {step + 1} / {STEPS.length}
+            {step + 1} / {steps.length}
           </div>
         </div>
 
@@ -179,7 +217,7 @@ export default function PostAdModal({ open, onClose }) {
         <div className="mt-5 min-h-[280px]">
           <AnimatePresence mode="wait">
             <motion.div
-              key={step + (done ? 'done' : '') + (checking ? 'chk' : '')}
+              key={stepId + (done ? 'done' : '') + (checking ? 'chk' : '')}
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
@@ -209,7 +247,7 @@ export default function PostAdModal({ open, onClose }) {
                     Сохраняем объявление и отправляем на витрину
                   </div>
                 </div>
-              ) : step === 0 ? (
+              ) : stepId === 'city' ? (
                 <div>
                   <div className="text-sm font-semibold text-ink-700 mb-2">Выберите город</div>
                   <div className="grid grid-cols-3 gap-2">
@@ -224,7 +262,7 @@ export default function PostAdModal({ open, onClose }) {
                     ))}
                   </div>
                 </div>
-              ) : step === 1 ? (
+              ) : stepId === 'section' ? (
                 <div>
                   <div className="text-sm font-semibold text-ink-700 mb-2">Раздел</div>
                   <div className="grid grid-cols-2 gap-2">
@@ -256,7 +294,7 @@ export default function PostAdModal({ open, onClose }) {
                     появится в «Отдам даром».
                   </p>
                 </div>
-              ) : step === 2 ? (
+              ) : stepId === 'category' ? (
                 <div>
                   <div className="text-sm font-semibold text-ink-700 mb-2">
                     Категория
@@ -312,7 +350,20 @@ export default function PostAdModal({ open, onClose }) {
                     </div>
                   )}
                 </div>
-              ) : step === 3 ? (
+              ) : stepId === 'details' ? (
+                <DetailsStep
+                  fields={attrFields}
+                  values={form.attrs}
+                  errors={attrErrors}
+                  onChange={(key, value) => setForm((f) => ({ ...f, attrs: { ...f.attrs, [key]: value } }))}
+                  isEvent={isEvent}
+                  eventDate={form.eventDate}
+                  onEventDate={(v) => setForm((f) => ({ ...f, eventDate: v }))}
+                  askAddress={askAddress}
+                  address={form.address}
+                  onAddress={(v) => setForm((f) => ({ ...f, address: v }))}
+                />
+              ) : stepId === 'text' ? (
                 <div className="space-y-3">
                   <div>
                     <label className="text-sm font-semibold text-ink-700">Заголовок</label>
@@ -358,7 +409,7 @@ export default function PostAdModal({ open, onClose }) {
                     />
                   </div>
                 </div>
-              ) : step === 4 ? (
+              ) : stepId === 'photos' ? (
                 <PhotosStep
                   photos={form.photos}
                   setPhotos={(nextOrFn) =>
@@ -381,6 +432,17 @@ export default function PostAdModal({ open, onClose }) {
                     <div><b>Категория:</b> {form.group} → {form.category}</div>
                     <div><b>Заголовок:</b> {form.title || <span className="text-ink-500">не указан</span>}</div>
                     <div><b>Цена:</b> {formatPrice(previewAd(form, priceCfg))}</div>
+                    {isEvent && form.eventDate && (
+                      <div><b>Когда:</b> {new Date(form.eventDate).toLocaleString('ru-RU', { dateStyle: 'long', timeStyle: 'short' })}</div>
+                    )}
+                    {askAddress && form.address.trim() && <div><b>Адрес:</b> {form.address.trim()}</div>}
+                    {describeAttributes({
+                      section: form.section,
+                      categoryGroup: form.group,
+                      attributes: buildAttributes(attrFields, form.attrs)
+                    }).map((r) => (
+                      <div key={r.label}><b>{r.label}:</b> {r.value}</div>
+                    ))}
                     <div><b>Фото:</b> {form.photos.length}</div>
                   </div>
                   <p className="text-[12px] text-ink-500">
@@ -408,7 +470,7 @@ export default function PostAdModal({ open, onClose }) {
               disabled={!canNext}
               className="ml-auto inline-flex items-center gap-1.5 rounded-2xl bg-brand-600 hover:bg-brand-700 disabled:bg-slate-300 text-white px-4 py-3 text-sm font-semibold"
             >
-              {step === STEPS.length - 1 ? 'Опубликовать' : 'Далее'}
+              {step === steps.length - 1 ? 'Опубликовать' : 'Далее'}
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
@@ -460,6 +522,97 @@ function previewAd(form, cfg) {
     priceTo: cfg.range && form.priceTo ? Number(form.priceTo) : 0,
     priceSuffix: cfg.suffix
   };
+}
+
+// Характеристики из полей ввода → объект для API (пустые не отправляем).
+function buildAttributes(fields, raw) {
+  const out = {};
+  for (const f of fields) {
+    const v = parseAttributeInput(f, raw[f.key]);
+    if (v !== undefined) out[f.key] = v;
+  }
+  return Object.keys(out).length ? out : undefined;
+}
+
+// Числа вне допустимого диапазона: { key: 'текст ошибки' }.
+function attributeErrors(fields, raw) {
+  const errors = {};
+  for (const f of fields) {
+    if (f.type !== 'number' || !String(raw[f.key] ?? '').trim()) continue;
+    const v = parseAttributeInput(f, raw[f.key]);
+    if (v === undefined) errors[f.key] = 'Введите число';
+    else if ((f.min != null && v < f.min) || (f.max != null && v > f.max)) {
+      errors[f.key] = `От ${f.min} до ${new Intl.NumberFormat('ru-RU').format(f.max)}`;
+    }
+  }
+  return errors;
+}
+
+// ── Шаг «Характеристики»: поля раздела, у афиши — дата, у жилья и афиши — адрес ──
+const INPUT =
+  'w-full rounded-2xl bg-white ring-1 ring-black/10 focus:ring-brand-400 outline-none px-4 py-3 text-base';
+
+function DetailsStep({ fields, values, errors, onChange, isEvent, eventDate, onEventDate, askAddress, address, onAddress }) {
+  return (
+    <div className="space-y-4">
+      {isEvent && (
+        <div>
+          <label className="text-sm font-semibold text-ink-700">Дата и время *</label>
+          <input
+            type="datetime-local"
+            value={eventDate}
+            onChange={(e) => onEventDate(e.target.value)}
+            className={`mt-1 ${INPUT}`}
+          />
+        </div>
+      )}
+      {askAddress && (
+        <div>
+          <label className="text-sm font-semibold text-ink-700">{isEvent ? 'Место' : 'Адрес или район'}</label>
+          <input
+            value={address}
+            onChange={(e) => onAddress(e.target.value.slice(0, 200))}
+            placeholder={isEvent ? 'Например, ДК Металлургов' : 'Например, ул. Ленина или Центр'}
+            className={`mt-1 ${INPUT}`}
+          />
+        </div>
+      )}
+      {fields.map((f) => (
+        <div key={f.key}>
+          <label className="text-sm font-semibold text-ink-700">
+            {f.label}
+            {f.unit && <span className="font-normal text-ink-500">, {f.unit}</span>}
+          </label>
+          {f.type === 'select' ? (
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              {f.options.map((o) => (
+                <button
+                  key={o}
+                  type="button"
+                  onClick={() => onChange(f.key, values[f.key] === o ? '' : o)}
+                  className={`chip ${values[f.key] === o ? 'chip-on' : ''}`}
+                >
+                  {o}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <input
+              value={values[f.key] ?? ''}
+              onChange={(e) => onChange(f.key, e.target.value.slice(0, 100))}
+              inputMode={f.type === 'number' ? (f.decimals ? 'decimal' : 'numeric') : 'text'}
+              placeholder={f.placeholder}
+              className={`mt-1 ${INPUT} ${errors[f.key] ? 'ring-rose-300' : ''}`}
+            />
+          )}
+          {errors[f.key] && <div className="mt-1 text-[12px] text-rose-600">{errors[f.key]}</div>}
+        </div>
+      ))}
+      <p className="text-[12px] text-ink-500">
+        {isEvent ? 'Остальное' : 'Всё'} необязательно, но с характеристиками объявление находят и понимают быстрее.
+      </p>
+    </div>
+  );
 }
 
 // ── Шаг «Фото»: реальная загрузка через POST /uploads/ad-photo ─────

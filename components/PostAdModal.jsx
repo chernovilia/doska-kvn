@@ -1,6 +1,6 @@
 'use client';
 
-import { AnimatePresence, motion } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { CITIES, REGIONS, SECTIONS, getCategoryGroups, getSection, createAd, uploadAdPhoto } from '@/lib/api';
 import { FREE_FROM_SECTIONS } from '@/data/categories';
 import { formatPrice } from '@/lib/format';
@@ -215,243 +215,242 @@ export default function PostAdModal({ open, onClose }) {
 
         {/* Body */}
         <div className="mt-5 min-h-[280px]">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={stepId + (done ? 'done' : '') + (checking ? 'chk' : '')}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.2 }}
-            >
-              {done ? (
-                <div className="text-center py-6">
-                  <div className="mx-auto w-14 h-14 grid place-items-center rounded-full bg-emerald-100 text-emerald-700">
-                    <CheckCircle2 className="w-8 h-8" />
-                  </div>
-                  <div className="mt-3 text-lg font-extrabold text-ink-900">
-                    Объявление опубликовано!
-                  </div>
-                  <div className="mt-1 text-sm text-ink-500">
-                    Оно уже видно всем в вашем городе.
-                  </div>
+          {/* Шаг меняется сразу, без ожидания анимации ухода: AnimatePresence mode="wait"
+              застревал на старом шаге, если анимации тормозились (фоновая вкладка, встроенный браузер). */}
+          <motion.div
+            key={stepId + (done ? 'done' : '') + (checking ? 'chk' : '')}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            {done ? (
+              <div className="text-center py-6">
+                <div className="mx-auto w-14 h-14 grid place-items-center rounded-full bg-emerald-100 text-emerald-700">
+                  <CheckCircle2 className="w-8 h-8" />
                 </div>
-              ) : checking ? (
-                <div className="text-center py-8">
-                  <div className="mx-auto w-14 h-14 grid place-items-center rounded-full bg-brand-100 text-brand-700 animate-pulse">
-                    <Sparkles className="w-8 h-8" />
-                  </div>
-                  <div className="mt-3 text-lg font-extrabold text-ink-900">
-                    Публикуем…
-                  </div>
-                  <div className="mt-1 text-sm text-ink-500">
-                    Сохраняем объявление и отправляем на витрину
-                  </div>
+                <div className="mt-3 text-lg font-extrabold text-ink-900">
+                  Объявление опубликовано!
                 </div>
-              ) : stepId === 'city' ? (
-                <div>
-                  <div className="text-sm font-semibold text-ink-700 mb-2">Выберите город</div>
-                  <div className="grid grid-cols-3 gap-2">
-                    {POST_CITIES.map((c) => (
+                <div className="mt-1 text-sm text-ink-500">
+                  Оно уже видно всем в вашем городе.
+                </div>
+              </div>
+            ) : checking ? (
+              <div className="text-center py-8">
+                <div className="mx-auto w-14 h-14 grid place-items-center rounded-full bg-brand-100 text-brand-700 animate-pulse">
+                  <Sparkles className="w-8 h-8" />
+                </div>
+                <div className="mt-3 text-lg font-extrabold text-ink-900">
+                  Публикуем…
+                </div>
+                <div className="mt-1 text-sm text-ink-500">
+                  Сохраняем объявление и отправляем на витрину
+                </div>
+              </div>
+            ) : stepId === 'city' ? (
+              <div>
+                <div className="text-sm font-semibold text-ink-700 mb-2">Выберите город</div>
+                <div className="grid grid-cols-3 gap-2">
+                  {POST_CITIES.map((c) => (
+                    <button
+                      key={c.id}
+                      onClick={() => setForm((f) => ({ ...f, city: c.id }))}
+                      className={`chip h-11 w-full ${form.city === c.id ? 'chip-on' : ''}`}
+                    >
+                      {c.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : stepId === 'section' ? (
+              <div>
+                <div className="text-sm font-semibold text-ink-700 mb-2">Раздел</div>
+                <div className="grid grid-cols-2 gap-2">
+                  {SECTIONS.map((s) => {
+                    const Icon = s.icon;
+                    return (
                       <button
-                        key={c.id}
-                        onClick={() => setForm((f) => ({ ...f, city: c.id }))}
-                        className={`chip h-11 w-full ${form.city === c.id ? 'chip-on' : ''}`}
+                        key={s.id}
+                        onClick={() => setForm((f) => ({ ...f, section: s.id }))}
+                        className={`flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-2.5 rounded-2xl p-2.5 text-left border-[1.5px] transition-colors min-w-0 ${
+                          form.section === s.id
+                            ? 'bg-brand-50 border-brand-400'
+                            : 'bg-slate-50 border-transparent hover:bg-slate-100'
+                        }`}
                       >
-                        {c.name}
+                        <span className={`grid place-items-center w-10 h-10 rounded-xl shrink-0 ${s.tile}`}>
+                          <Icon className="w-5 h-5" />
+                        </span>
+                        <span className="min-w-0 w-full">
+                          <span className="block font-bold text-ink-900 text-sm leading-tight">{s.name}</span>
+                          <span className="block text-[11px] text-ink-500 leading-tight truncate">{s.hint}</span>
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="mt-3 text-[12px] text-ink-500">
+                  Отдаёте бесплатно? Выберите раздел по смыслу и не указывайте цену — объявление
+                  появится в «Отдам даром».
+                </p>
+              </div>
+            ) : stepId === 'category' ? (
+              <div>
+                <div className="text-sm font-semibold text-ink-700 mb-2">
+                  Категория
+                  {form.category && (
+                    <span className="ml-2 text-brand-700">
+                      {form.group} → {form.category}
+                    </span>
+                  )}
+                </div>
+
+                {!form.group ? (
+                  <div className="grid grid-cols-1 gap-1.5">
+                    {groups.map((g) => (
+                      <button
+                        key={g.name}
+                        onClick={() => setForm((f) => ({ ...f, group: g.name }))}
+                        className="flex items-center justify-between gap-2 rounded-2xl px-4 py-3 text-left bg-slate-50 hover:bg-slate-100 transition-colors"
+                      >
+                        <div className="min-w-0">
+                          <div className="font-semibold text-ink-900">{g.name}</div>
+                          <div className="text-[12px] text-ink-500 truncate">
+                            {g.items.slice(0, 3).join(' · ')}
+                            {g.items.length > 3 && ` и ещё ${g.items.length - 3}`}
+                          </div>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-ink-500 shrink-0" />
                       </button>
                     ))}
                   </div>
-                </div>
-              ) : stepId === 'section' ? (
-                <div>
-                  <div className="text-sm font-semibold text-ink-700 mb-2">Раздел</div>
-                  <div className="grid grid-cols-2 gap-2">
-                    {SECTIONS.map((s) => {
-                      const Icon = s.icon;
-                      return (
+                ) : (
+                  <div>
+                    <button
+                      onClick={() => setForm((f) => ({ ...f, group: null, category: null }))}
+                      className="mb-2 inline-flex items-center gap-1 text-xs font-semibold text-ink-500 hover:text-ink-800"
+                    >
+                      <ArrowLeft className="w-3 h-3" />
+                      Все группы
+                    </button>
+                    <div className="text-[12px] uppercase tracking-wide text-ink-500 font-bold mb-1.5">
+                      {form.group}
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {(groups.find((g) => g.name === form.group)?.items || []).map((c) => (
                         <button
-                          key={s.id}
-                          onClick={() => setForm((f) => ({ ...f, section: s.id }))}
-                          className={`flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-2.5 rounded-2xl p-2.5 text-left border-[1.5px] transition-colors min-w-0 ${
-                            form.section === s.id
-                              ? 'bg-brand-50 border-brand-400'
-                              : 'bg-slate-50 border-transparent hover:bg-slate-100'
-                          }`}
+                          key={c}
+                          onClick={() => setForm((f) => ({ ...f, category: c }))}
+                          className={`chip ${form.category === c ? 'chip-on' : ''}`}
                         >
-                          <span className={`grid place-items-center w-10 h-10 rounded-xl shrink-0 ${s.tile}`}>
-                            <Icon className="w-5 h-5" />
-                          </span>
-                          <span className="min-w-0 w-full">
-                            <span className="block font-bold text-ink-900 text-sm leading-tight">{s.name}</span>
-                            <span className="block text-[11px] text-ink-500 leading-tight truncate">{s.hint}</span>
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <p className="mt-3 text-[12px] text-ink-500">
-                    Отдаёте бесплатно? Выберите раздел по смыслу и не указывайте цену — объявление
-                    появится в «Отдам даром».
-                  </p>
-                </div>
-              ) : stepId === 'category' ? (
-                <div>
-                  <div className="text-sm font-semibold text-ink-700 mb-2">
-                    Категория
-                    {form.category && (
-                      <span className="ml-2 text-brand-700">
-                        {form.group} → {form.category}
-                      </span>
-                    )}
-                  </div>
-
-                  {!form.group ? (
-                    <div className="grid grid-cols-1 gap-1.5">
-                      {groups.map((g) => (
-                        <button
-                          key={g.name}
-                          onClick={() => setForm((f) => ({ ...f, group: g.name }))}
-                          className="flex items-center justify-between gap-2 rounded-2xl px-4 py-3 text-left bg-slate-50 hover:bg-slate-100 transition-colors"
-                        >
-                          <div className="min-w-0">
-                            <div className="font-semibold text-ink-900">{g.name}</div>
-                            <div className="text-[12px] text-ink-500 truncate">
-                              {g.items.slice(0, 3).join(' · ')}
-                              {g.items.length > 3 && ` и ещё ${g.items.length - 3}`}
-                            </div>
-                          </div>
-                          <ChevronRight className="w-4 h-4 text-ink-500 shrink-0" />
+                          {c}
                         </button>
                       ))}
                     </div>
-                  ) : (
-                    <div>
-                      <button
-                        onClick={() => setForm((f) => ({ ...f, group: null, category: null }))}
-                        className="mb-2 inline-flex items-center gap-1 text-xs font-semibold text-ink-500 hover:text-ink-800"
-                      >
-                        <ArrowLeft className="w-3 h-3" />
-                        Все группы
-                      </button>
-                      <div className="text-[12px] uppercase tracking-wide text-ink-500 font-bold mb-1.5">
-                        {form.group}
-                      </div>
-                      <div className="flex flex-wrap gap-1.5">
-                        {(groups.find((g) => g.name === form.group)?.items || []).map((c) => (
-                          <button
-                            key={c}
-                            onClick={() => setForm((f) => ({ ...f, category: c }))}
-                            className={`chip ${form.category === c ? 'chip-on' : ''}`}
-                          >
-                            {c}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ) : stepId === 'details' ? (
-                <DetailsStep
-                  fields={attrFields}
-                  values={form.attrs}
-                  errors={attrErrors}
-                  onChange={(key, value) => setForm((f) => ({ ...f, attrs: { ...f.attrs, [key]: value } }))}
-                  isEvent={isEvent}
-                  eventDate={form.eventDate}
-                  onEventDate={(v) => setForm((f) => ({ ...f, eventDate: v }))}
-                  askAddress={askAddress}
-                  address={form.address}
-                  onAddress={(v) => setForm((f) => ({ ...f, address: v }))}
-                />
-              ) : stepId === 'text' ? (
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-sm font-semibold text-ink-700">Заголовок</label>
-                    <input
-                      value={form.title}
-                      onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-                      placeholder="Например: Сдам 2-к квартиру в центре Выксы"
-                      className="mt-1 w-full rounded-2xl bg-white ring-1 ring-black/10 focus:ring-brand-400 outline-none px-4 py-3 text-base"
-                    />
                   </div>
-                  <div>
-                    <label className="text-sm font-semibold text-ink-700">{priceCfg.label}</label>
-                    <div className={`mt-1 grid gap-2 ${priceCfg.range ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                )}
+              </div>
+            ) : stepId === 'details' ? (
+              <DetailsStep
+                fields={attrFields}
+                values={form.attrs}
+                errors={attrErrors}
+                onChange={(key, value) => setForm((f) => ({ ...f, attrs: { ...f.attrs, [key]: value } }))}
+                isEvent={isEvent}
+                eventDate={form.eventDate}
+                onEventDate={(v) => setForm((f) => ({ ...f, eventDate: v }))}
+                askAddress={askAddress}
+                address={form.address}
+                onAddress={(v) => setForm((f) => ({ ...f, address: v }))}
+              />
+            ) : stepId === 'text' ? (
+              <div className="space-y-3">
+                <div>
+                  <label className="text-sm font-semibold text-ink-700">Заголовок</label>
+                  <input
+                    value={form.title}
+                    onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+                    placeholder="Например: Сдам 2-к квартиру в центре Выксы"
+                    className="mt-1 w-full rounded-2xl bg-white ring-1 ring-black/10 focus:ring-brand-400 outline-none px-4 py-3 text-base"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-semibold text-ink-700">{priceCfg.label}</label>
+                  <div className={`mt-1 grid gap-2 ${priceCfg.range ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                    <input
+                      value={form.price}
+                      onChange={(e) => setForm((f) => ({ ...f, price: e.target.value.replace(/\D/g, '').slice(0, 9) }))}
+                      placeholder={priceCfg.range ? 'от' : 'Не указана'}
+                      aria-label={priceCfg.range ? 'Зарплата от' : priceCfg.label}
+                      inputMode="numeric"
+                      className="w-full rounded-2xl bg-white ring-1 ring-black/10 focus:ring-brand-400 outline-none px-4 py-3 text-base"
+                    />
+                    {priceCfg.range && (
                       <input
-                        value={form.price}
-                        onChange={(e) => setForm((f) => ({ ...f, price: e.target.value.replace(/\D/g, '').slice(0, 9) }))}
-                        placeholder={priceCfg.range ? 'от' : 'Не указана'}
-                        aria-label={priceCfg.range ? 'Зарплата от' : priceCfg.label}
+                        value={form.priceTo}
+                        onChange={(e) => setForm((f) => ({ ...f, priceTo: e.target.value.replace(/\D/g, '').slice(0, 9) }))}
+                        placeholder="до"
+                        aria-label="Зарплата до"
                         inputMode="numeric"
                         className="w-full rounded-2xl bg-white ring-1 ring-black/10 focus:ring-brand-400 outline-none px-4 py-3 text-base"
                       />
-                      {priceCfg.range && (
-                        <input
-                          value={form.priceTo}
-                          onChange={(e) => setForm((f) => ({ ...f, priceTo: e.target.value.replace(/\D/g, '').slice(0, 9) }))}
-                          placeholder="до"
-                          aria-label="Зарплата до"
-                          inputMode="numeric"
-                          className="w-full rounded-2xl bg-white ring-1 ring-black/10 focus:ring-brand-400 outline-none px-4 py-3 text-base"
-                        />
-                      )}
-                    </div>
-                    {priceCfg.hint && <div className="mt-1 text-[12px] text-ink-500">{priceCfg.hint}</div>}
-                  </div>
-                  <div>
-                    <label className="text-sm font-semibold text-ink-700">Описание</label>
-                    <textarea
-                      rows={4}
-                      value={form.description}
-                      onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-                      placeholder="Опишите товар или услугу, состояние, условия…"
-                      className="mt-1 w-full rounded-2xl bg-white ring-1 ring-black/10 focus:ring-brand-400 outline-none px-4 py-3 text-base"
-                    />
-                  </div>
-                </div>
-              ) : stepId === 'photos' ? (
-                <PhotosStep
-                  photos={form.photos}
-                  setPhotos={(nextOrFn) =>
-                    setForm((f) => ({
-                      ...f,
-                      photos:
-                        typeof nextOrFn === 'function' ? nextOrFn(f.photos) : nextOrFn
-                    }))
-                  }
-                  uploading={uploading}
-                  setUploading={setUploading}
-                  onError={setError}
-                />
-              ) : (
-                <div className="space-y-2">
-                  <div className="text-sm font-semibold text-ink-700">Проверьте объявление</div>
-                  <div className="rounded-2xl bg-slate-50 ring-1 ring-black/10 p-4 text-sm space-y-0.5">
-                    <div><b>Город:</b> {CITIES.find((c) => c.id === form.city)?.name}</div>
-                    <div><b>Раздел:</b> {getSection(form.section)?.name}</div>
-                    <div><b>Категория:</b> {form.group} → {form.category}</div>
-                    <div><b>Заголовок:</b> {form.title || <span className="text-ink-500">не указан</span>}</div>
-                    <div><b>Цена:</b> {formatPrice(previewAd(form, priceCfg))}</div>
-                    {isEvent && form.eventDate && (
-                      <div><b>Когда:</b> {new Date(form.eventDate).toLocaleString('ru-RU', { dateStyle: 'long', timeStyle: 'short' })}</div>
                     )}
-                    {askAddress && form.address.trim() && <div><b>Адрес:</b> {form.address.trim()}</div>}
-                    {describeAttributes({
-                      section: form.section,
-                      categoryGroup: form.group,
-                      attributes: buildAttributes(attrFields, form.attrs)
-                    }).map((r) => (
-                      <div key={r.label}><b>{r.label}:</b> {r.value}</div>
-                    ))}
-                    <div><b>Фото:</b> {form.photos.length}</div>
                   </div>
-                  <p className="text-[12px] text-ink-500">
-                    Нажимая «Опубликовать», вы соглашаетесь с правилами платформы «Доска/КВН».
-                  </p>
+                  {priceCfg.hint && <div className="mt-1 text-[12px] text-ink-500">{priceCfg.hint}</div>}
                 </div>
-              )}
-            </motion.div>
-          </AnimatePresence>
+                <div>
+                  <label className="text-sm font-semibold text-ink-700">Описание</label>
+                  <textarea
+                    rows={4}
+                    value={form.description}
+                    onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+                    placeholder="Опишите товар или услугу, состояние, условия…"
+                    className="mt-1 w-full rounded-2xl bg-white ring-1 ring-black/10 focus:ring-brand-400 outline-none px-4 py-3 text-base"
+                  />
+                </div>
+              </div>
+            ) : stepId === 'photos' ? (
+              <PhotosStep
+                photos={form.photos}
+                setPhotos={(nextOrFn) =>
+                  setForm((f) => ({
+                    ...f,
+                    photos:
+                      typeof nextOrFn === 'function' ? nextOrFn(f.photos) : nextOrFn
+                  }))
+                }
+                uploading={uploading}
+                setUploading={setUploading}
+                onError={setError}
+              />
+            ) : (
+              <div className="space-y-2">
+                <div className="text-sm font-semibold text-ink-700">Проверьте объявление</div>
+                <div className="rounded-2xl bg-slate-50 ring-1 ring-black/10 p-4 text-sm space-y-0.5">
+                  <div><b>Город:</b> {CITIES.find((c) => c.id === form.city)?.name}</div>
+                  <div><b>Раздел:</b> {getSection(form.section)?.name}</div>
+                  <div><b>Категория:</b> {form.group} → {form.category}</div>
+                  <div><b>Заголовок:</b> {form.title || <span className="text-ink-500">не указан</span>}</div>
+                  <div><b>Цена:</b> {formatPrice(previewAd(form, priceCfg))}</div>
+                  {isEvent && form.eventDate && (
+                    <div><b>Когда:</b> {new Date(form.eventDate).toLocaleString('ru-RU', { dateStyle: 'long', timeStyle: 'short' })}</div>
+                  )}
+                  {askAddress && form.address.trim() && <div><b>Адрес:</b> {form.address.trim()}</div>}
+                  {describeAttributes({
+                    section: form.section,
+                    categoryGroup: form.group,
+                    attributes: buildAttributes(attrFields, form.attrs)
+                  }).map((r) => (
+                    <div key={r.label}><b>{r.label}:</b> {r.value}</div>
+                  ))}
+                  <div><b>Фото:</b> {form.photos.length}</div>
+                </div>
+                <p className="text-[12px] text-ink-500">
+                  Нажимая «Опубликовать», вы соглашаетесь с правилами платформы «Доска/КВН».
+                </p>
+              </div>
+            )}
+          </motion.div>
         </div>
 
         {/* Footer */}

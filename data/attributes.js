@@ -85,6 +85,22 @@ const FIELDS = {
     ],
     Резюме: [SCHEDULE, EXPERIENCE, { key: 'age', label: 'Возраст', type: 'number', unit: 'лет', min: 14, max: 99 }]
   },
+  services: {
+    '*': [
+      {
+        key: 'where',
+        label: 'Где работаете',
+        type: 'select',
+        options: ['Выезд к клиенту', 'У себя', 'Удалённо']
+      },
+      {
+        key: 'service_experience',
+        label: 'Опыт',
+        type: 'select',
+        options: ['До 1 года', '1–3 года', '3–10 лет', 'Больше 10 лет']
+      }
+    ]
+  },
   electronics: {
     Телефоны: [
       BRAND,
@@ -160,6 +176,9 @@ export function attributesSummary(ad) {
   } else if (ad.section === 'jobs') {
     if (a.schedule) parts.push(a.schedule);
     if (a.experience) parts.push(a.experience.toLowerCase());
+  } else if (ad.section === 'services') {
+    if (a.where) parts.push(a.where);
+    if (a.service_experience) parts.push(`опыт ${a.service_experience.toLowerCase()}`);
   } else {
     if (a.memory) parts.push(a.memory);
     if (a.size) parts.push(`размер ${a.size}`);

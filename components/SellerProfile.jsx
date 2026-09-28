@@ -12,12 +12,13 @@ import AdCard from './AdCard';
 import BottomNav from './BottomNav';
 import Footer from './Footer';
 import PostAdModal from './PostAdModal';
+import { RatingSummary, ReviewsList } from './Reviews';
 
 /**
  * Публичная страница продавца. Связаться — через конкретное объявление
  * («Написать» открывает диалог по нему), поэтому отдельной кнопки здесь нет.
  */
-export default function SellerProfile({ user, ads }) {
+export default function SellerProfile({ user, ads, reviews = [] }) {
   const router = useRouter();
   const { toast } = useToast();
   const { user: me } = useAuth();
@@ -120,6 +121,19 @@ export default function SellerProfile({ user, ads }) {
               {isMe ? 'У вас пока нет опубликованных объявлений.' : 'Сейчас у продавца нет опубликованных объявлений.'}
             </div>
           )}
+        </section>
+
+        <section id="reviews" className="space-y-3 scroll-mt-20">
+          <h2 className="text-xl font-extrabold text-ink-900 px-0.5">Отзывы</h2>
+          {user.reviewsCount > 0 && (
+            <div className="rounded-2xl bg-white ring-1 ring-black/5 shadow-card p-4">
+              <RatingSummary rating={user.rating} count={user.reviewsCount} />
+            </div>
+          )}
+          <ReviewsList
+            reviews={reviews}
+            empty="Отзывов пока нет. Их оставляют собеседники после переписки по объявлению."
+          />
         </section>
       </main>
 

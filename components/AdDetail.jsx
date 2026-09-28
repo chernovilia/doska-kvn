@@ -343,6 +343,11 @@ export default function AdDetail({ ad }) {
                   <div className="text-sm font-bold text-ink-900">Это ваше объявление</div>
                   <OwnerStatus status={ad.status} />
                 </div>
+                {ad.status === 'rejected' && ad.moderationNotes && (
+                  <div className="rounded-xl bg-rose-50 text-rose-800 text-[13px] px-3 py-2">
+                    Причина: {ad.moderationNotes}
+                  </div>
+                )}
                 <BumpButton ad={ad} />
                 <button
                   onClick={onDelete}

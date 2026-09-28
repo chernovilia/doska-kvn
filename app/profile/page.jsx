@@ -29,7 +29,8 @@ import { useToast } from '@/components/Toast';
 import { useAuth } from '@/lib/auth';
 import { getCity } from '@/data/regions';
 
-import { getMyAds, getReviews, deleteAd } from '@/lib/api';
+import { getMyAds, getUserReviews, deleteAd } from '@/lib/api';
+import { RatingSummary, ReviewsList } from '@/components/Reviews';
 import { formatRelative } from '@/lib/format';
 
 const TABS = [
@@ -335,65 +336,26 @@ function MyAdsTab({ ads, onPost, onReload }) {
 
 
 function ReviewsTab({ me }) {
-  const [reviews, setReviews] = useState([]);
+  const [reviews, setReviews] = useState(null);
   useEffect(() => {
-    getReviews().then(setReviews);
-  }, []);
+    getUserReviews(me.id)
+      .then(setReviews)
+      .catch(() => setReviews([]));
+  }, [me.id]);
 
   return (
     <div className="space-y-3">
-      <div className="rounded-2xl bg-white ring-1 ring-black/5 shadow-card p-4 flex items-center gap-4">
-        <div className="text-3xl md:text-4xl font-black text-ink-900">
-          {(me.rating ?? 0).toFixed(1)}
-          <span className="text-lg md:text-xl text-ink-500">/5</span>
-        </div>
-        <div className="flex-1">
-          <div className="flex items-center gap-1 text-amber-500">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />
-            ))}
-          </div>
-          <div className="text-[12px] text-ink-500 mt-0.5">
-            На основе {me.reviewsCount ?? 0} отзывов от покупателей
-          </div>
-        </div>
-        <button className="btn-outline h-9 px-3.5 text-sm">
-          Все отзывы <ChevronRight className="w-4 h-4 inline -mr-1" />
-        </button>
+      <div className="rounded-2xl bg-white ring-1 ring-black/5 shadow-card p-4">
+        <RatingSummary rating={me.rating ?? 0} count={me.reviewsCount ?? 0} />
+        <p className="mt-2 text-[12px] text-ink-500">
+          Отзыв оставляет собеседник после переписки по объявлению — когда вы оба написали хотя бы по сообщению.
+        </p>
       </div>
-
-      <ul className="space-y-2">
-        {reviews.map((r) => (
-          <li key={r.id} className="rounded-2xl bg-white ring-1 ring-black/5 shadow-card p-4">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-brand-600 text-white grid place-items-center text-xs font-bold">
-                {r.fromName[0]}
-              </div>
-              <div className="min-w-0">
-                <div className="text-sm font-semibold text-ink-900 truncate">
-                  {r.fromName}{' '}
-                  <span className="text-ink-500 font-normal">· {r.fromCity}</span>
-                </div>
-                <div className="flex items-center gap-1 text-amber-500">
-                  {Array.from({ length: r.rating }).map((_, i) => (
-                    <Star key={i} className="w-3 h-3 fill-amber-400 text-amber-400" />
-                  ))}
-                </div>
-              </div>
-              <div
-                className="ml-auto text-[11px] text-ink-500"
-                suppressHydrationWarning
-              >
-                {formatRelative(r.at)}
-              </div>
-            </div>
-            <div className="mt-2 text-sm text-ink-800">{r.text}</div>
-            <div className="mt-1 text-[11px] text-ink-500">
-              По объявлению: <span className="text-brand-700">{r.adTitle}</span>
-            </div>
-          </li>
-        ))}
-      </ul>
+      {reviews === null ? (
+        <div className="h-24 rounded-2xl bg-white ring-1 ring-black/5 animate-pulse" />
+      ) : (
+        <ReviewsList reviews={reviews} empty="Отзывов пока нет." />
+      )}
     </div>
   );
 }

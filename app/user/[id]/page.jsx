@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { getAdsByAuthor, getPublicUser } from '@/lib/api';
+import { getAdsByAuthor, getPublicUser, getUserReviews } from '@/lib/api';
 import SellerProfile from '@/components/SellerProfile';
 
 // Публичная страница продавца: профиль и его опубликованные объявления.
@@ -18,10 +18,11 @@ export async function generateMetadata({ params }) {
 }
 
 export default async function UserPage({ params }) {
-  const [user, ads] = await Promise.all([
+  const [user, ads, reviews] = await Promise.all([
     getPublicUser(params.id),
-    getAdsByAuthor(params.id).catch(() => [])
+    getAdsByAuthor(params.id).catch(() => []),
+    getUserReviews(params.id).catch(() => [])
   ]);
   if (!user) notFound();
-  return <SellerProfile user={user} ads={ads} />;
+  return <SellerProfile user={user} ads={ads} reviews={reviews} />;
 }

@@ -3,8 +3,9 @@
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ArrowLeft, Search, Info, Send, MessageCircle } from 'lucide-react';
-import { listConversations, getConversationMessages, sendChatMessage } from '@/lib/api';
+import { ArrowLeft, Search, Info, Send, MessageCircle, Star } from 'lucide-react';
+import { listConversations, getConversationMessages, sendChatMessage, getReviewEligibility } from '@/lib/api';
+import { ReviewModal } from '@/components/Reviews';
 import { formatRelative } from '@/lib/format';
 import { useAuth } from '@/lib/auth';
 import { refreshUnread } from '@/lib/chats';
@@ -288,6 +289,8 @@ function MessagesContent() {
 function ChatView({ chatId, me, onActivity }) {
   const router = useRouter();
   const [conv, setConv] = useState(null);
+  const [review, setReview] = useState(null); // { eligible, reason, review } с сервера
+  const [reviewOpen, setReviewOpen] = useState(false);
   const [msgs, setMsgs] = useState([]);
   const [state, setState] = useState('loading'); // loading | ok | notfound | error
   const [draft, setDraft] = useState('');
@@ -371,6 +374,20 @@ function ChatView({ chatId, me, onActivity }) {
     if (el) el.scrollTop = el.scrollHeight;
   }, [msgs.length]);
 
+  // Отзыв можно оставить, когда в переписке написали оба. Спрашиваем сервер,
+  // как только это стало так (или сразу при открытии старого диалога).
+  const bothWrote = msgs.some((m) => m.senderId === me.id) && msgs.some((m) => m.senderId !== me.id);
+  useEffect(() => {
+    if (state !== 'ok' || !bothWrote) return;
+    let cancelled = false;
+    getReviewEligibility(chatId)
+      .then((r) => !cancelled && setReview(r))
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [chatId, state, bothWrote]);
+
   // Клавиатура открылась — список сжался; держим последние сообщения в кадре.
   useEffect(() => {
     const vv = window.visualViewport;
@@ -442,6 +459,18 @@ function ChatView({ chatId, me, onActivity }) {
               {conv.role === 'buyer' ? 'Продавец' : 'Покупатель'}
             </div>
           </div>
+          {review?.eligible && (
+            <button onClick={() => setReviewOpen(true)} className="ml-auto btn-outline h-9 px-3 text-[13px] shrink-0">
+              <Star className="w-4 h-4 text-amber-500" />
+              Оставить отзыв
+            </button>
+          )}
+          {review?.review && (
+            <span className="ml-auto inline-flex items-center gap-1 text-[12px] text-ink-500 shrink-0">
+              <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+              Ваш отзыв: {review.review.rating}
+            </span>
+          )}
         </div>
         <ListingHeader ad={conv.ad} />
       </div>
@@ -478,6 +507,17 @@ function ChatView({ chatId, me, onActivity }) {
           })
         )}
       </div>
+
+      <ReviewModal
+        open={reviewOpen}
+        onClose={() => setReviewOpen(false)}
+        conversationId={chatId}
+        targetName={conv.other.name}
+        onDone={(r) => {
+          setReviewOpen(false);
+          setReview({ eligible: false, reason: 'already', review: r });
+        }}
+      />
 
       <form onSubmit={onSend} className="shrink-0 border-t border-black/5 bg-white p-3 pb-4">
         {sendError && <div className="text-[12px] text-rose-700 mb-2">{sendError}</div>}

@@ -268,7 +268,7 @@ function Feed({ place, params }) {
                       transition={{ type: 'spring', stiffness: 400, damping: 32 }}
                       className="h-full"
                     >
-                      <AdCard ad={ad} onOpen={(a) => router.push(`/ad/${a.id}`)} />
+                      <AdCard ad={ad} />
                     </motion.div>
                   ))}
             </AnimatePresence>
@@ -318,7 +318,6 @@ function Feed({ place, params }) {
             <NearbyBlock
               cityName={resolved.city.name}
               nearby={nearby}
-              onOpen={(a) => router.push(`/ad/${a.id}`)}
               onExpand={() => onPlaceChange(resolved.region.id)}
               regionName={resolved.region.shortName}
             />
@@ -430,7 +429,7 @@ function PriceModal({ open, onClose, min, max, onApply }) {
   );
 }
 
-function NearbyBlock({ cityName, nearby, onOpen, onExpand, regionName }) {
+function NearbyBlock({ cityName, nearby, onExpand, regionName }) {
   return (
     <div className="mt-6 rounded-2xl bg-slate-50/70 ring-1 ring-black/5 p-3 md:p-4 relative">
       <div className="flex items-center gap-2 mb-3 px-0.5">
@@ -454,7 +453,7 @@ function NearbyBlock({ cityName, nearby, onOpen, onExpand, regionName }) {
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 auto-rows-fr">
           {nearby.map((ad) => (
             <div key={ad.id} className="h-full opacity-70 hover:opacity-100 transition">
-              <AdCard ad={ad} onOpen={onOpen} />
+              <AdCard ad={ad} />
             </div>
           ))}
         </div>

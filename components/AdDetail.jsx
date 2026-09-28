@@ -2,8 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
+import { useEffect, useRef, useState } from 'react';
 import {
   ArrowLeft,
   BadgeCheck,
@@ -12,8 +11,9 @@ import {
   ChevronRight,
   Crown,
   ExternalLink,
-  Flame,
+  Eye,
   Flag,
+  Flame,
   Heart,
   Home,
   Lock,
@@ -24,8 +24,16 @@ import {
   Star,
   Trash2
 } from 'lucide-react';
-import { cityName, getSection, deleteAd, getAdContact, openConversation, getSimilarAds } from '@/lib/api';
-import { formatPrice, formatRelative, formatEventDate, formatMonthYear } from '@/lib/format';
+import {
+  cityName,
+  getSection,
+  deleteAd,
+  getAdContact,
+  openConversation,
+  getSimilarAds,
+  registerView
+} from '@/lib/api';
+import { formatPrice, formatRelative, formatEventDate, formatMonthYear, pluralRu } from '@/lib/format';
 import { accountTypeLabel, accountTypeEmoji, accountTypeBadgeClass, isBusiness } from '@/lib/accountType';
 import { useAuth } from '@/lib/auth';
 import { shareOrCopy } from '@/lib/share';
@@ -41,14 +49,16 @@ export default function AdDetail({ ad }) {
   const { user, ready } = useAuth();
   const { toast } = useToast();
   const authed = ready && !!user;
+  const isOwner = authed && ad.authorId === user.id;
+  const acceptsPhone = ad.author?.contactMethod === 'phone';
+
   const [phone, setPhone] = useState(null);
   const [phoneLoading, setPhoneLoading] = useState(false);
-  const acceptsPhone = ad.author?.contactMethod === 'phone';
+  const [opening, setOpening] = useState(false);
   const [liked, setLiked] = useState(false);
-  const [photoIdx, setPhotoIdx] = useState(0);
   const [postOpen, setPostOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const isOwner = authed && ad.authorId === user.id;
+  const [views, setViews] = useState(ad.viewsCount ?? 0);
 
   // Похожие — в браузере: на сервере они только задерживали открытие страницы.
   const [similar, setSimilar] = useState([]);
@@ -62,7 +72,17 @@ export default function AdDetail({ ad }) {
     };
   }, [ad]);
 
-  const gallery = ad.gallery && ad.gallery.length ? ad.gallery : ad.image ? [ad.image] : [];
+  // Просмотр засчитывает сервер (раз в сутки на зрителя); ref — от двойного вызова в dev.
+  const viewSent = useRef(null);
+  useEffect(() => {
+    if (viewSent.current === ad.id) return;
+    viewSent.current = ad.id;
+    registerView(ad.id)
+      .then((r) => setViews(r.viewsCount))
+      .catch(() => {});
+  }, [ad.id]);
+
+  const gallery = ad.gallery?.length ? ad.gallery : ad.image ? [ad.image] : [];
   const isEvent = ad.section === 'events';
   // У старых объявлений раздел 'market' — его в справочнике уже нет.
   const sectionInfo = getSection(ad.section);
@@ -72,8 +92,6 @@ export default function AdDetail({ ad }) {
   function loginRedirect() {
     router.push(`/login?returnTo=/ad/${ad.id}`);
   }
-
-  const [opening, setOpening] = useState(false);
 
   async function onWrite() {
     if (!authed) return loginRedirect();
@@ -124,21 +142,56 @@ export default function AdDetail({ ad }) {
     else if (status === 'error') toast('Не удалось скопировать', { kind: 'error' });
   }
 
+  // Кнопки связи: в карточке справа на компьютере и в закреплённой панели на телефоне.
+  const telHref = phone ? `tel:${phone.replace(/[^\d+]/g, '')}` : null;
+  const writeBtn = (
+    <button
+      onClick={onWrite}
+      disabled={opening}
+      className="flex-1 inline-flex items-center justify-center gap-2 h-12 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-bold disabled:opacity-60"
+    >
+      <MessageCircle className="w-5 h-5" />
+      {opening ? 'Открываем…' : 'Написать'}
+    </button>
+  );
+  const phoneBtn = !acceptsPhone ? null : telHref ? (
+    <a href={telHref} className="btn-outline flex-1 h-12 rounded-2xl px-3 text-[15px]">
+      <Phone className="w-5 h-5 text-brand-600" />
+      <span className="truncate">{phone}</span>
+    </a>
+  ) : (
+    <button
+      onClick={onShowPhone}
+      disabled={phoneLoading}
+      className="btn-outline flex-1 h-12 rounded-2xl px-3 text-[15px] disabled:opacity-60"
+    >
+      {authed ? <Phone className="w-5 h-5" /> : <Lock className="w-4 h-4" />}
+      {phoneLoading ? 'Загружаем…' : authed ? 'Позвонить' : 'Телефон'}
+    </button>
+  );
+
+  const path = [
+    sectionInfo && { label: sectionInfo.name, href: `/${ad.city}?section=${sectionInfo.id}` },
+    sectionInfo && ad.categoryGroup && {
+      label: ad.categoryGroup,
+      href: `/${ad.city}?section=${sectionInfo.id}&group=${encodeURIComponent(ad.categoryGroup)}`
+    },
+    ad.category && { label: ad.category }
+  ].filter(Boolean);
+
+  const showActionBar = !isOwner;
+
   return (
-    <div className="min-h-screen bg-slate-50 pb-24 md:pb-0">
-      {/* Верхняя навигация */}
-      <div className="hero-gradient border-b border-black/5">
-        <div className="max-w-5xl mx-auto px-4 md:px-6 pt-4 pb-3 flex items-center gap-3">
-          <button
-            onClick={() => router.back()}
-            className="btn-outline w-10 h-10 shrink-0"
-            aria-label="Назад"
-          >
-            <ArrowLeft className="w-4.5 h-4.5 text-ink-800" />
-          </button>
+    <div className={`min-h-screen bg-slate-50 md:pb-0 ${showActionBar ? 'pb-28' : 'pb-24'}`}>
+      {/* Верхняя панель */}
+      <div className="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-slate-100">
+        <div className="max-w-5xl mx-auto px-2 md:px-6 h-14 flex items-center gap-1">
+          <IconBtn label="Назад" onClick={() => router.back()}>
+            <ArrowLeft className="w-[22px] h-[22px]" />
+          </IconBtn>
 
           {/* Хлебные крошки — только на десктопе */}
-          <nav className="hidden md:flex items-center gap-1.5 text-[13px] text-ink-500 min-w-0">
+          <nav className="hidden md:flex items-center gap-1.5 text-[13px] text-ink-500 min-w-0 ml-2">
             <Link href="/" className="hover:text-brand-700 inline-flex items-center gap-1">
               <Home className="w-3.5 h-3.5" />
               Доска/КВН
@@ -147,48 +200,35 @@ export default function AdDetail({ ad }) {
             <Link href={`/${ad.city}`} className="hover:text-brand-700 truncate">
               {cityName(ad.city)}
             </Link>
-            {sectionInfo && (
-              <>
+            {path.slice(0, 2).map((p) => (
+              <span key={p.label} className="contents">
                 <span>›</span>
-                <Link
-                  href={`/${ad.city}?section=${sectionInfo.id}`}
-                  className="text-ink-700 font-medium hover:text-brand-700 truncate"
-                >
-                  {sectionInfo.name}
+                <Link href={p.href} className="hover:text-brand-700 truncate">
+                  {p.label}
                 </Link>
-              </>
-            )}
+              </span>
+            ))}
           </nav>
 
-          <button
-            onClick={onShare}
-            className="ml-auto btn-outline h-10 px-3.5 text-sm"
-          >
-            <Share2 className="w-4 h-4 text-brand-600" />
-            <span className="hidden sm:inline">Поделиться</span>
-          </button>
+          <div className="ml-auto flex items-center gap-0.5">
+            <IconBtn label="Поделиться" onClick={onShare}>
+              <Share2 className="w-5 h-5" />
+            </IconBtn>
+            {!isOwner && (
+              <IconBtn label={liked ? 'Убрать из избранного' : 'В избранное'} onClick={() => setLiked((v) => !v)}>
+                <Heart className={`w-[22px] h-[22px] ${liked ? 'fill-rose-500 text-rose-500' : ''}`} />
+              </IconBtn>
+            )}
+          </div>
         </div>
       </div>
 
       <main className="max-w-5xl mx-auto px-0 md:px-6 py-0 md:py-6">
         <div className="md:grid md:grid-cols-[1.4fr_1fr] md:gap-6">
           {/* Левая колонка — галерея */}
-          <div className="md:sticky md:top-4 md:self-start">
-            <div className="relative aspect-[4/3] bg-slate-100 md:rounded-2xl overflow-hidden shadow-card">
-              {gallery[photoIdx] ? (
-                <img
-                  src={gallery[photoIdx]}
-                  alt={ad.title}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full grid place-items-center text-ink-500">
-                  Без фото
-                </div>
-              )}
-
-              {/* Плашки */}
-              <div className="absolute top-3 left-3 flex flex-col items-start gap-1">
+          <div className="md:sticky md:top-20 md:self-start">
+            <Gallery photos={gallery} title={ad.title} section={ad.section}>
+              <div className="absolute top-3 left-3 flex flex-col items-start gap-1 pointer-events-none">
                 {ad.top && (
                   <span className="top-badge inline-flex items-center gap-1 text-[11px] font-bold px-2 py-1 rounded-full shadow">
                     <Crown className="w-3 h-3" /> TOP
@@ -208,109 +248,114 @@ export default function AdDetail({ ad }) {
                   </span>
                 )}
               </div>
-
-              {/* Стрелки */}
-              {gallery.length > 1 && (
-                <>
-                  <button
-                    onClick={() => setPhotoIdx((i) => (i - 1 + gallery.length) % gallery.length)}
-                    className="absolute left-2 top-1/2 -translate-y-1/2 w-9 h-9 grid place-items-center rounded-full bg-white/90 shadow-card ring-1 ring-black/5 hover:bg-white"
-                    aria-label="Предыдущее фото"
-                  >
-                    <ChevronLeft className="w-4.5 h-4.5" />
-                  </button>
-                  <button
-                    onClick={() => setPhotoIdx((i) => (i + 1) % gallery.length)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 grid place-items-center rounded-full bg-white/90 shadow-card ring-1 ring-black/5 hover:bg-white"
-                    aria-label="Следующее фото"
-                  >
-                    <ChevronRight className="w-4.5 h-4.5" />
-                  </button>
-                </>
-              )}
-
-              {/* Избранное */}
-              <button
-                onClick={() => setLiked((v) => !v)}
-                className="absolute top-3 right-3 w-10 h-10 grid place-items-center rounded-full bg-white/95 shadow-card ring-1 ring-black/5"
-                aria-label="В избранное"
-              >
-                <Heart className={`w-5 h-5 ${liked ? 'fill-rose-500 text-rose-500' : 'text-ink-700'}`} />
-              </button>
-
-              {/* Счётчик фото */}
-              {gallery.length > 1 && (
-                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-black/60 text-white text-[11px] font-semibold px-2 py-1 rounded-full">
-                  {photoIdx + 1} / {gallery.length}
-                </div>
-              )}
-            </div>
-
-            {/* Миниатюры */}
-            {gallery.length > 1 && (
-              <div className="p-3 flex gap-2 overflow-x-auto no-scrollbar md:mt-2 md:p-0">
-                {gallery.map((g, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setPhotoIdx(i)}
-                    className={`w-20 h-20 shrink-0 rounded-xl overflow-hidden ring-2 ${
-                      i === photoIdx ? 'ring-brand-500' : 'ring-transparent'
-                    }`}
-                  >
-                    <img src={g} alt="" className="w-full h-full object-cover" />
-                  </button>
-                ))}
-              </div>
-            )}
+            </Gallery>
           </div>
 
           {/* Правая колонка — детали */}
-          <div className="p-4 md:p-0 space-y-5">
-            <div>
-              <div className="text-[12px] text-ink-500 flex items-center gap-1.5">
-                <MapPin className="w-3.5 h-3.5 text-brand-600" />
-                {ad.address || cityName(ad.city)}
-                <span className="text-ink-300">·</span>
+          <div className="p-4 md:p-0 space-y-4">
+            <div className="rounded-2xl bg-white ring-1 ring-black/5 shadow-card p-4 space-y-2">
+              <div className="text-[26px] md:text-3xl font-black text-ink-900 leading-tight">
+                {formatPrice(ad)}
+              </div>
+              <h1 className="text-lg md:text-xl font-bold text-ink-900 leading-snug">{ad.title}</h1>
+
+              {path.length > 0 && (
+                <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[13px] text-ink-500">
+                  {path.map((p, i) => (
+                    <span key={p.label} className="inline-flex items-center gap-1.5">
+                      {i > 0 && <span className="text-ink-300">›</span>}
+                      {p.href ? (
+                        <Link href={p.href} className="hover:text-brand-700">
+                          {p.label}
+                        </Link>
+                      ) : (
+                        <span>{p.label}</span>
+                      )}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              <div className="pt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-ink-500">
+                <span className="inline-flex items-center gap-1 min-w-0">
+                  <MapPin className="w-4 h-4 shrink-0" />
+                  <span className="truncate">{ad.address || cityName(ad.city)}</span>
+                </span>
                 <span suppressHydrationWarning>
                   {isEvent ? formatEventDate(ad.eventDate) : formatRelative(ad.createdAt)}
                 </span>
-              </div>
-              <h1 className="mt-2 text-2xl md:text-3xl font-extrabold text-ink-900 leading-tight">
-                {ad.title}
-              </h1>
-              <div className="mt-3 text-3xl font-black text-brand-700">
-                {formatPrice(ad)}
+                <span className="inline-flex items-center gap-1">
+                  <Eye className="w-4 h-4" />
+                  {views} {pluralRu(views, ['просмотр', 'просмотра', 'просмотров'])}
+                </span>
               </div>
 
-              <div className="mt-3 flex flex-wrap gap-2">
-                {ad.verified && (
-                  <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-emerald-700 bg-emerald-50 ring-1 ring-emerald-200 px-2 py-1 rounded-full">
-                    <BadgeCheck className="w-3.5 h-3.5" /> Проверен через «Подслушано»
-                  </span>
-                )}
-                {isEvent && ad.eventDate && (
-                  <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-amber-700 bg-amber-50 ring-1 ring-amber-200 px-2 py-1 rounded-full">
-                    <Calendar className="w-3.5 h-3.5" />
-                    {formatEventDate(ad.eventDate)}
-                  </span>
-                )}
-              </div>
+              {(ad.verified || (isEvent && ad.eventDate)) && (
+                <div className="pt-1 flex flex-wrap gap-2">
+                  {ad.verified && (
+                    <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-emerald-700 bg-emerald-50 ring-1 ring-emerald-200 px-2 py-1 rounded-full">
+                      <BadgeCheck className="w-3.5 h-3.5" /> Проверен через «Подслушано»
+                    </span>
+                  )}
+                  {isEvent && ad.eventDate && (
+                    <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-amber-700 bg-amber-50 ring-1 ring-amber-200 px-2 py-1 rounded-full">
+                      <Calendar className="w-3.5 h-3.5" />
+                      {formatEventDate(ad.eventDate)}
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
 
-            {/* Описание */}
+            {/* Связь — на компьютере; на телефоне те же кнопки в панели снизу */}
+            {!isOwner && (
+              <div className="hidden md:block rounded-2xl bg-white ring-1 ring-black/5 shadow-card p-4 space-y-2">
+                <div className="flex gap-2">
+                  {writeBtn}
+                  {phoneBtn}
+                </div>
+                {ready && (!acceptsPhone || !authed) && (
+                  <div className="text-[12px] text-ink-500">
+                    {acceptsPhone
+                      ? 'Телефон и сообщения доступны после входа — это защищает продавцов от спама.'
+                      : 'Продавец отвечает только в сообщениях на сайте.'}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {isOwner && (
+              <div className="rounded-2xl bg-white ring-1 ring-black/5 shadow-card p-4 space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="text-sm font-bold text-ink-900">Это ваше объявление</div>
+                  <OwnerStatus status={ad.status} />
+                </div>
+                <BumpButton ad={ad} />
+                <button
+                  onClick={onDelete}
+                  disabled={deleting}
+                  className="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-white border-2 border-rose-100 text-rose-700 hover:bg-rose-50 font-bold px-4 py-3 disabled:opacity-50"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  {deleting ? 'Удаляем…' : 'Удалить объявление'}
+                </button>
+              </div>
+            )}
+
             {ad.description && (
               <div className="rounded-2xl bg-white ring-1 ring-black/5 shadow-card p-4">
-                <div className="text-[11px] uppercase tracking-wide text-ink-500 font-bold mb-1.5">
-                  Описание
-                </div>
-                <p className="text-sm text-ink-800 leading-relaxed whitespace-pre-line">
+                <h2 className="text-base font-bold text-ink-900 mb-1.5">Описание</h2>
+                <p className="text-[15px] text-ink-800 leading-relaxed whitespace-pre-line break-words">
                   {ad.description}
                 </p>
               </div>
             )}
 
-            {/* Автор */}
+            {/* Продавец */}
             <div className="rounded-2xl bg-white ring-1 ring-black/5 shadow-card p-4">
+              <h2 className="text-base font-bold text-ink-900 mb-3">
+                {isEvent ? 'Организатор' : 'Продавец'}
+              </h2>
               <div className="flex items-center gap-3">
                 {ad.author?.avatar ? (
                   <img
@@ -325,19 +370,15 @@ export default function AdDetail({ ad }) {
                 )}
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
-                    <div className="text-sm font-semibold text-ink-900 truncate">
-                      {ad.author?.name}
-                    </div>
-                    {ad.author?.verified && (
-                      <BadgeCheck className="w-4 h-4 text-brand-600 shrink-0" />
-                    )}
+                    <div className="font-semibold text-ink-900 truncate">{ad.author?.name}</div>
+                    {ad.author?.verified && <BadgeCheck className="w-4 h-4 text-brand-600 shrink-0" />}
                   </div>
-                  <div className="text-[12px] text-ink-500 flex items-center gap-1.5 mt-0.5">
+                  <div className="text-[13px] text-ink-500 flex items-center gap-1 mt-0.5 whitespace-nowrap">
                     <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
                     {ad.author?.reviewsCount > 0 ? ad.author.rating.toFixed(1) : 'нет оценок'}
                   </div>
                   {ad.author?.createdAt && (
-                    <div className="text-[12px] text-ink-500" suppressHydrationWarning>
+                    <div className="text-[13px] text-ink-500" suppressHydrationWarning>
                       На Доске с {formatMonthYear(ad.author.createdAt)}
                     </div>
                   )}
@@ -345,121 +386,60 @@ export default function AdDetail({ ad }) {
                 {authorTypeIsBiz && ad.author?.businessProfile?.slug && (
                   <Link
                     href={`/u/${ad.author.businessProfile.slug}`}
-                    className="text-[12px] font-semibold text-brand-700 hover:text-brand-800 shrink-0"
+                    className="text-[13px] font-semibold text-brand-700 hover:text-brand-800 shrink-0"
                   >
                     Профиль →
                   </Link>
                 )}
               </div>
-            </div>
-
-            {isOwner ? (
-              <div className="rounded-2xl bg-white ring-1 ring-black/5 shadow-card p-4 space-y-3">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="text-sm font-bold text-ink-900">Это ваше объявление</div>
-                  <OwnerStatus status={ad.status} />
-                </div>
-                <BumpButton ad={ad} />
-                <button
-                  onClick={onDelete}
-                  disabled={deleting}
-                  className="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-white ring-1 ring-rose-200 text-rose-700 hover:bg-rose-50 font-semibold px-4 py-3 disabled:opacity-50"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  {deleting ? 'Удаляем…' : 'Удалить объявление'}
-                </button>
-              </div>
-            ) : (
-            <div className="rounded-2xl bg-white ring-1 ring-black/5 shadow-card p-4 space-y-2">
-              <div className={`grid grid-cols-1 gap-2 ${acceptsPhone ? 'sm:grid-cols-2' : ''}`}>
-                <button
-                  onClick={onWrite}
-                  disabled={opening}
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-semibold px-4 py-3 disabled:opacity-60"
-                >
-                  <MessageCircle className="w-4 h-4" />
-                  {opening ? 'Открываем…' : 'Написать'}
-                </button>
-                {acceptsPhone &&
-                  (phone ? (
-                    <a
-                      href={`tel:${phone.replace(/[^\d+]/g, '')}`}
-                      className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white ring-1 ring-brand-300 hover:bg-brand-50 font-semibold px-4 py-3 text-ink-900"
-                    >
-                      <Phone className="w-4 h-4 text-brand-600" />
-                      {phone}
-                    </a>
-                  ) : (
-                    <button
-                      onClick={onShowPhone}
-                      disabled={phoneLoading}
-                      className="btn-outline inline-flex items-center justify-center gap-2 rounded-2xl font-semibold px-4 py-3 text-ink-900 disabled:opacity-60"
-                    >
-                      {authed ? <Phone className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
-                      {phoneLoading ? 'Загружаем…' : authed ? 'Показать телефон' : 'Войти, чтобы позвонить'}
-                    </button>
-                  ))}
-              </div>
-
-              {ready && (!acceptsPhone || !authed) && (
-                <div className="text-[11px] text-ink-500">
+              {!isOwner && ready && (!acceptsPhone || !authed) && (
+                <div className="md:hidden mt-3 text-[12px] text-ink-500">
                   {acceptsPhone
                     ? 'Телефон и сообщения доступны после входа — это защищает продавцов от спама.'
                     : 'Продавец отвечает только в сообщениях на сайте.'}
                 </div>
               )}
-
-              {ad.avitoUrl && (
-                <a
-                  href={ad.avitoUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="btn-outline inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold text-emerald-700 w-full"
-                >
-                  <ExternalLink className="w-4 h-4" />
-                  Открыть похожие на Авито
-                </a>
-              )}
             </div>
+
+            {ad.avitoUrl && (
+              <a
+                href={ad.avitoUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="btn-outline w-full rounded-2xl px-4 py-3 text-sm text-emerald-700"
+              >
+                <ExternalLink className="w-4 h-4" />
+                Открыть похожие на Авито
+              </a>
             )}
 
-            {/* Мелкие действия */}
-            <div className="flex items-center gap-3 text-[12px] text-ink-500 px-1">
-              {!isOwner && (
-                <>
-                  <button className="inline-flex items-center gap-1 hover:text-ink-800">
-                    <Flag className="w-3.5 h-3.5" />
-                    Пожаловаться
-                  </button>
-                  <span className="text-ink-300">·</span>
-                </>
-              )}
-              <span>ID: {ad.id.slice(0, 8)}</span>
+            <div className="px-1 space-y-2">
+              <p className="text-[12px] text-ink-500">
+                Не вносите предоплату до встречи с продавцом — так чаще всего действуют мошенники.
+              </p>
+              <div className="flex items-center gap-3 text-[12px] text-ink-500">
+                {!isOwner && (
+                  <>
+                    <button className="inline-flex items-center gap-1 hover:text-ink-800">
+                      <Flag className="w-3.5 h-3.5" />
+                      Пожаловаться
+                    </button>
+                    <span className="text-ink-300">·</span>
+                  </>
+                )}
+                <span>№ {ad.id.slice(0, 8)}</span>
+              </div>
             </div>
-
-            <p className="text-[11px] text-ink-500 px-1">
-              Не вносите предоплату до встречи с продавцом — так чаще всего действуют мошенники.
-            </p>
           </div>
         </div>
 
-        {/* Похожие объявления */}
         {similar.length > 0 && (
-          <section className="mt-8 md:mt-10 px-4 md:px-0">
-            <div className="flex items-end justify-between mb-3 px-0.5">
-              <div>
-                <div className="text-[11px] uppercase tracking-wide text-ink-500 font-bold">
-                  Ещё по теме
-                </div>
-                <div className="text-base md:text-lg font-extrabold text-ink-900 leading-tight">
-                  Похожие объявления
-                </div>
-              </div>
-            </div>
+          <section className="mt-6 md:mt-10 px-4 md:px-0">
+            <h2 className="text-xl font-extrabold text-ink-900 mb-3 px-0.5">Похожие объявления</h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 auto-rows-fr">
               {similar.map((s) => (
                 <div key={s.id} className="h-full">
-                  <AdCard ad={s} onOpen={() => router.push(`/ad/${s.id}`)} />
+                  <AdCard ad={s} />
                 </div>
               ))}
             </div>
@@ -467,9 +447,136 @@ export default function AdDetail({ ad }) {
         )}
       </main>
 
-      <Footer />
-      <PostAdModal open={postOpen} onClose={() => setPostOpen(false)} />
-      <BottomNav onPost={() => setPostOpen(true)} />
+      <div className="hidden md:block">
+        <Footer />
+      </div>
+
+      {showActionBar ? (
+        // Закреплённая панель связи на телефоне — вместо нижнего меню, как в приложениях
+        <div
+          className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-slate-100 px-4 pt-2.5"
+          style={{ paddingBottom: 'max(10px, env(safe-area-inset-bottom))' }}
+        >
+          <div className="flex gap-2">
+            {phoneBtn}
+            {writeBtn}
+          </div>
+        </div>
+      ) : (
+        <>
+          <PostAdModal open={postOpen} onClose={() => setPostOpen(false)} />
+          <BottomNav onPost={() => setPostOpen(true)} />
+        </>
+      )}
+    </div>
+  );
+}
+
+function IconBtn({ label, onClick, children }) {
+  return (
+    <button
+      onClick={onClick}
+      aria-label={label}
+      title={label}
+      className="w-10 h-10 grid place-items-center rounded-full text-ink-800 hover:bg-slate-100"
+    >
+      {children}
+    </button>
+  );
+}
+
+/**
+ * Галерея: на телефоне листается пальцем (scroll-snap), на компьютере — стрелками и миниатюрами.
+ * children — плашки поверх фото.
+ */
+function Gallery({ photos, title, section, children }) {
+  const trackRef = useRef(null);
+  const [idx, setIdx] = useState(0);
+
+  function onScroll() {
+    const el = trackRef.current;
+    if (!el) return;
+    setIdx(Math.round(el.scrollLeft / el.clientWidth));
+  }
+
+  function go(i) {
+    const el = trackRef.current;
+    if (!el) return;
+    const n = (i + photos.length) % photos.length;
+    el.scrollTo({ left: n * el.clientWidth, behavior: 'smooth' });
+  }
+
+  if (!photos.length) {
+    const s = getSection(section);
+    const Icon = s?.icon;
+    return (
+      <div className={`relative aspect-[4/3] md:rounded-2xl overflow-hidden grid place-items-center ${s?.tile || 'bg-slate-100 text-ink-500'}`}>
+        {Icon ? <Icon className="w-16 h-16 opacity-50" strokeWidth={1.4} /> : 'Без фото'}
+        {children}
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="relative aspect-[4/3] bg-slate-100 md:rounded-2xl overflow-hidden md:shadow-card">
+        <div
+          ref={trackRef}
+          onScroll={onScroll}
+          className="flex h-full overflow-x-auto snap-x snap-mandatory no-scrollbar"
+        >
+          {photos.map((src, i) => (
+            <img
+              key={src + i}
+              src={src}
+              alt={i === 0 ? title : ''}
+              loading={i === 0 ? 'eager' : 'lazy'}
+              className="w-full h-full shrink-0 snap-center object-contain bg-slate-100"
+            />
+          ))}
+        </div>
+
+        {children}
+
+        {photos.length > 1 && (
+          <>
+            <button
+              onClick={() => go(idx - 1)}
+              className="hidden md:grid absolute left-2 top-1/2 -translate-y-1/2 w-10 h-10 place-items-center rounded-full bg-white/90 shadow-card hover:bg-white"
+              aria-label="Предыдущее фото"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            <button
+              onClick={() => go(idx + 1)}
+              className="hidden md:grid absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 place-items-center rounded-full bg-white/90 shadow-card hover:bg-white"
+              aria-label="Следующее фото"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </button>
+            <div className="absolute bottom-3 right-3 bg-black/60 text-white text-[12px] font-semibold px-2 py-0.5 rounded-full tabular-nums">
+              {idx + 1} / {photos.length}
+            </div>
+          </>
+        )}
+      </div>
+
+      {photos.length > 1 && (
+        <div className="hidden md:flex mt-2 gap-2 overflow-x-auto no-scrollbar">
+          {photos.map((src, i) => (
+            <button
+              key={src + i}
+              onClick={() => go(i)}
+              className={`w-20 h-20 shrink-0 rounded-xl overflow-hidden ring-2 ${
+                i === idx ? 'ring-accent-500' : 'ring-transparent'
+              }`}
+              aria-label={`Фото ${i + 1}`}
+            >
+              <img src={src} alt="" className="w-full h-full object-cover" />
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -262,7 +262,6 @@ function Metric({ value, label, icon }) {
 }
 
 function MyAdsTab({ ads, onPost, onReload }) {
-  const router = useRouter();
 
   async function handleDelete(ad) {
     if (!window.confirm(`Удалить объявление «${ad.title}»?`)) return;
@@ -310,8 +309,7 @@ function MyAdsTab({ ads, onPost, onReload }) {
         </button>
       </div>
       <div className="text-[11px] text-ink-500 px-0.5 -mt-1">
-        Нажми на 🔗 — скопируется ссылка на объявление, чтобы поделиться в
-        VK или мессенджере.
+        Кнопка со скрепкой копирует ссылку на объявление — для ВК или мессенджера.
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 auto-rows-fr">
         {ads.map((ad) => (
@@ -320,7 +318,6 @@ function MyAdsTab({ ads, onPost, onReload }) {
               <AdCard
                 ad={ad}
                 showShare
-                onOpen={(a) => router.push(`/ad/${a.id}`)}
                 onDelete={handleDelete}
               />
             </div>

@@ -259,7 +259,7 @@ export default function BusinessProfile({ biz, ads = [] }) {
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 auto-rows-fr">
               {ads.map((ad) => (
                 <div key={ad.id} className="h-full">
-                  <AdCard ad={ad} onOpen={() => router.push(`/ad/${ad.id}`)} />
+                  <AdCard ad={ad} />
                 </div>
               ))}
             </div>

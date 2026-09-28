@@ -1,57 +1,35 @@
 'use client';
 
-import { motion } from 'framer-motion';
-import { BadgeCheck, Clock, Heart, Link as LinkIcon, MapPin, Calendar, Flame, Crown, ExternalLink, Trash2 } from 'lucide-react';
-import { cityName } from '@/lib/api';
+import Link from 'next/link';
+import { useState } from 'react';
+import { BadgeCheck, Calendar, Camera, Crown, ExternalLink, Flame, Heart, Link as LinkIcon, Trash2 } from 'lucide-react';
+import { cityName, getSection } from '@/lib/api';
 import { formatPrice, formatRelative, formatEventDate } from '@/lib/format';
 import { accountTypeLabel, accountTypeEmoji, accountTypeBadgeClass, isBusiness } from '@/lib/accountType';
 import { shareOrCopy } from '@/lib/share';
 import { useToast } from './Toast';
-import { useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
 
-// Единый стиль карточки: одинаковые внешние/внутренние отступы,
-// одинаковая высота обложки (aspect-[4/3]), тело — flex-column с ровными gap.
-// h-full позволяет карточкам в CSS grid тянуться до одной высоты по ряду.
 /**
- * Карточка объявления.
- * @param {Object} props
- * @param {Object} props.ad
- * @param {Function} [props.onOpen]      — при клике на карточку (обычно router.push('/ad/id'))
- * @param {boolean}  [props.showShare]   — показать кнопку копирования ссылки (для профиля)
+ * Карточка объявления: квадратное фото, под ним цена, заголовок, город и время.
+ *
+ * Вся карточка — ссылка на /ad/[id] (Next сам подгружает страницу, когда карточка на экране).
+ * Кнопки действий лежат рядом со ссылкой, а не внутри неё: вложенные интерактивные
+ * элементы ломают разметку и чтение с экрана.
+ *
+ * @param {Object}   props.ad
+ * @param {boolean}  [props.showShare] — кнопка «скопировать ссылку» (в профиле)
+ * @param {Function} [props.onDelete]  — кнопка удаления (в профиле)
  */
-export default function AdCard({ ad, onOpen, showShare = false, onDelete }) {
+export default function AdCard({ ad, showShare = false, onDelete }) {
   const [liked, setLiked] = useState(false);
-  const router = useRouter();
-  const cardRef = useRef(null);
-
-  // Карточка показалась на экране — заранее грузим оболочку страницы объявления,
-  // чтобы по нажатию сразу открылся экран загрузки (app/ad/[id]/loading.jsx).
-  useEffect(() => {
-    const el = cardRef.current;
-    if (!el || !('IntersectionObserver' in window)) return;
-    const io = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((e) => e.isIntersecting)) {
-          router.prefetch(`/ad/${ad.id}`);
-          io.disconnect();
-        }
-      },
-      { rootMargin: '200px' }
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, [ad.id, router]);
   const { toast } = useToast();
   const isEvent = ad.section === 'events';
-  // Тип автора — снапшот на момент публикации (frozen).
+  const photos = ad.gallery?.length || (ad.image ? 1 : 0);
+  // Тип автора — снапшот на момент публикации.
   const authorType = ad.authorType || ad.author?.type || null;
-  const authorTypeIsBiz = isBusiness(authorType);
-  const typeEmoji = accountTypeEmoji(authorType);
-  const typeText = accountTypeLabel(authorType);
+  const showType = isBusiness(authorType) && accountTypeLabel(authorType);
 
-  async function onCopyLink(e) {
-    e.stopPropagation();
+  async function onCopyLink() {
     const status = await shareOrCopy({
       url: `/ad/${ad.id}`,
       title: ad.title,
@@ -63,134 +41,128 @@ export default function AdCard({ ad, onOpen, showShare = false, onDelete }) {
   }
 
   return (
-    <motion.button
-      ref={cardRef}
-      layout
-      onClick={() => onOpen?.(ad)}
-      whileHover={{ y: -3 }}
-      transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-      className={`group relative flex h-full w-full flex-col overflow-hidden rounded-2xl bg-white text-left shadow-card ring-1 transition hover:shadow-soft ${
+    <div
+      className={`group relative flex h-full w-full flex-col overflow-hidden rounded-2xl bg-white shadow-card ring-1 transition-shadow hover:shadow-soft ${
         ad.top ? 'ring-amber-300' : 'ring-black/5'
       }`}
     >
-      {/* Обложка — фиксированный аспект, одинаковый для всех карточек */}
-      <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-100">
-        <img
-          src={ad.image}
-          alt={ad.title}
-          loading="lazy"
-          className="h-full w-full object-cover transition group-hover:scale-[1.03]"
-        />
-
-        {/* Плашки слева */}
-        <div className="absolute left-2 top-2 flex flex-col items-start gap-1">
-          {ad.top && (
-            <span className="top-badge inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-bold shadow">
-              <Crown className="h-3 w-3" />
-              TOP
-            </span>
-          )}
-          {ad.urgent && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-accent-500 px-2 py-1 text-[11px] font-bold text-white shadow">
-              <Flame className="h-3 w-3" />
-              Срочно
-            </span>
-          )}
-          {isEvent && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-brand-600 px-2 py-1 text-[11px] font-bold text-white shadow">
-              <Calendar className="h-3 w-3" />
-              Событие
-            </span>
-          )}
-          {ad.avitoUrl && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600 px-2 py-1 text-[11px] font-bold text-white shadow">
-              <ExternalLink className="h-3 w-3" />
-              Авито
-            </span>
-          )}
-          {authorTypeIsBiz && typeText && (
-            <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-bold ring-1 shadow ${accountTypeBadgeClass(authorType)}`}>
-              <span>{typeEmoji}</span>
-              {typeText}
-            </span>
-          )}
-        </div>
-
-        {/* Действия в верхнем правом углу */}
-        <div className="absolute right-2 top-2 flex flex-col gap-1.5">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setLiked((v) => !v);
-            }}
-            className="grid h-8 w-8 place-items-center rounded-full bg-white/95 shadow-card ring-1 ring-black/5"
-            aria-label="В избранное"
-          >
-            <Heart
-              className={`h-4 w-4 ${liked ? 'fill-rose-500 text-rose-500' : 'text-ink-700'}`}
+      <Link href={`/ad/${ad.id}`} className="flex flex-1 flex-col text-left">
+        <div className="relative aspect-square w-full overflow-hidden bg-slate-100">
+          {ad.image ? (
+            <img
+              src={ad.image}
+              alt={ad.title}
+              loading="lazy"
+              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
             />
-          </button>
-          {showShare && (
-            <button
-              onClick={onCopyLink}
-              className="grid h-8 w-8 place-items-center rounded-full bg-white/95 shadow-card ring-1 ring-black/5 hover:bg-brand-50"
-              aria-label="Скопировать ссылку"
-              title="Скопировать ссылку"
-            >
-              <LinkIcon className="h-4 w-4 text-brand-700" />
-            </button>
+          ) : (
+            <NoPhoto section={ad.section} />
           )}
-          {onDelete && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete(ad);
-              }}
-              className="grid h-8 w-8 place-items-center rounded-full bg-white/95 shadow-card ring-1 ring-black/5 hover:bg-rose-50"
-              aria-label="Удалить"
-              title="Удалить"
-            >
-              <Trash2 className="h-4 w-4 text-rose-600" />
-            </button>
-          )}
-        </div>
 
-        {/* Цена */}
-        <div className="absolute bottom-2 left-2 rounded-xl bg-white/95 px-2.5 py-1 shadow-card backdrop-blur">
-          <div className="text-[13px] font-extrabold text-ink-900">{formatPrice(ad)}</div>
-        </div>
-      </div>
+          <div className="absolute left-2 top-2 flex flex-col items-start gap-1">
+            {ad.top && (
+              <Badge className="top-badge">
+                <Crown className="h-3 w-3" />
+                TOP
+              </Badge>
+            )}
+            {ad.urgent && (
+              <Badge className="bg-accent-500 text-white">
+                <Flame className="h-3 w-3" />
+                Срочно
+              </Badge>
+            )}
+            {ad.avitoUrl && (
+              <Badge className="bg-emerald-600 text-white">
+                <ExternalLink className="h-3 w-3" />
+                Авито
+              </Badge>
+            )}
+            {showType && (
+              <Badge className={`ring-1 ${accountTypeBadgeClass(authorType)}`}>
+                <span>{accountTypeEmoji(authorType)}</span>
+                {accountTypeLabel(authorType)}
+              </Badge>
+            )}
+          </div>
 
-      {/* Тело: единая структура, всегда 3 строки */}
-      <div className="flex flex-1 flex-col gap-1.5 p-3">
-        {/* Заголовок — всегда 2 строки для одинаковой высоты */}
-        <div className="line-clamp-2 min-h-[2.5em] text-[13px] font-semibold leading-snug text-ink-900 md:text-sm">
-          {ad.title}
-        </div>
-
-        {/* Адрес — всегда одна строка */}
-        <div className="flex items-center gap-1 text-[11px] text-ink-500 md:text-[12px]">
-          <MapPin className="h-3.5 w-3.5 shrink-0 text-brand-600" />
-          <span className="truncate">{ad.address || cityName(ad.city)}</span>
-        </div>
-
-        {/* Мета — прижата к низу, всегда одна строка */}
-        <div className="mt-auto flex items-center gap-1.5">
-          {ad.verified && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700 ring-1 ring-emerald-200 md:text-[11px]">
-              <BadgeCheck className="h-3 w-3" />
-              Проверен
+          {photos > 1 && (
+            <span className="absolute bottom-2 left-2 inline-flex items-center gap-1 rounded-full bg-black/55 px-1.5 py-0.5 text-[11px] font-semibold text-white backdrop-blur-sm">
+              <Camera className="h-3 w-3" />
+              {photos}
             </span>
           )}
-          <span
-            className="ml-auto inline-flex items-center gap-0.5 whitespace-nowrap text-[10px] text-ink-500 md:text-[11px]"
+        </div>
+
+        <div className="flex flex-1 flex-col gap-1 p-2.5 md:p-3">
+          <div className="truncate text-[15px] font-extrabold leading-tight text-ink-900 md:text-base">
+            {formatPrice(ad, { compact: true })}
+          </div>
+          <div className="line-clamp-2 min-h-[2.5em] text-[13px] leading-snug text-ink-800 md:text-sm">
+            {ad.title}
+          </div>
+          <div
+            className="mt-auto flex items-center gap-1 pt-0.5 text-[11px] text-ink-500 md:text-[12px]"
             suppressHydrationWarning
           >
-            <Clock className="h-3 w-3" />
-            {isEvent ? formatEventDate(ad.eventDate) : formatRelative(ad.createdAt)}
-          </span>
+            {ad.verified && <BadgeCheck className="h-3.5 w-3.5 shrink-0 text-emerald-600" aria-label="Проверен" />}
+            {isEvent && <Calendar className="h-3 w-3 shrink-0" />}
+            <span className="truncate">
+              {cityName(ad.city)} · {isEvent ? formatEventDate(ad.eventDate) : formatRelative(ad.createdAt)}
+            </span>
+          </div>
         </div>
+      </Link>
+
+      {/* Действия — поверх фото, но вне ссылки */}
+      <div className="absolute right-2 top-2 flex flex-col gap-1.5">
+        <IconButton label={liked ? 'Убрать из избранного' : 'В избранное'} onClick={() => setLiked((v) => !v)}>
+          <Heart className={`h-4 w-4 ${liked ? 'fill-rose-500 text-rose-500' : 'text-ink-700'}`} />
+        </IconButton>
+        {showShare && (
+          <IconButton label="Скопировать ссылку" onClick={onCopyLink}>
+            <LinkIcon className="h-4 w-4 text-ink-700" />
+          </IconButton>
+        )}
+        {onDelete && (
+          <IconButton label="Удалить" onClick={() => onDelete(ad)}>
+            <Trash2 className="h-4 w-4 text-rose-600" />
+          </IconButton>
+        )}
       </div>
-    </motion.button>
+    </div>
+  );
+}
+
+function Badge({ className = '', children }) {
+  return (
+    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold shadow ${className}`}>
+      {children}
+    </span>
+  );
+}
+
+function IconButton({ label, onClick, children }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      title={label}
+      className="grid h-8 w-8 place-items-center rounded-full bg-white/95 shadow-card ring-1 ring-black/5 hover:bg-white"
+    >
+      {children}
+    </button>
+  );
+}
+
+// Без фото — иконка раздела на его цвете, а не битая картинка.
+function NoPhoto({ section }) {
+  const s = getSection(section);
+  const Icon = s?.icon || Camera;
+  return (
+    <div className={`grid h-full w-full place-items-center ${s?.tile || 'bg-slate-100 text-ink-500'}`}>
+      <Icon className="h-10 w-10 opacity-60" strokeWidth={1.5} />
+    </div>
   );
 }

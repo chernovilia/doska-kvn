@@ -3,7 +3,7 @@
 import { motion } from 'framer-motion';
 import { CITIES, REGIONS, SECTIONS, getCategoryGroups, getSection, createAd, uploadAdPhoto } from '@/lib/api';
 import { FREE_FROM_SECTIONS } from '@/data/categories';
-import { formatPrice } from '@/lib/format';
+import { formatPrice, formatEventDate } from '@/lib/format';
 import { getAttributeFields, describeAttributes, parseAttributeInput } from '@/data/attributes';
 import { CheckCircle2, Sparkles, ArrowLeft, ArrowRight, ChevronRight, AlertCircle, X, ImagePlus } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
@@ -145,7 +145,8 @@ export default function PostAdModal({ open, onClose }) {
         priceTo: priceCfg.range && form.priceTo ? Number(form.priceTo) : undefined,
         priceSuffix: priceCfg.suffix,
         attributes: buildAttributes(attrFields, form.attrs),
-        eventDate: isEvent && form.eventDate ? new Date(form.eventDate).toISOString() : undefined,
+        // Поле без часового пояса — считаем время московским (все события в КВН).
+        eventDate: isEvent && form.eventDate ? `${form.eventDate}:00+03:00` : undefined,
         address: askAddress ? form.address.trim() || undefined : undefined,
         description: form.description?.trim() || undefined,
         photoUrls: form.photos.map((p) => p.url)
@@ -443,7 +444,7 @@ export default function PostAdModal({ open, onClose }) {
                   <div><b>Заголовок:</b> {form.title || <span className="text-ink-500">не указан</span>}</div>
                   <div><b>Цена:</b> {formatPrice(previewAd(form, priceCfg))}</div>
                   {isEvent && form.eventDate && (
-                    <div><b>Когда:</b> {new Date(form.eventDate).toLocaleString('ru-RU', { dateStyle: 'long', timeStyle: 'short' })}</div>
+                    <div><b>Когда:</b> {formatEventDate(`${form.eventDate}:00+03:00`)}</div>
                   )}
                   {askAddress && form.address.trim() && <div><b>Адрес:</b> {form.address.trim()}</div>}
                   {describeAttributes({
@@ -566,7 +567,9 @@ function DetailsStep({ fields, values, errors, onChange, isEvent, eventDate, onE
     <div className="space-y-4">
       {isEvent && (
         <div>
-          <label className="text-sm font-semibold text-ink-700">Дата и время *</label>
+          <label className="text-sm font-semibold text-ink-700">
+            Дата и время <span className="font-normal text-ink-500">по Москве</span> *
+          </label>
           <input
             type="datetime-local"
             value={eventDate}

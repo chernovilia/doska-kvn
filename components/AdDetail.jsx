@@ -37,6 +37,7 @@ import { formatPrice, formatRelative, formatEventDate, formatMonthYear, pluralRu
 import { accountTypeLabel, accountTypeEmoji, accountTypeBadgeClass, isBusiness } from '@/lib/accountType';
 import { useAuth } from '@/lib/auth';
 import { describeAttributes } from '@/data/attributes';
+import { useFavorites } from '@/lib/favorites';
 import { shareOrCopy } from '@/lib/share';
 import { useToast } from './Toast';
 import AdCard from './AdCard';
@@ -56,10 +57,20 @@ export default function AdDetail({ ad }) {
   const [phone, setPhone] = useState(null);
   const [phoneLoading, setPhoneLoading] = useState(false);
   const [opening, setOpening] = useState(false);
-  const [liked, setLiked] = useState(false);
   const [postOpen, setPostOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [views, setViews] = useState(ad.viewsCount ?? 0);
+  const { isFavorite, toggle: toggleFavorite } = useFavorites();
+  const liked = isFavorite(ad.id);
+
+  async function onToggleFavorite() {
+    try {
+      const res = await toggleFavorite(ad);
+      if (res === 'added') toast('Добавлено в избранное');
+    } catch (err) {
+      toast(err.message || 'Не получилось', { kind: 'error' });
+    }
+  }
 
   // Похожие — в браузере: на сервере они только задерживали открытие страницы.
   const [similar, setSimilar] = useState([]);
@@ -217,7 +228,7 @@ export default function AdDetail({ ad }) {
               <Share2 className="w-5 h-5" />
             </IconBtn>
             {!isOwner && (
-              <IconBtn label={liked ? 'Убрать из избранного' : 'В избранное'} onClick={() => setLiked((v) => !v)}>
+              <IconBtn label={liked ? 'Убрать из избранного' : 'В избранное'} onClick={onToggleFavorite}>
                 <Heart className={`w-[22px] h-[22px] ${liked ? 'fill-rose-500 text-rose-500' : ''}`} />
               </IconBtn>
             )}
@@ -408,8 +419,15 @@ export default function AdDetail({ ad }) {
                   </Link>
                 )}
               </div>
+              <Link
+                href={`/user/${ad.authorId}`}
+                className="mt-3 -mx-1 px-1 py-2 flex items-center justify-between rounded-xl text-[15px] font-semibold text-brand-700 hover:bg-slate-50"
+              >
+                {isOwner ? 'Как вашу страницу видят другие' : 'Все объявления продавца'}
+                <ChevronRight className="w-5 h-5" />
+              </Link>
               {!isOwner && ready && (!acceptsPhone || !authed) && (
-                <div className="md:hidden mt-3 text-[12px] text-ink-500">
+                <div className="md:hidden mt-1 text-[12px] text-ink-500">
                   {acceptsPhone
                     ? 'Телефон и сообщения доступны после входа — это защищает продавцов от спама.'
                     : 'Продавец отвечает только в сообщениях на сайте.'}

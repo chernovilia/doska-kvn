@@ -1,13 +1,13 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
 import { BadgeCheck, Calendar, Camera, Crown, ExternalLink, Flame, Heart, Link as LinkIcon, Trash2 } from 'lucide-react';
 import { cityName, getSection } from '@/lib/api';
 import { formatPrice, formatRelative, formatEventDate } from '@/lib/format';
 import { accountTypeLabel, accountTypeEmoji, accountTypeBadgeClass, isBusiness } from '@/lib/accountType';
 import { shareOrCopy } from '@/lib/share';
 import { attributesSummary } from '@/data/attributes';
+import { useFavorites } from '@/lib/favorites';
 import { useToast } from './Toast';
 
 /**
@@ -22,14 +22,25 @@ import { useToast } from './Toast';
  * @param {Function} [props.onDelete]  — кнопка удаления (в профиле)
  */
 export default function AdCard({ ad, showShare = false, onDelete }) {
-  const [liked, setLiked] = useState(false);
   const { toast } = useToast();
+  const { isFavorite, toggle, userId } = useFavorites();
+  const liked = isFavorite(ad.id);
+  const isOwn = !!userId && ad.authorId === userId;
   const isEvent = ad.section === 'events';
   const photos = ad.gallery?.length || (ad.image ? 1 : 0);
   // Тип автора — снапшот на момент публикации.
   const authorType = ad.authorType || ad.author?.type || null;
   const showType = isBusiness(authorType) && accountTypeLabel(authorType);
   const summary = attributesSummary(ad);
+
+  async function onToggleFavorite() {
+    try {
+      const res = await toggle(ad);
+      if (res === 'added') toast('Добавлено в избранное');
+    } catch (err) {
+      toast(err.message || 'Не получилось', { kind: 'error' });
+    }
+  }
 
   async function onCopyLink() {
     const status = await shareOrCopy({
@@ -119,9 +130,11 @@ export default function AdCard({ ad, showShare = false, onDelete }) {
 
       {/* Действия — поверх фото, но вне ссылки */}
       <div className="absolute right-2 top-2 flex flex-col gap-1.5">
-        <IconButton label={liked ? 'Убрать из избранного' : 'В избранное'} onClick={() => setLiked((v) => !v)}>
-          <Heart className={`h-4 w-4 ${liked ? 'fill-rose-500 text-rose-500' : 'text-ink-700'}`} />
-        </IconButton>
+        {!isOwn && (
+          <IconButton label={liked ? 'Убрать из избранного' : 'В избранное'} onClick={onToggleFavorite}>
+            <Heart className={`h-4 w-4 ${liked ? 'fill-rose-500 text-rose-500' : 'text-ink-700'}`} />
+          </IconButton>
+        )}
         {showShare && (
           <IconButton label="Скопировать ссылку" onClick={onCopyLink}>
             <LinkIcon className="h-4 w-4 text-ink-700" />

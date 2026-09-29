@@ -4,7 +4,7 @@ import Avatar from '@/components/Avatar';
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ArrowLeft, Search, Info, Send, MessageCircle, Star } from 'lucide-react';
+import { ArrowLeft, Search, Info, Send, MessageCircle, Star, X } from 'lucide-react';
 import { listConversations, getConversationMessages, sendChatMessage, getReviewEligibility } from '@/lib/api';
 import { ReviewModal } from '@/components/Reviews';
 import { formatRelative } from '@/lib/format';
@@ -290,7 +290,7 @@ function MessagesContent() {
 function ChatView({ chatId, me, onActivity }) {
   const router = useRouter();
   const [conv, setConv] = useState(null);
-  const [review, setReview] = useState(null); // { eligible, reason, review } с сервера
+  const [review, setReview] = useState(null); // { eligible, reason, review, need, readyAt } с сервера
   const [reviewOpen, setReviewOpen] = useState(false);
   const [msgs, setMsgs] = useState([]);
   const [state, setState] = useState('loading'); // loading | ok | notfound | error
@@ -375,11 +375,15 @@ function ChatView({ chatId, me, onActivity }) {
     if (el) el.scrollTop = el.scrollHeight;
   }, [msgs.length]);
 
-  // Отзыв можно оставить, когда в переписке написали оба. Спрашиваем сервер,
-  // как только это стало так (или сразу при открытии старого диалога).
-  const bothWrote = msgs.some((m) => m.senderId === me.id) && msgs.some((m) => m.senderId !== me.id);
+  // Отзыв открывается, когда каждый написал need.messages сообщений и с первого прошло need.hours.
+  // Порог и время знает сервер; перепрашиваем, когда по сообщениям в чате порог достигнут,
+  // а если ждём только времени — ставим таймер до readyAt.
+  const [reviewTick, setReviewTick] = useState(0);
+  const askedRef = useRef('');
+  const myCount = msgs.filter((m) => m.senderId === me.id).length;
+  const theirCount = msgs.length - myCount;
   useEffect(() => {
-    if (state !== 'ok' || !bothWrote) return;
+    if (state !== 'ok') return;
     let cancelled = false;
     getReviewEligibility(chatId)
       .then((r) => !cancelled && setReview(r))
@@ -387,7 +391,40 @@ function ChatView({ chatId, me, onActivity }) {
     return () => {
       cancelled = true;
     };
-  }, [chatId, state, bothWrote]);
+  }, [chatId, state, reviewTick]);
+
+  const countsReady = !!review?.need && myCount >= review.need.messages && theirCount >= review.need.messages;
+  useEffect(() => {
+    if (!review || !countsReady || review.eligible || review.reason === 'already') return;
+    if (review.reason === 'no_dialog') {
+      const key = `${myCount}:${theirCount}`;
+      if (askedRef.current === key) return;
+      askedRef.current = key;
+      setReviewTick((t) => t + 1);
+      return;
+    }
+    if (review.reason === 'too_early' && review.readyAt) {
+      const wait = Math.max(0, new Date(review.readyAt).getTime() - Date.now()) + 1000;
+      const t = setTimeout(() => setReviewTick((x) => x + 1), Math.min(wait, 2 ** 31 - 1));
+      return () => clearTimeout(t);
+    }
+  }, [review, countsReady, myCount, theirCount]);
+
+  // Приглашение оценить можно скрыть — тогда остаётся кнопка в шапке.
+  const [promptHidden, setPromptHidden] = useState(false);
+  useEffect(() => {
+    try {
+      setPromptHidden(localStorage.getItem(`review-prompt-hidden:${chatId}`) === '1');
+    } catch {
+      setPromptHidden(false);
+    }
+  }, [chatId]);
+  function hidePrompt() {
+    setPromptHidden(true);
+    try {
+      localStorage.setItem(`review-prompt-hidden:${chatId}`, '1');
+    } catch {}
+  }
 
   // Клавиатура открылась — список сжался; держим последние сообщения в кадре.
   useEffect(() => {
@@ -460,10 +497,10 @@ function ChatView({ chatId, me, onActivity }) {
               {conv.role === 'buyer' ? 'Продавец' : 'Покупатель'}
             </div>
           </div>
-          {review?.eligible && (
+          {review?.eligible && promptHidden && (
             <button onClick={() => setReviewOpen(true)} className="ml-auto btn-outline h-9 px-3 text-[13px] shrink-0">
               <Star className="w-4 h-4 text-amber-500" />
-              Оставить отзыв
+              Оценить
             </button>
           )}
           {review?.review && (
@@ -508,6 +545,26 @@ function ChatView({ chatId, me, onActivity }) {
           })
         )}
       </div>
+
+      {review?.eligible && !promptHidden && (
+        <div className="shrink-0 border-t border-amber-100 bg-amber-50 px-3 md:px-5 py-2.5 flex items-center gap-3">
+          <Star className="w-5 h-5 fill-amber-400 text-amber-400 shrink-0" />
+          <div className="min-w-0 flex-1">
+            <div className="text-[13px] font-bold text-ink-900">Оцените собеседника</div>
+            <div className="text-[12px] text-ink-500 truncate">Отзыв поможет другим покупателям и продавцам</div>
+          </div>
+          <button onClick={() => setReviewOpen(true)} className="h-8 px-3.5 rounded-full bg-accent-500 hover:bg-accent-600 text-white text-[13px] font-bold shrink-0">
+            Оценить
+          </button>
+          <button
+            onClick={hidePrompt}
+            aria-label="Скрыть приглашение"
+            className="w-8 h-8 grid place-items-center rounded-full text-ink-500 hover:bg-amber-100 shrink-0"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       <ReviewModal
         open={reviewOpen}

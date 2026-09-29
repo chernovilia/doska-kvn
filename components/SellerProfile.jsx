@@ -1,5 +1,6 @@
 'use client';
 
+import Avatar from './Avatar';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { ArrowLeft, BadgeCheck, MapPin, Share2, Star } from 'lucide-react';
@@ -62,17 +63,7 @@ export default function SellerProfile({ user, ads, reviews = [] }) {
       <main className="max-w-5xl mx-auto px-4 md:px-6 py-4 md:py-6 space-y-5">
         <section className="rounded-2xl bg-white ring-1 ring-black/5 shadow-card p-4 md:p-5">
           <div className="flex items-center gap-4">
-            {user.avatar ? (
-              <img
-                src={user.avatar}
-                alt={user.name}
-                className="w-16 h-16 md:w-20 md:h-20 rounded-full object-cover ring-1 ring-black/5 shrink-0"
-              />
-            ) : (
-              <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-brand-600 text-white grid place-items-center text-2xl font-black shrink-0">
-                {user.name?.[0]?.toUpperCase() || '?'}
-              </div>
-            )}
+            <Avatar person={user} size="xl" />
             <div className="min-w-0">
               <h1 className="flex items-center gap-1.5 text-xl md:text-2xl font-extrabold text-ink-900">
                 <span className="truncate">{user.name || 'Без имени'}</span>

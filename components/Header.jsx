@@ -8,6 +8,7 @@ import { Heart, MessageCircle } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { useUnreadCount } from '@/lib/chats';
 import UnreadBadge from './UnreadBadge';
+import Avatar from './Avatar';
 
 // Шапка ленты: логотип, место, уведомления, вход/профиль и поиск.
 // Лента разделов идёт сразу под ней (AdsView) на том же белом фоне.
@@ -57,15 +58,11 @@ export default function Header({ place, onPlaceChange, search, onSearchSubmit, o
             ) : user ? (
               <Link
                 href="/profile"
-                className="w-9 h-9 shrink-0 rounded-full bg-brand-600 text-white grid place-items-center font-black text-sm hover:bg-brand-700 overflow-hidden"
+                className="shrink-0 rounded-full hover:opacity-90"
                 aria-label="Профиль"
                 title={user.name || 'Профиль'}
               >
-                {user.avatar ? (
-                  <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
-                ) : (
-                  (user.name || 'A').slice(0, 1).toUpperCase()
-                )}
+                <Avatar person={user} size="sm" />
               </Link>
             ) : (
               <Link href="/login" className="btn-outline h-10 px-4 text-[15px] shrink-0">

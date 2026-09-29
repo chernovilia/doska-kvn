@@ -22,6 +22,7 @@ import {
   resolvePlace
 } from '@/lib/api';
 import { pluralRu } from '@/lib/format';
+import { useAuth } from '@/lib/auth';
 import { getAttributeFields, parseAttributeInput } from '@/data/attributes';
 
 const SORTS = [
@@ -84,6 +85,7 @@ function readAttr(raw) {
 function Feed({ place, params }) {
   const router = useRouter();
   const pathname = usePathname();
+  const { user: authUser, ready: authReady } = useAuth();
   const filters = readFilters(params);
   const { section, group, q, sort, priceMin, priceMax, attr } = filters;
   const attrKey = Object.keys(attr).length ? JSON.stringify(attr) : null;
@@ -157,6 +159,17 @@ function Feed({ place, params }) {
     window.history.pushState(null, '', qs ? `${pathname}?${qs}` : pathname);
   }
 
+  // Подача — только вошедшим: гостя ведём на вход и возвращаем на эту же ленту.
+  function openPost() {
+    if (!authReady) return;
+    if (!authUser) {
+      const back = window.location.pathname + window.location.search;
+      router.push(`/login?returnTo=${encodeURIComponent(back)}`);
+      return;
+    }
+    setPostOpen(true);
+  }
+
   function onPlaceChange(newPlace) {
     const qs = params?.toString();
     const path = newPlace === DEFAULT_REGION_ID ? '/' : `/${newPlace}`;
@@ -199,7 +212,7 @@ function Feed({ place, params }) {
           <div className="hidden md:block">
             <HeroBanner
               place={place}
-              onPostAd={() => setPostOpen(true)}
+              onPostAd={openPost}
             />
           </div>
         )}
@@ -341,7 +354,7 @@ function Feed({ place, params }) {
                   </button>
                 ) : (
                   <button
-                    onClick={() => setPostOpen(true)}
+                    onClick={openPost}
                     className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-brand-600 hover:bg-brand-700 text-white font-semibold text-sm px-4 py-2"
                   >
                     + Подать объявление

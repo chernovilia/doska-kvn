@@ -3,7 +3,8 @@
 import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { User as UserIcon, Pencil, Phone, MessageCircle, AlertCircle } from 'lucide-react';
+import { User as UserIcon, Briefcase, Phone, MessageCircle, AlertCircle } from 'lucide-react';
+import AvatarPicker from '@/components/AvatarPicker';
 import { CITIES } from '@/data/regions';
 import { useAuth } from '@/lib/auth';
 import { safeReturnTo } from '@/lib/site';
@@ -34,7 +35,8 @@ function Onboarding() {
     homeCityId: '',
     contactMethod: 'chat',
     phone: '',
-    notifyEmail: true
+    notifyEmail: true,
+    avatar: null
   });
 
   // После успешного updateMe у user появится onboardedAt — этот же эффект вернёт на returnTo.
@@ -63,6 +65,7 @@ function Onboarding() {
         contactMethod: form.contactMethod,
         phone: form.contactMethod === 'phone' ? form.phone : undefined,
         notifyEmail: form.notifyEmail,
+        avatar: form.avatar || undefined,
         markOnboarded: true,
         agreeTerms: true
       });
@@ -77,14 +80,19 @@ function Onboarding() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <div className="max-w-xl mx-auto px-4 pt-6 pb-28">
-        <div className="font-black tracking-tight text-lg text-ink-900">
-          Доска<span className="brand-slash">/</span>КВН
+      {/* Шапка закреплена: логотип, заголовок и подпись видны, пока заполняешь форму */}
+      <div className="sticky top-0 z-30 bg-slate-50/95 backdrop-blur border-b border-slate-100">
+        <div className="max-w-xl mx-auto px-4 pt-3 pb-3">
+          <div className="font-black tracking-tight text-lg text-ink-900">
+            Доска<span className="brand-slash">/</span>КВН
+          </div>
+          <h1 className="mt-2 text-xl font-extrabold text-ink-900">Создание аккаунта</h1>
+          <p className="text-[13px] text-ink-500 mt-0.5">
+            Ещё пара полей — и можно публиковать. Всё меняется потом в настройках.
+          </p>
         </div>
-        <h1 className="mt-5 text-2xl font-extrabold text-ink-900">Создание аккаунта</h1>
-        <p className="text-sm text-ink-500 mt-1">
-          Ещё пара полей — и можно публиковать. Всё меняется потом в настройках.
-        </p>
+      </div>
+      <div className="max-w-xl mx-auto px-4 pt-1 pb-28">
 
         <form
           onSubmit={submit}
@@ -96,15 +104,26 @@ function Onboarding() {
                 <UserIcon className="w-4 h-4" />
                 Личный
               </span>
+              {/* Как в профиле: бизнес виден, но пока в разработке */}
               <button
                 type="button"
-                disabled
-                title="Смена типа аккаунта — скоро"
-                className="w-8 h-8 grid place-items-center rounded-full text-ink-400 cursor-not-allowed opacity-60"
+                aria-disabled="true"
+                onClick={() => toast('Бизнес-аккаунты в разработке — скоро')}
+                className="chip opacity-50"
               >
-                <Pencil className="w-4 h-4" />
+                <Briefcase className="w-4 h-4" />
+                Бизнес
               </button>
             </div>
+          </Field>
+
+          <Field label="Аватар">
+            <AvatarPicker
+              value={form.avatar}
+              name={form.name}
+              onChange={(avatar) => set({ avatar })}
+              onError={setError}
+            />
           </Field>
 
           <Field label="Имя" required>

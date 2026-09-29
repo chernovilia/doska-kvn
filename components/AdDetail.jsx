@@ -1,5 +1,6 @@
 'use client';
 
+import Avatar from './Avatar';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
@@ -391,17 +392,7 @@ export default function AdDetail({ ad }) {
                 {isEvent ? 'Организатор' : 'Продавец'}
               </h2>
               <div className="flex items-center gap-3">
-                {ad.author?.avatar ? (
-                  <img
-                    src={ad.author.avatar}
-                    alt={ad.author.name}
-                    className="w-12 h-12 rounded-full object-cover ring-1 ring-black/5"
-                  />
-                ) : (
-                  <div className="w-12 h-12 rounded-full bg-brand-600 text-white grid place-items-center text-lg font-bold">
-                    {ad.author?.name?.[0] || '?'}
-                  </div>
-                )}
+                <Avatar person={ad.author} size="md" />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
                     <div className="font-semibold text-ink-900 truncate">{ad.author?.name}</div>
@@ -655,7 +646,7 @@ function StatusBanner({ ad }) {
   if (!b) return null;
   const [cls, title, text] = b;
   return (
-    <div className={`mx-4 md:mx-0 mt-3 md:mt-0 md:mb-4 rounded-2xl ring-1 px-4 py-3 ${cls}`}>
+    <div className={`mx-4 md:mx-0 mt-3 mb-3 md:mt-0 md:mb-4 rounded-2xl ring-1 px-4 py-3 ${cls}`}>
       <div className="font-bold">{title}</div>
       {ad.moderationNotes && <div className="text-sm mt-0.5">Причина: {ad.moderationNotes}</div>}
       <div className="text-[13px] mt-0.5 opacity-80">{text}</div>

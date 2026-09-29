@@ -6,6 +6,7 @@
  * пользователи (поиск, блокировка), отзывы, настройки. Списки — карточками: удобно и с телефона.
  */
 
+import Avatar from '@/components/Avatar';
 import { Suspense, useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -748,13 +749,7 @@ function UsersTab({ me, onShowAds, onChanged }) {
           {data.items.map((u) => (
             <li key={u.id} className={`rounded-2xl bg-white ring-1 shadow-card p-3 ${u.blockedAt ? 'ring-rose-200' : 'ring-black/5'}`}>
               <div className="flex items-center gap-3">
-                {u.avatar ? (
-                  <img src={u.avatar} alt="" className="w-11 h-11 rounded-full object-cover shrink-0" />
-                ) : (
-                  <span className="w-11 h-11 rounded-full bg-brand-600 text-white grid place-items-center font-bold shrink-0">
-                    {(u.name || u.email || '?')[0].toUpperCase()}
-                  </span>
-                )}
+                <Avatar person={{ name: u.name || u.email, avatar: u.avatar }} size="md" />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <span className="font-semibold text-ink-900 truncate">{u.name || 'Без имени'}</span>

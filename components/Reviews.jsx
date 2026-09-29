@@ -1,5 +1,6 @@
 'use client';
 
+import Avatar from './Avatar';
 import Link from 'next/link';
 import { useState } from 'react';
 import { Star } from 'lucide-react';
@@ -45,13 +46,7 @@ export function ReviewsList({ reviews, empty = 'Пока нет отзывов.'
         <li key={r.id} className="rounded-2xl bg-white ring-1 ring-black/5 shadow-card p-4">
           <div className="flex items-center gap-2.5">
             <Link href={`/user/${r.author.id}`} className="shrink-0">
-              {r.author.avatar ? (
-                <img src={r.author.avatar} alt="" className="w-9 h-9 rounded-full object-cover" />
-              ) : (
-                <span className="w-9 h-9 rounded-full bg-brand-600 text-white grid place-items-center text-sm font-bold">
-                  {r.author.name?.[0]?.toUpperCase() || '?'}
-                </span>
-              )}
+              <Avatar person={r.author} size="sm" />
             </Link>
             <div className="min-w-0">
               <Link href={`/user/${r.author.id}`} className="block text-sm font-semibold text-ink-900 truncate hover:text-brand-700">

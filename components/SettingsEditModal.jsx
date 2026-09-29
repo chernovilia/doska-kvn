@@ -12,6 +12,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, AlertCircle, MapPin, MessageCircle, Phone as PhoneIcon, CheckCircle2 } from 'lucide-react';
 import { CITIES } from '@/data/regions';
 import { useAuth } from '@/lib/auth';
+import AvatarPicker from './AvatarPicker';
 
 const HOME_CITIES = CITIES.filter((c) => c.regionId === 'kvn');
 
@@ -138,6 +139,10 @@ export default function SettingsEditModal({ open, kind, me, onClose }) {
 function PersonalFields({ form, setForm }) {
   return (
     <>
+      <div>
+        <div className="text-sm font-semibold text-ink-700 mb-2">Аватар</div>
+        <AvatarPicker value={form.avatar} name={form.name} onChange={(avatar) => setForm((f) => ({ ...f, avatar }))} />
+      </div>
       <div>
         <div className="text-xs font-semibold text-ink-700 mb-1">Имя</div>
         <input
@@ -269,7 +274,7 @@ function NotificationsFields({ form, setForm }) {
 
 function initialFor(kind, me) {
   if (!me) return {};
-  if (kind === 'personal') return { name: me.name || '', bio: me.bio || '' };
+  if (kind === 'personal') return { name: me.name || '', bio: me.bio || '', avatar: me.avatar || null };
   if (kind === 'phone') return { contactMethod: me.contactMethod || 'chat', phone: me.phone || '' };
   if (kind === 'city') return { homeCityId: me.homeCityId || '' };
   if (kind === 'notifications') return { notifyEmail: me.notifyEmail ?? true };
@@ -277,7 +282,7 @@ function initialFor(kind, me) {
 }
 
 function patchFrom(kind, form) {
-  if (kind === 'personal') return { name: form.name.trim(), bio: form.bio.trim() || undefined };
+  if (kind === 'personal') return { name: form.name.trim(), bio: form.bio.trim() || undefined, avatar: form.avatar };
   if (kind === 'phone') return {
     contactMethod: form.contactMethod,
     phone: form.phone || undefined

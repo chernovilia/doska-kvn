@@ -1,5 +1,6 @@
 'use client';
 
+import Avatar from '@/components/Avatar';
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -229,7 +230,7 @@ function MessagesContent() {
                     chatId === c.id ? 'bg-brand-50' : ''
                   }`}
                 >
-                  <Avatar person={c.other} size="w-11 h-11" />
+                  <Avatar person={c.other} size="md" />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <div className="text-sm font-semibold text-ink-900 truncate">
@@ -450,7 +451,7 @@ function ChatView({ chatId, me, onActivity }) {
           >
             <ArrowLeft className="w-4.5 h-4.5 text-ink-800" />
           </button>
-          <Avatar person={conv.other} size="w-10 h-10" />
+          <Avatar person={conv.other} size="md" />
           <div className="min-w-0">
             <div className="text-sm font-semibold text-ink-900 truncate">
               {conv.other.name || 'Пользователь'}
@@ -553,16 +554,6 @@ function ChatView({ chatId, me, onActivity }) {
   );
 }
 
-function Avatar({ person, size }) {
-  if (person?.avatar) {
-    return <img src={person.avatar} alt="" className={`${size} rounded-full object-cover ring-1 ring-black/5 shrink-0`} />;
-  }
-  return (
-    <div className={`${size} rounded-full bg-brand-600 text-white grid place-items-center font-bold shrink-0`}>
-      {(person?.name || '?').slice(0, 1).toUpperCase()}
-    </div>
-  );
-}
 
 function ListingHeader({ ad }) {
   const body = (

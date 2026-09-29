@@ -78,7 +78,7 @@ export default function NotificationsButton() {
             initial={{ opacity: 0, y: -6 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -6 }}
-            className="absolute right-0 mt-2 w-[min(22rem,calc(100vw-2rem))] rounded-2xl bg-white shadow-soft ring-1 ring-black/5 z-50 overflow-hidden"
+            className="fixed left-4 right-4 top-16 md:absolute md:left-auto md:right-0 md:top-auto md:mt-2 md:w-[22rem] rounded-2xl bg-white shadow-soft ring-1 ring-black/5 z-50 overflow-hidden"
           >
             <div className="px-4 py-3 border-b border-black/5 flex items-center">
               <div className="font-extrabold text-ink-900">Уведомления</div>

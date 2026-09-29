@@ -1,13 +1,12 @@
 'use client';
 
+import Avatar from '@/components/Avatar';
 import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
-  ArrowLeft,
   BadgeCheck,
-  Bell,
   ChevronRight,
   LogOut,
   Settings,
@@ -22,7 +21,10 @@ import {
 
 import VkIcon from '@/components/icons/VkIcon';
 import BottomNav from '@/components/BottomNav';
+import PageHeader, { HeaderIconButton } from '@/components/PageHeader';
+import NotificationsButton from '@/components/NotificationsButton';
 import AdCard from '@/components/AdCard';
+import AdCardSkeleton from '@/components/AdCardSkeleton';
 import PostAdModal from '@/components/PostAdModal';
 import SettingsEditModal from '@/components/SettingsEditModal';
 import BumpButton from '@/components/BumpButton';
@@ -56,7 +58,7 @@ function ProfileContent() {
 
   const { user: me, ready, signOut } = useAuth();
   const { toast } = useToast();
-  const [myAds, setMyAds] = useState([]);
+  const [myAds, setMyAds] = useState(null); // null — ещё грузятся
   const [postOpen, setPostOpen] = useState(false);
 
   // На MVP всегда 'personal'. Бизнес-профили — в разработке.
@@ -84,65 +86,38 @@ function ProfileContent() {
 
   return (
     <div className="min-h-screen pb-24 md:pb-0">
-      <div className="hero-gradient border-b border-black/5">
-        <div className="max-w-4xl mx-auto px-4 md:px-6 pt-4 pb-3 flex items-center gap-3">
-          <Link
-            href="/"
-            className="btn-outline w-10 h-10 shrink-0"
-            aria-label="Назад"
-          >
-            <ArrowLeft className="w-4.5 h-4.5 text-ink-800" />
-          </Link>
-          <div className="font-black tracking-tight text-lg md:text-xl text-ink-900">
-            Профиль
-          </div>
-          <div className="ml-auto flex items-center gap-2">
+      <PageHeader
+        title="Профиль"
+        maxWidth="max-w-4xl"
+        right={
+          <>
             {me.isAdmin && (
-              <Link
-                href="/admin"
-                className="btn-outline h-10 px-3.5 text-sm"
-                title="Админка"
-              >
+              <Link href="/admin" className="btn-outline h-9 px-3 text-sm mr-1" title="Админка">
                 <ShieldCheck className="w-4 h-4" />
                 <span className="hidden sm:inline">Админка</span>
               </Link>
             )}
-            <button
-              className="btn-outline w-10 h-10 shrink-0"
-              aria-label="Уведомления"
-            >
-              <Bell className="w-4.5 h-4.5 text-ink-800" />
-            </button>
-            <button
+            <NotificationsButton />
+            <HeaderIconButton
+              label="Выйти"
               onClick={async () => {
+                if (!window.confirm('Выйти из аккаунта?')) return;
                 await signOut();
                 router.push('/');
               }}
-              className="btn-outline w-10 h-10 shrink-0"
-              aria-label="Выйти"
             >
-              <LogOut className="w-4.5 h-4.5 text-ink-800" />
-            </button>
-          </div>
-        </div>
-      </div>
+              <LogOut className="w-5 h-5" />
+            </HeaderIconButton>
+          </>
+        }
+      />
 
       <main className="max-w-4xl mx-auto px-4 md:px-6 py-4 md:py-6 space-y-4 md:space-y-5">
         {/* Карточка пользователя */}
         <section className="rounded-2xl bg-white ring-1 ring-black/5 shadow-card overflow-hidden">
           <div className="p-4 md:p-5">
             <div className="flex items-start gap-3 md:gap-4">
-              {me.avatar ? (
-                <img
-                  src={me.avatar}
-                  alt={me.name}
-                  className="w-16 h-16 md:w-20 md:h-20 rounded-2xl object-cover ring-2 ring-white shadow-card"
-                />
-              ) : (
-                <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-brand-100 text-brand-700 ring-2 ring-white shadow-card grid place-items-center text-2xl font-black">
-                  {(me.name || 'A').slice(0, 1).toUpperCase()}
-                </div>
-              )}
+              <Avatar person={me} size="xl" className="ring-2 ring-white shadow-card" />
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <div className="text-lg md:text-xl font-extrabold text-ink-900 truncate">
@@ -208,7 +183,7 @@ function ProfileContent() {
             />
             <Metric value={me.reviewsCount ?? 0} label="Отзывы" />
             <Metric value={me.dealsCount ?? 0} label="Сделки" />
-            <Metric value={myAds.filter((a) => a.status === 'approved').length} label="В ленте" />
+            <Metric value={myAds ? myAds.filter((a) => a.status === 'approved').length : '…'} label="В ленте" />
           </div>
         </section>
 
@@ -282,6 +257,16 @@ function MyAdsTab({ ads, onPost, onReload }) {
     }
   }
 
+  if (ads === null) {
+    return (
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <AdCardSkeleton key={i} />
+        ))}
+      </div>
+    );
+  }
+
   if (ads.length === 0) {
     return (
       <div className="rounded-2xl bg-white ring-1 ring-black/5 shadow-card p-8 text-center">
@@ -317,10 +302,12 @@ function MyAdsTab({ ads, onPost, onReload }) {
           + Добавить
         </button>
       </div>
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 auto-rows-fr">
+      {/* Без auto-rows-fr: под карточкой кнопка или подпись разной высоты, и соседняя
+          карточка растягивалась до высоты самой высокой ячейки ряда */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 items-start">
         {ads.map((ad) => (
-          <div key={ad.id} className="h-full flex flex-col gap-1.5">
-            <div className="flex-1">
+          <div key={ad.id} className="flex flex-col gap-1.5">
+            <div>
               <AdCard
                 ad={ad}
                 showShare

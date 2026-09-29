@@ -333,6 +333,14 @@ function OverviewTab({ stats, onReload, go }) {
           </>
         )}
       </p>
+      {whoami && (
+        <details className="text-[12px] text-ink-500">
+          <summary className="cursor-pointer">Диагностика IP (заголовки прокси)</summary>
+          <pre className="mt-1 whitespace-pre-wrap break-all rounded-xl bg-white ring-1 ring-black/5 p-3 select-all">
+            {JSON.stringify({ ip: whoami.ip, ips: whoami.ips, socket: whoami.socket, headers: whoami.ipHeaders }, null, 2)}
+          </pre>
+        </details>
+      )}
 
       <ErrorBox message={error} />
       <details className="rounded-2xl bg-rose-50 ring-1 ring-rose-200 p-4">

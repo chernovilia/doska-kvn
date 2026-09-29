@@ -996,7 +996,7 @@ function SettingsTab({ onChanged }) {
                 <button
                   onClick={() => save(s.key, draft[s.key])}
                   disabled={!changed || saving === s.key}
-                  className="h-9 px-3 rounded-xl bg-accent-500 hover:bg-accent-600 disabled:bg-slate-200 disabled:text-ink-400 text-white text-[13px] font-semibold"
+                  className="h-9 px-3 rounded-xl btn-primary text-[13px]"
                 >
                   {saving === s.key ? '…' : 'OK'}
                 </button>
@@ -1098,7 +1098,7 @@ function SupportTicket({ ticket, focused, onChanged }) {
           <div key={m.id} className={`flex ${m.fromAdmin ? 'justify-end' : 'justify-start'}`}>
             <div
               className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap break-words ${
-                m.fromAdmin ? 'bg-accent-500 text-white rounded-br-sm' : 'bg-slate-100 text-ink-900 rounded-bl-sm'
+                m.fromAdmin ? 'bg-accent-100 text-ink-900 rounded-br-sm' : 'bg-slate-100 text-ink-900 rounded-bl-sm'
               }`}
             >
               {m.text}
@@ -1122,7 +1122,7 @@ function SupportTicket({ ticket, focused, onChanged }) {
             className="w-full rounded-xl bg-white ring-1 ring-black/10 focus:ring-accent-400 outline-none px-3 py-2 text-sm resize-none"
           />
           <div className="flex gap-1.5">
-            <button type="submit" disabled={busy || !reply.trim()} className="h-8 px-3 rounded-lg bg-accent-500 hover:bg-accent-600 disabled:bg-slate-300 text-white text-[13px] font-semibold">
+            <button type="submit" disabled={busy || !reply.trim()} className="h-8 px-3 rounded-lg btn-primary text-[13px]">
               Ответить
             </button>
             <button type="button" onClick={() => run(() => adminSetSupportStatus(ticket.id, 'closed'))} disabled={busy} className="h-8 px-3 rounded-lg ring-1 ring-black/10 text-ink-700 hover:bg-slate-50 text-[13px] font-semibold">

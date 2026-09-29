@@ -17,7 +17,8 @@ import {
   MapPin,
   Briefcase,
   LifeBuoy,
-  Rocket
+  Rocket,
+  Camera
 } from 'lucide-react';
 
 import VkIcon from '@/components/icons/VkIcon';
@@ -63,6 +64,7 @@ function ProfileContent() {
   const { toast } = useToast();
   const [myAds, setMyAds] = useState(null); // null — ещё грузятся
   const [postOpen, setPostOpen] = useState(false);
+  const [avatarEdit, setAvatarEdit] = useState(false);
 
   // На MVP всегда 'personal'. Бизнес-профили — в разработке.
   const type = 'personal';
@@ -120,7 +122,18 @@ function ProfileContent() {
         <section className="rounded-2xl bg-white ring-1 ring-black/5 shadow-card overflow-hidden">
           <div className="p-4 md:p-5">
             <div className="flex items-start gap-3 md:gap-4">
-              <Avatar person={me} size="xl" className="ring-2 ring-white shadow-card" />
+              {/* Тап по аватару — сразу окно «Личные данные» с выбором фото */}
+              <button
+                type="button"
+                onClick={() => setAvatarEdit(true)}
+                aria-label="Изменить фото"
+                className="relative shrink-0 rounded-full"
+              >
+                <Avatar person={me} size="xl" className="ring-2 ring-white shadow-card" />
+                <span className="absolute -bottom-0.5 -right-0.5 w-7 h-7 grid place-items-center rounded-full bg-white ring-1 ring-black/10 shadow-card text-ink-700">
+                  <Camera className="w-3.5 h-3.5" />
+                </span>
+              </button>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <div className="text-lg md:text-xl font-extrabold text-ink-900 truncate">
@@ -200,7 +213,7 @@ function ProfileContent() {
                   key={t.id}
                   onClick={() => setTab(t.id)}
                   className={`chip relative shrink-0 ${
-                    active ? 'chip-on' : t.highlight ? '!bg-accent-50 !text-accent-700 ring-1 ring-accent-200' : ''
+                    active ? 'chip-on' : t.highlight ? '!bg-white !text-accent-700 !border-accent-200' : ''
                   }`}
                 >
                   <Icon className="w-4 h-4" />
@@ -233,6 +246,7 @@ function ProfileContent() {
       </main>
 
       <PostAdModal open={postOpen} onClose={() => setPostOpen(false)} />
+      <SettingsEditModal open={avatarEdit} kind="personal" me={me} onClose={() => setAvatarEdit(false)} />
       <BottomNav onPost={() => setPostOpen(true)} />
     </div>
   );
@@ -296,7 +310,7 @@ function MyAdsTab({ ads, onPost, onReload }) {
         </div>
         <button
           onClick={onPost}
-          className="mt-4 inline-flex items-center gap-1.5 rounded-2xl bg-accent-500 hover:bg-accent-600 text-white text-sm font-semibold px-5 py-3"
+          className="mt-4 inline-flex items-center gap-1.5 rounded-2xl btn-primary text-sm px-5 py-3"
         >
           Создать первое объявление
         </button>
@@ -416,7 +430,7 @@ function PromoTab({ ads }) {
                     {wait ? `Поднять можно через ${wait}` : 'Можно поднять сейчас'}
                   </div>
                 </div>
-                <span className="inline-flex items-center gap-1 h-8 px-3 rounded-full bg-accent-500 text-white text-[12px] font-bold shrink-0">
+                <span className="btn-primary h-8 px-3 rounded-full text-[12px] shrink-0">
                   <Rocket className="w-3.5 h-3.5" />
                   Продвинуть
                 </span>
@@ -481,7 +495,7 @@ function SettingsTab({ me }) {
         href="/help"
         className="mb-3 flex items-center gap-3 rounded-2xl bg-accent-50 ring-1 ring-accent-300 p-4 hover:bg-accent-100/60"
       >
-        <span className="w-11 h-11 rounded-2xl bg-accent-500 text-white grid place-items-center shrink-0">
+        <span className="w-11 h-11 rounded-2xl bg-accent-100 text-accent-700 grid place-items-center shrink-0">
           <LifeBuoy className="w-6 h-6" />
         </span>
         <span className="min-w-0 flex-1">

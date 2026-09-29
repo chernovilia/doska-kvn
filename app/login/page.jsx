@@ -4,7 +4,7 @@ import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Mail, ShieldCheck, CheckCircle2, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Mail, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { safeReturnTo } from '@/lib/site';
 
@@ -81,15 +81,15 @@ function LoginContent() {
   }
 
   return (
-    <div className="min-h-screen hero-gradient grid place-items-start md:place-items-center px-4 py-6">
+    <div className="min-h-screen bg-slate-50 grid place-items-start md:place-items-center px-4 py-6">
       <div className="w-full max-w-md">
         <div className="flex items-center gap-3 mb-4">
           <Link
             href="/"
-            className="btn-outline w-10 h-10 shrink-0"
+            className="w-10 h-10 grid place-items-center rounded-full text-ink-800 hover:bg-slate-100 shrink-0"
             aria-label="Назад"
           >
-            <ArrowLeft className="w-4.5 h-4.5 text-ink-800" />
+            <ArrowLeft className="w-[22px] h-[22px]" />
           </Link>
           <div className="font-black tracking-tight text-lg text-ink-900">
             Доска<span className="brand-slash">/</span>КВН
@@ -194,15 +194,11 @@ function EmailStep({ email, setEmail, onSubmit, busy, error }) {
       <button
         type="submit"
         disabled={!email.includes('@') || busy}
-        className="mt-4 w-full rounded-2xl bg-accent-500 hover:bg-accent-600 text-white py-3 font-semibold disabled:opacity-60 disabled:cursor-not-allowed"
+        className="mt-4 w-full rounded-2xl btn-primary py-3 disabled:opacity-60 disabled:cursor-not-allowed"
       >
         {busy ? 'Отправляем…' : 'Отправить код'}
       </button>
 
-      <div className="mt-5 flex items-center gap-2 text-[12px] text-ink-500">
-        <ShieldCheck className="w-4 h-4 text-emerald-600" />
-        Соблюдаем 152-ФЗ. Данные хранятся в РФ.
-      </div>
     </form>
   );
 }
@@ -265,7 +261,7 @@ function CodeStep({
       <button
         type="submit"
         disabled={code.length !== 6 || busy}
-        className="mt-4 w-full rounded-2xl bg-accent-500 hover:bg-accent-600 text-white py-3 font-semibold disabled:opacity-60 disabled:cursor-not-allowed"
+        className="mt-4 w-full rounded-2xl btn-primary py-3 disabled:opacity-60 disabled:cursor-not-allowed"
       >
         {busy ? 'Проверяем…' : 'Войти'}
       </button>

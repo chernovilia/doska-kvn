@@ -59,7 +59,8 @@ export default function AvatarPicker({ value, name, onChange, onError }) {
       </div>
 
       <div className="mt-3 text-[13px] text-ink-500">Или выберите готовый:</div>
-      <div className="mt-1.5 grid grid-cols-6 gap-2">
+      {/* Одна строка: остальные — прокруткой вбок */}
+      <div className="mt-1.5 -mx-1 px-1 py-1 flex gap-2 overflow-x-auto no-scrollbar">
         {AVATAR_PRESETS.map((p) => {
           const id = `preset:${p.id}`;
           const on = value === id;
@@ -70,9 +71,9 @@ export default function AvatarPicker({ value, name, onChange, onError }) {
               onClick={() => onChange(id)}
               aria-label={`Аватар ${p.id}`}
               aria-pressed={on}
-              className={`relative rounded-full p-0.5 ring-2 transition ${on ? 'ring-accent-500' : 'ring-transparent'}`}
+              className={`relative shrink-0 rounded-full p-0.5 ring-2 transition ${on ? 'ring-accent-400' : 'ring-transparent'}`}
             >
-              <Avatar person={{ avatar: id }} size="md" className="w-full h-auto aspect-square" />
+              <Avatar person={{ avatar: id }} size="md" />
               {on && (
                 <span className="absolute -bottom-0.5 -right-0.5 w-4 h-4 grid place-items-center rounded-full bg-accent-500 text-white">
                   <Check className="w-3 h-3" />

@@ -211,7 +211,7 @@ function Onboarding() {
           <button
             type="submit"
             disabled={!canSubmit}
-            className="w-full rounded-2xl bg-accent-500 hover:bg-accent-600 text-white py-3.5 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full rounded-2xl btn-primary py-3.5 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {busy ? 'Создаём аккаунт…' : 'Создать аккаунт'}
           </button>

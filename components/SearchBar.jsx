@@ -95,7 +95,7 @@ export default function SearchBar({ value = '', onSubmit, onSelect }) {
         </div>
         <button
           type="submit"
-          className="px-5 rounded-r-2xl bg-accent-500 hover:bg-accent-600 text-white text-[15px] font-bold shrink-0"
+          className="px-5 rounded-r-2xl btn-primary text-[15px] font-bold shrink-0"
         >
           Найти
         </button>

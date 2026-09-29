@@ -562,7 +562,7 @@ export default function PostAdModal({ open, onClose, editAd = null, onSaved }) {
             <button
               onClick={next}
               disabled={!canNext}
-              className="ml-auto inline-flex items-center gap-1.5 rounded-2xl bg-accent-500 hover:bg-accent-600 disabled:bg-slate-300 text-white px-4 py-3 text-sm font-semibold"
+              className="ml-auto inline-flex items-center gap-1.5 rounded-2xl btn-primary px-4 py-3 text-sm"
             >
               {step === steps.length - 1 ? (editing ? 'Сохранить' : 'Опубликовать') : 'Далее'}
               <ArrowRight className="w-4 h-4" />
@@ -594,7 +594,7 @@ export default function PostAdModal({ open, onClose, editAd = null, onSaved }) {
                   setTimeout(reset, 300);
                   router.push(`/ad/${publishedAdId}`);
                 }}
-                className="ml-auto inline-flex items-center gap-1.5 rounded-2xl bg-accent-500 hover:bg-accent-600 text-white px-4 py-3 text-sm font-semibold"
+                className="ml-auto inline-flex items-center gap-1.5 rounded-2xl btn-primary px-4 py-3 text-sm"
               >
                 Открыть объявление
                 <ArrowRight className="w-4 h-4" />

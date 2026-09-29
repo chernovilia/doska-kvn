@@ -40,7 +40,7 @@ export default function OwnerAdActions({ ad, compact = false, onChanged }) {
       <div className={compact ? 'space-y-1' : 'space-y-2'}>
         <Link
           href={`/promote?ad=${ad.id}`}
-          className={`w-full inline-flex items-center justify-center gap-1.5 font-bold bg-accent-500 hover:bg-accent-600 text-white ${size}`}
+          className={`w-full inline-flex items-center justify-center gap-1.5 font-bold btn-primary ${size}`}
         >
           <Rocket className={icon} />
           Продвинуть
@@ -75,7 +75,7 @@ export default function OwnerAdActions({ ad, compact = false, onChanged }) {
           type="button"
           onClick={() => run('renew', renewAd, 'Объявление снова в ленте')}
           disabled={!!busy}
-          className={`w-full inline-flex items-center justify-center gap-1.5 font-bold bg-accent-500 hover:bg-accent-600 text-white disabled:opacity-60 ${size}`}
+          className={`w-full inline-flex items-center justify-center gap-1.5 font-bold btn-primary disabled:opacity-60 ${size}`}
         >
           <RefreshCw className={`${icon} ${busy ? 'animate-spin' : ''}`} />
           Вернуть в ленту

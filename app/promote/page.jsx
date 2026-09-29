@@ -111,7 +111,7 @@ function PromoteContent() {
                     <button
                       onClick={onRenew}
                       disabled={renewing}
-                      className="mt-3 w-full inline-flex items-center justify-center gap-1.5 h-11 rounded-2xl bg-accent-500 hover:bg-accent-600 text-white font-bold disabled:opacity-60"
+                      className="mt-3 w-full inline-flex items-center justify-center gap-1.5 h-11 rounded-2xl btn-primary font-bold disabled:opacity-60"
                     >
                       <RefreshCw className={`w-4 h-4 ${renewing ? 'animate-spin' : ''}`} />
                       Вернуть в ленту

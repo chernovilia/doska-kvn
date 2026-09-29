@@ -29,12 +29,15 @@ export default function SettingsEditModal({ open, kind, me, onClose }) {
   const [error, setError] = useState(null);
   const [form, setForm] = useState(() => initialFor(kind, me));
 
+  // Заполняем при открытии, а не при каждом обновлении `me`: иначе выбранный аватар
+  // сбрасывался бы, если данные профиля обновятся, пока окно открыто.
   useEffect(() => {
     if (open) {
       setForm(initialFor(kind, me));
       setError(null);
     }
-  }, [open, kind, me]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, kind]);
 
   useEffect(() => {
     if (!open) return;
@@ -98,7 +101,7 @@ export default function SettingsEditModal({ open, kind, me, onClose }) {
               </h3>
 
               <div className="mt-4 space-y-4">
-                {kind === 'personal' && <PersonalFields form={form} setForm={setForm} />}
+                {kind === 'personal' && <PersonalFields form={form} setForm={setForm} onError={setError} />}
                 {kind === 'phone' && <PhoneFields form={form} setForm={setForm} />}
                 {kind === 'city' && <CityFields form={form} setForm={setForm} />}
                 {kind === 'notifications' && <NotificationsFields form={form} setForm={setForm} />}
@@ -121,7 +124,7 @@ export default function SettingsEditModal({ open, kind, me, onClose }) {
                 <button
                   onClick={submit}
                   disabled={!canSave}
-                  className="flex-[2] rounded-2xl bg-accent-500 hover:bg-accent-600 text-white py-3 text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-[2] rounded-2xl btn-primary py-3 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {busy ? 'Сохраняем…' : 'Сохранить'}
                 </button>
@@ -136,12 +139,20 @@ export default function SettingsEditModal({ open, kind, me, onClose }) {
 
 // ── Формы для каждого kind ─────────────────────────────────────────
 
-function PersonalFields({ form, setForm }) {
+function PersonalFields({ form, setForm, onError }) {
   return (
     <>
       <div>
         <div className="text-sm font-semibold text-ink-700 mb-2">Аватар</div>
-        <AvatarPicker value={form.avatar} name={form.name} onChange={(avatar) => setForm((f) => ({ ...f, avatar }))} />
+        <AvatarPicker
+          value={form.avatar}
+          name={form.name}
+          onChange={(avatar) => {
+            onError?.(null);
+            setForm((f) => ({ ...f, avatar }));
+          }}
+          onError={onError}
+        />
       </div>
       <div>
         <div className="text-xs font-semibold text-ink-700 mb-1">Имя</div>
@@ -150,7 +161,6 @@ function PersonalFields({ form, setForm }) {
           value={form.name}
           onChange={(e) => setForm((f) => ({ ...f, name: e.target.value.slice(0, 80) }))}
           className="w-full rounded-2xl bg-white ring-1 ring-black/10 focus:ring-accent-400 outline-none px-4 py-3 text-base"
-          autoFocus
         />
       </div>
       <div>

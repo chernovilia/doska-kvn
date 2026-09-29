@@ -128,7 +128,7 @@ export function ReviewModal({ open, onClose, conversationId, targetName, onDone 
         <button
           type="submit"
           disabled={!rating || sending}
-          className="mt-4 w-full rounded-2xl bg-accent-500 hover:bg-accent-600 disabled:bg-slate-300 text-white px-4 py-3 font-semibold"
+          className="mt-4 w-full rounded-2xl btn-primary px-4 py-3"
         >
           {sending ? 'Отправляем…' : 'Отправить отзыв'}
         </button>

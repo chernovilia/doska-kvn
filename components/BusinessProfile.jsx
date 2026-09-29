@@ -70,7 +70,7 @@ export default function BusinessProfile({ biz, ads = [] }) {
   return (
     <div className="min-h-screen bg-slate-50 pb-24 md:pb-0">
       {/* Хедер */}
-      <div className="hero-gradient border-b border-black/5">
+      <div className="bg-white border-b border-slate-100">
         <div className="max-w-5xl mx-auto px-4 md:px-6 pt-4 pb-3 flex items-center gap-3">
           <button
             onClick={() => router.back()}
@@ -205,7 +205,7 @@ export default function BusinessProfile({ biz, ads = [] }) {
             <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-2">
               <button
                 onClick={onWrite}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-accent-500 hover:bg-accent-600 text-white font-semibold px-4 py-3"
+                className="inline-flex items-center justify-center gap-2 rounded-2xl btn-primary px-4 py-3"
               >
                 <MessageCircle className="w-4 h-4" />
                 Написать

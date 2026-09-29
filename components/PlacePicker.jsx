@@ -64,7 +64,7 @@ export default function PlacePicker({ value, onChange }) {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -4 }}
             transition={{ duration: 0.15 }}
-            className="absolute right-0 top-full mt-2 w-[300px] max-w-[92vw] rounded-2xl bg-white shadow-soft ring-1 ring-black/5 z-50 overflow-hidden"
+            className="fixed left-4 right-4 top-16 md:absolute md:left-auto md:right-0 md:top-full md:mt-2 md:w-[300px] rounded-2xl bg-white shadow-soft ring-1 ring-black/5 z-50 overflow-hidden"
             role="menu"
           >
             {/* Ваш регион */}

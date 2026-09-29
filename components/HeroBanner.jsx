@@ -119,7 +119,7 @@ export default function HeroBanner({
               ) : slide.ctaKind === 'post' ? (
                 <button
                   onClick={onCta}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-accent-500 hover:bg-accent-600 text-white font-semibold text-sm px-4 py-2 shadow-card"
+                  className="inline-flex items-center gap-1.5 rounded-full btn-primary text-sm px-4 py-2 shadow-card"
                 >
                   <Plus className="w-4 h-4" />
                   {slide.ctaLabel}

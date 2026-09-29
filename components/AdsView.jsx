@@ -324,7 +324,7 @@ function Feed({ place, params }) {
                 <div className="text-sm text-ink-500">Проверьте интернет и попробуйте ещё раз.</div>
                 <button
                   onClick={() => setReloadKey((k) => k + 1)}
-                  className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-accent-500 hover:bg-accent-600 text-white font-semibold text-sm px-4 py-2"
+                  className="mt-3 inline-flex items-center gap-1.5 rounded-full btn-primary text-sm px-4 py-2"
                 >
                   Повторить
                 </button>
@@ -355,7 +355,7 @@ function Feed({ place, params }) {
                 ) : (
                   <button
                     onClick={openPost}
-                    className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-accent-500 hover:bg-accent-600 text-white font-semibold text-sm px-4 py-2"
+                    className="mt-3 inline-flex items-center gap-1.5 rounded-full btn-primary text-sm px-4 py-2"
                   >
                     + Подать объявление
                   </button>
@@ -527,7 +527,7 @@ function AttrFiltersModal({ open, onClose, fields, value, onApply }) {
           </button>
           <button
             type="submit"
-            className="flex-1 rounded-2xl bg-accent-500 hover:bg-accent-600 text-white px-4 py-3 text-sm font-semibold"
+            className="flex-1 rounded-2xl btn-primary px-4 py-3 text-sm"
           >
             Показать
           </button>
@@ -593,7 +593,7 @@ function PriceModal({ open, onClose, min, max, onApply }) {
           </button>
           <button
             type="submit"
-            className="flex-1 rounded-2xl bg-accent-500 hover:bg-accent-600 text-white px-4 py-3 text-sm font-semibold"
+            className="flex-1 rounded-2xl btn-primary px-4 py-3 text-sm"
           >
             Показать
           </button>
@@ -642,7 +642,7 @@ function NearbyBlock({ cityName, nearby, onExpand, regionName }) {
       <div className="mt-2 flex justify-center relative z-10">
         <button
           onClick={onExpand}
-          className="rounded-full bg-accent-500 hover:bg-accent-600 text-white text-sm font-semibold px-4 py-2 shadow-card"
+          className="rounded-full btn-primary text-sm px-4 py-2 shadow-card"
         >
           Показать все объявления региона
         </button>

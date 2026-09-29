@@ -82,7 +82,7 @@ export default function HelpPage() {
       <main className="max-w-2xl mx-auto px-4 md:px-6 py-4 space-y-4">
         <form onSubmit={submit} className="rounded-2xl bg-white ring-1 ring-black/5 shadow-card p-4 space-y-3">
           <div className="flex items-center gap-3">
-            <span className="w-10 h-10 rounded-xl bg-accent-500 text-white grid place-items-center shrink-0">
+            <span className="w-10 h-10 rounded-xl bg-accent-100 text-accent-700 grid place-items-center shrink-0">
               <LifeBuoy className="w-5 h-5" />
             </span>
             <div>
@@ -111,7 +111,7 @@ export default function HelpPage() {
           <button
             type="submit"
             disabled={sending || text.trim().length < 5}
-            className="w-full rounded-2xl bg-accent-500 hover:bg-accent-600 disabled:bg-slate-300 text-white px-4 py-3 font-semibold"
+            className="w-full rounded-2xl btn-primary px-4 py-3"
           >
             {sending ? 'Отправляем…' : 'Отправить'}
           </button>
@@ -172,7 +172,7 @@ function Ticket({ ticket, onChanged }) {
           <div key={m.id} className={`flex ${m.fromAdmin ? 'justify-start' : 'justify-end'}`}>
             <div
               className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap break-words ${
-                m.fromAdmin ? 'bg-white ring-1 ring-black/5 text-ink-900 rounded-bl-sm' : 'bg-accent-500 text-white rounded-br-sm'
+                m.fromAdmin ? 'bg-white ring-1 ring-black/5 text-ink-900 rounded-bl-sm' : 'bg-accent-100 text-ink-900 rounded-br-sm'
               }`}
             >
               {m.fromAdmin && <div className="text-[11px] font-bold text-accent-700 mb-0.5">Поддержка</div>}
@@ -193,7 +193,7 @@ function Ticket({ ticket, onChanged }) {
           <button
             type="submit"
             disabled={!reply.trim() || sending}
-            className="w-11 h-11 shrink-0 grid place-items-center rounded-full bg-accent-500 hover:bg-accent-600 text-white disabled:opacity-40"
+            className="w-11 h-11 shrink-0 grid place-items-center rounded-full btn-primary disabled:opacity-40"
             aria-label="Отправить"
           >
             <Send className="w-5 h-5" />

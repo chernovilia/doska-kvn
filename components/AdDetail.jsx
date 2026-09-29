@@ -166,7 +166,7 @@ export default function AdDetail({ ad }) {
     <button
       onClick={onWrite}
       disabled={opening}
-      className="flex-1 inline-flex items-center justify-center gap-2 h-12 rounded-2xl bg-accent-500 hover:bg-accent-600 text-white font-bold disabled:opacity-60"
+      className="flex-1 inline-flex items-center justify-center gap-2 h-12 rounded-2xl btn-primary font-bold disabled:opacity-60"
     >
       <MessageCircle className="w-5 h-5" />
       {opening ? 'Открываем…' : 'Написать'}

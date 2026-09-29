@@ -161,7 +161,7 @@ function EmailStep({ email, setEmail, onSubmit, busy, error }) {
         onSubmit();
       }}
     >
-      <div className="text-xs uppercase tracking-wide text-brand-700 font-bold">
+      <div className="text-xs uppercase tracking-wide text-accent-700 font-bold">
         Вход
       </div>
       <h1 className="text-xl md:text-2xl font-extrabold text-ink-900 mt-1">
@@ -184,7 +184,7 @@ function EmailStep({ email, setEmail, onSubmit, busy, error }) {
             autoFocus
             autoComplete="email"
             inputMode="email"
-            className="w-full rounded-2xl bg-white ring-1 ring-black/10 focus:ring-brand-400 outline-none pl-9 pr-4 py-3 text-base"
+            className="w-full rounded-2xl bg-white ring-1 ring-black/10 focus:ring-accent-400 outline-none pl-9 pr-4 py-3 text-base"
           />
         </div>
       </label>
@@ -194,7 +194,7 @@ function EmailStep({ email, setEmail, onSubmit, busy, error }) {
       <button
         type="submit"
         disabled={!email.includes('@') || busy}
-        className="mt-4 w-full rounded-2xl bg-brand-600 hover:bg-brand-700 text-white py-3 font-semibold disabled:opacity-60 disabled:cursor-not-allowed"
+        className="mt-4 w-full rounded-2xl bg-accent-500 hover:bg-accent-600 text-white py-3 font-semibold disabled:opacity-60 disabled:cursor-not-allowed"
       >
         {busy ? 'Отправляем…' : 'Отправить код'}
       </button>
@@ -234,7 +234,7 @@ function CodeStep({
         onSubmit();
       }}
     >
-      <div className="text-xs uppercase tracking-wide text-brand-700 font-bold">
+      <div className="text-xs uppercase tracking-wide text-accent-700 font-bold">
         Введите код
       </div>
       <h1 className="text-xl md:text-2xl font-extrabold text-ink-900 mt-1">
@@ -256,7 +256,7 @@ function CodeStep({
           autoComplete="one-time-code"
           inputMode="numeric"
           pattern="\d{6}"
-          className="w-full text-center rounded-2xl bg-white ring-1 ring-black/10 focus:ring-brand-400 outline-none py-4 text-2xl font-black tracking-[0.5em] tabular-nums"
+          className="w-full text-center rounded-2xl bg-white ring-1 ring-black/10 focus:ring-accent-400 outline-none py-4 text-2xl font-black tracking-[0.5em] tabular-nums"
         />
       </div>
 
@@ -265,7 +265,7 @@ function CodeStep({
       <button
         type="submit"
         disabled={code.length !== 6 || busy}
-        className="mt-4 w-full rounded-2xl bg-brand-600 hover:bg-brand-700 text-white py-3 font-semibold disabled:opacity-60 disabled:cursor-not-allowed"
+        className="mt-4 w-full rounded-2xl bg-accent-500 hover:bg-accent-600 text-white py-3 font-semibold disabled:opacity-60 disabled:cursor-not-allowed"
       >
         {busy ? 'Проверяем…' : 'Войти'}
       </button>
@@ -284,7 +284,7 @@ function CodeStep({
           <button
             type="button"
             onClick={onResend}
-            className="text-brand-700 hover:text-brand-800 font-semibold"
+            className="text-accent-700 hover:text-accent-800 font-semibold"
           >
             Отправить код ещё раз
           </button>

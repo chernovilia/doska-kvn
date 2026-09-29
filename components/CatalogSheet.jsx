@@ -26,7 +26,7 @@ export default function CatalogSheet({ open, onClose, onPick }) {
                     <Icon className="w-5 h-5" strokeWidth={1.9} />
                   </span>
                   <span className="min-w-0">
-                    <span className="block font-bold text-ink-900 group-hover:text-brand-700">{s.name}</span>
+                    <span className="block font-bold text-ink-900 group-hover:text-accent-700">{s.name}</span>
                     <span className="block text-[12px] text-ink-500 truncate">{s.hint}</span>
                   </span>
                 </button>

@@ -67,7 +67,7 @@ export default function SellerProfile({ user, ads, reviews = [] }) {
             <div className="min-w-0">
               <h1 className="flex items-center gap-1.5 text-xl md:text-2xl font-extrabold text-ink-900">
                 <span className="truncate">{user.name || 'Без имени'}</span>
-                {user.verified && <BadgeCheck className="w-5 h-5 text-brand-600 shrink-0" />}
+                {user.verified && <BadgeCheck className="w-5 h-5 text-accent-600 shrink-0" />}
               </h1>
               <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[13px] text-ink-500">
                 <span className="inline-flex items-center gap-1 whitespace-nowrap">

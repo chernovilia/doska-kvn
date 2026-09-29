@@ -75,14 +75,14 @@ function Item({ href, icon: Icon, label, active, onClick, badge = 0 }) {
   const content = (
     <>
       <span className="relative">
-        <Icon className={`h-6 w-6 ${active ? 'text-brand-700' : 'text-ink-700'}`} strokeWidth={active ? 2.2 : 1.9} />
+        <Icon className={`h-6 w-6 ${active ? 'text-accent-700' : 'text-ink-700'}`} strokeWidth={active ? 2.2 : 1.9} />
         {badge > 0 && <UnreadBadge count={badge} />}
       </span>
       <span>{label}</span>
     </>
   );
   const cls = `flex flex-1 flex-col items-center justify-center gap-1 text-[11px] font-semibold ${
-    active ? 'text-brand-700' : 'text-ink-500'
+    active ? 'text-accent-700' : 'text-ink-500'
   }`;
   if (onClick) {
     return (

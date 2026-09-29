@@ -47,7 +47,7 @@ export default function PlacePicker({ value, onChange }) {
       {/* Место — просто текст с булавкой, без плашки */}
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-1 h-9 min-w-0 text-[15px] font-semibold text-ink-900 hover:text-brand-700"
+        className="flex items-center gap-1 h-9 min-w-0 text-[15px] font-semibold text-ink-900 hover:text-accent-700"
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label={`Место: ${label}`}
@@ -122,14 +122,14 @@ function RegionRow({ id, name, hint, isAggregate, isCity, isActive, onClick }) {
   return (
     <button
       onClick={onClick}
-      className={`w-full text-left px-2.5 py-2 rounded-xl flex items-center gap-2 hover:bg-brand-50 ${
-        isActive ? 'bg-brand-50 text-brand-700' : 'text-ink-800'
+      className={`w-full text-left px-2.5 py-2 rounded-xl flex items-center gap-2 hover:bg-accent-50 ${
+        isActive ? 'bg-accent-50 text-accent-700' : 'text-ink-800'
       }`}
       role="menuitem"
     >
       <span
         className={`w-2 h-2 rounded-full shrink-0 ${
-          isActive ? 'bg-brand-600' : isAggregate ? 'bg-accent-500' : 'bg-slate-300'
+          isActive ? 'bg-accent-500' : isAggregate ? 'bg-accent-500' : 'bg-slate-300'
         }`}
       />
       <div className="min-w-0 flex-1">
@@ -145,7 +145,7 @@ function RegionRow({ id, name, hint, isAggregate, isCity, isActive, onClick }) {
           <div className="text-[11px] text-ink-500 truncate">{hint}</div>
         )}
       </div>
-      {isActive && <Check className="w-4 h-4 text-brand-600 shrink-0" />}
+      {isActive && <Check className="w-4 h-4 text-accent-600 shrink-0" />}
     </button>
   );
 }

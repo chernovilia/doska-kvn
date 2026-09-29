@@ -81,7 +81,7 @@ export default function BusinessProfile({ biz, ads = [] }) {
           </button>
 
           <nav className="hidden md:flex items-center gap-1.5 text-[13px] text-ink-500 min-w-0">
-            <Link href="/" className="hover:text-brand-700 inline-flex items-center gap-1">
+            <Link href="/" className="hover:text-accent-700 inline-flex items-center gap-1">
               <Home className="w-3.5 h-3.5" />
               Доска/КВН
             </Link>
@@ -93,7 +93,7 @@ export default function BusinessProfile({ biz, ads = [] }) {
             onClick={onShare}
             className="ml-auto btn-outline h-10 px-3.5 text-sm"
           >
-            <Share2 className="w-4 h-4 text-brand-600" />
+            <Share2 className="w-4 h-4 text-accent-600" />
             <span className="hidden sm:inline">Поделиться</span>
           </button>
         </div>
@@ -111,7 +111,7 @@ export default function BusinessProfile({ biz, ads = [] }) {
                   className="w-20 h-20 md:w-24 md:h-24 rounded-2xl object-cover ring-2 ring-white shadow-card"
                 />
               ) : (
-                <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-brand-600 text-white grid place-items-center text-3xl font-black shadow-card">
+                <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-accent-500 text-white grid place-items-center text-3xl font-black shadow-card">
                   {biz.name?.[0] || '?'}
                 </div>
               )}
@@ -130,7 +130,7 @@ export default function BusinessProfile({ biz, ads = [] }) {
                         {kindLabel}
                       </span>
                       {biz.userVerified && (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-brand-700 bg-brand-50 ring-1 ring-brand-200 px-2 py-0.5 rounded-full">
+                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-accent-700 bg-accent-50 ring-1 ring-accent-200 px-2 py-0.5 rounded-full">
                           <BadgeCheck className="w-3 h-3" />
                           Проверен
                         </span>
@@ -163,13 +163,13 @@ export default function BusinessProfile({ biz, ads = [] }) {
                 <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[12px] text-ink-600">
                   {biz.hours && (
                     <span className="inline-flex items-center gap-1">
-                      <Clock className="w-3.5 h-3.5 text-brand-600" />
+                      <Clock className="w-3.5 h-3.5 text-accent-600" />
                       {biz.hours}
                     </span>
                   )}
                   {biz.address && (
                     <span className="inline-flex items-center gap-1">
-                      <MapPin className="w-3.5 h-3.5 text-brand-600" />
+                      <MapPin className="w-3.5 h-3.5 text-accent-600" />
                       {biz.address}
                     </span>
                   )}
@@ -178,7 +178,7 @@ export default function BusinessProfile({ biz, ads = [] }) {
                       href={biz.website}
                       target="_blank"
                       rel="noreferrer"
-                      className="inline-flex items-center gap-1 text-brand-700 hover:underline"
+                      className="inline-flex items-center gap-1 text-accent-700 hover:underline"
                     >
                       <Globe className="w-3.5 h-3.5" />
                       {biz.website.replace(/^https?:\/\//, '')}
@@ -191,7 +191,7 @@ export default function BusinessProfile({ biz, ads = [] }) {
                     {biz.categories.map((c) => (
                       <span
                         key={c}
-                        className="text-[11px] font-semibold text-brand-700 bg-brand-50 ring-1 ring-brand-200 px-2 py-0.5 rounded-full"
+                        className="text-[11px] font-semibold text-accent-700 bg-accent-50 ring-1 ring-accent-200 px-2 py-0.5 rounded-full"
                       >
                         {c}
                       </span>
@@ -205,7 +205,7 @@ export default function BusinessProfile({ biz, ads = [] }) {
             <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-2">
               <button
                 onClick={onWrite}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-semibold px-4 py-3"
+                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-accent-500 hover:bg-accent-600 text-white font-semibold px-4 py-3"
               >
                 <MessageCircle className="w-4 h-4" />
                 Написать
@@ -216,7 +216,7 @@ export default function BusinessProfile({ biz, ads = [] }) {
               >
                 {phoneShown && authed ? (
                   <>
-                    <Phone className="w-4 h-4 text-brand-600" />
+                    <Phone className="w-4 h-4 text-accent-600" />
                     {biz.phone || '+7 (___) ___-__-__'}
                   </>
                 ) : (

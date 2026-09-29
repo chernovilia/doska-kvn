@@ -23,6 +23,7 @@ import {
   Phone,
   Share2,
   Star,
+  Pencil,
   Trash2
 } from 'lucide-react';
 import {
@@ -45,7 +46,7 @@ import AdCard from './AdCard';
 import BottomNav from './BottomNav';
 import Footer from './Footer';
 import PostAdModal from './PostAdModal';
-import OwnerAdActions from './OwnerAdActions';
+import OwnerAdActions, { SoldButton } from './OwnerAdActions';
 import ReportModal from './ReportModal';
 
 export default function AdDetail({ ad }) {
@@ -61,6 +62,7 @@ export default function AdDetail({ ad }) {
   const [opening, setOpening] = useState(false);
   const [postOpen, setPostOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [views, setViews] = useState(ad.viewsCount ?? 0);
   const { isFavorite, toggle: toggleFavorite } = useFavorites();
@@ -164,7 +166,7 @@ export default function AdDetail({ ad }) {
     <button
       onClick={onWrite}
       disabled={opening}
-      className="flex-1 inline-flex items-center justify-center gap-2 h-12 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-bold disabled:opacity-60"
+      className="flex-1 inline-flex items-center justify-center gap-2 h-12 rounded-2xl bg-accent-500 hover:bg-accent-600 text-white font-bold disabled:opacity-60"
     >
       <MessageCircle className="w-5 h-5" />
       {opening ? 'Открываем…' : 'Написать'}
@@ -172,7 +174,7 @@ export default function AdDetail({ ad }) {
   );
   const phoneBtn = !acceptsPhone ? null : telHref ? (
     <a href={telHref} className="btn-outline flex-1 h-12 rounded-2xl px-3 text-[15px]">
-      <Phone className="w-5 h-5 text-brand-600" />
+      <Phone className="w-5 h-5 text-accent-600" />
       <span className="truncate">{phone}</span>
     </a>
   ) : (
@@ -209,18 +211,18 @@ export default function AdDetail({ ad }) {
 
           {/* Хлебные крошки — только на десктопе */}
           <nav className="hidden md:flex items-center gap-1.5 text-[13px] text-ink-500 min-w-0 ml-2">
-            <Link href="/" className="hover:text-brand-700 inline-flex items-center gap-1">
+            <Link href="/" className="hover:text-accent-700 inline-flex items-center gap-1">
               <Home className="w-3.5 h-3.5" />
               Доска/КВН
             </Link>
             <span>›</span>
-            <Link href={`/${ad.city}`} className="hover:text-brand-700 truncate">
+            <Link href={`/${ad.city}`} className="hover:text-accent-700 truncate">
               {cityName(ad.city)}
             </Link>
             {path.filter((p) => p.href).map((p, i) => (
               <span key={i} className="contents">
                 <span>›</span>
-                <Link href={p.href} className="hover:text-brand-700 truncate">
+                <Link href={p.href} className="hover:text-accent-700 truncate">
                   {p.label}
                 </Link>
               </span>
@@ -286,7 +288,7 @@ export default function AdDetail({ ad }) {
                     <span key={i} className="inline-flex items-center gap-1.5">
                       {i > 0 && <span className="text-ink-300">›</span>}
                       {p.href ? (
-                        <Link href={p.href} className="hover:text-brand-700">
+                        <Link href={p.href} className="hover:text-accent-700">
                           {p.label}
                         </Link>
                       ) : (
@@ -353,13 +355,21 @@ export default function AdDetail({ ad }) {
                 </div>
                 <OwnerAdActions ad={ad} onChanged={() => router.refresh()} />
                 <button
+                  onClick={() => setEditOpen(true)}
+                  className="w-full btn-outline h-11 rounded-2xl px-4 text-sm"
+                >
+                  <Pencil className="w-4 h-4" />
+                  Редактировать
+                </button>
+                <button
                   onClick={onDelete}
                   disabled={deleting}
-                  className="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-white border-2 border-rose-100 text-rose-700 hover:bg-rose-50 font-bold px-4 py-3 disabled:opacity-50"
+                  className="w-full inline-flex items-center justify-center gap-2 h-11 rounded-2xl bg-white border-2 border-rose-100 text-rose-700 hover:bg-rose-50 text-sm font-bold px-4 disabled:opacity-50"
                 >
                   <Trash2 className="w-4 h-4" />
                   {deleting ? 'Удаляем…' : 'Удалить объявление'}
                 </button>
+                <SoldButton ad={ad} onChanged={() => router.refresh()} />
               </div>
             )}
 
@@ -396,7 +406,7 @@ export default function AdDetail({ ad }) {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
                     <div className="font-semibold text-ink-900 truncate">{ad.author?.name}</div>
-                    {ad.author?.verified && <BadgeCheck className="w-4 h-4 text-brand-600 shrink-0" />}
+                    {ad.author?.verified && <BadgeCheck className="w-4 h-4 text-accent-600 shrink-0" />}
                   </div>
                   <div className="text-[13px] text-ink-500 flex items-center gap-1 mt-0.5 whitespace-nowrap">
                     <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
@@ -411,7 +421,7 @@ export default function AdDetail({ ad }) {
                 {authorTypeIsBiz && ad.author?.businessProfile?.slug && (
                   <Link
                     href={`/u/${ad.author.businessProfile.slug}`}
-                    className="text-[13px] font-semibold text-brand-700 hover:text-brand-800 shrink-0"
+                    className="text-[13px] font-semibold text-accent-700 hover:text-accent-800 shrink-0"
                   >
                     Профиль →
                   </Link>
@@ -419,7 +429,7 @@ export default function AdDetail({ ad }) {
               </div>
               <Link
                 href={`/user/${ad.authorId}`}
-                className="mt-3 -mx-1 px-1 py-2 flex items-center justify-between rounded-xl text-[15px] font-semibold text-brand-700 hover:bg-slate-50"
+                className="mt-3 -mx-1 px-1 py-2 flex items-center justify-between rounded-xl text-[15px] font-semibold text-accent-700 hover:bg-slate-50"
               >
                 {isOwner ? 'Как вашу страницу видят другие' : 'Все объявления продавца'}
                 <ChevronRight className="w-5 h-5" />
@@ -510,6 +520,14 @@ export default function AdDetail({ ad }) {
       ) : (
         <>
           <PostAdModal open={postOpen} onClose={() => setPostOpen(false)} />
+          {isOwner && (
+            <PostAdModal
+              open={editOpen}
+              editAd={ad}
+              onClose={() => setEditOpen(false)}
+              onSaved={() => router.refresh()}
+            />
+          )}
           <BottomNav onPost={() => setPostOpen(true)} />
         </>
       )}

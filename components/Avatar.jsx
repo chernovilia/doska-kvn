@@ -12,10 +12,10 @@ export const AVATAR_PRESETS = [
   { id: 'squirrel', icon: Squirrel, cls: 'bg-red-100 text-red-700' },
   { id: 'turtle', icon: Turtle, cls: 'bg-emerald-100 text-emerald-700' },
   { id: 'snail', icon: Snail, cls: 'bg-lime-100 text-lime-700' },
-  { id: 'flower', icon: Flower2, cls: 'bg-fuchsia-100 text-fuchsia-700' },
+  { id: 'flower', icon: Flower2, cls: 'bg-rose-100 text-rose-700' },
   { id: 'tree', icon: TreePine, cls: 'bg-green-100 text-green-700' },
   { id: 'sun', icon: Sun, cls: 'bg-yellow-100 text-yellow-700' },
-  { id: 'rocket', icon: Rocket, cls: 'bg-indigo-100 text-indigo-700' }
+  { id: 'rocket', icon: Rocket, cls: 'bg-slate-100 text-slate-700' }
 ];
 
 const SIZES = {
@@ -49,7 +49,7 @@ export default function Avatar({ person, size = 'md', className = '' }) {
     return <img src={avatar} alt="" className={`${box} object-cover ring-1 ring-black/5 bg-slate-100`} />;
   }
   return (
-    <span className={`${box} grid place-items-center bg-brand-600 text-white font-black`} aria-hidden>
+    <span className={`${box} grid place-items-center bg-accent-500 text-white font-black`} aria-hidden>
       {(person?.name || '?').trim().charAt(0).toUpperCase() || '?'}
     </span>
   );

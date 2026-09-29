@@ -65,7 +65,7 @@ export function ReasonForm({ title, confirmLabel, tone = 'rose', busy, onConfirm
         onChange={(e) => setReason(e.target.value.slice(0, 500))}
         rows={2}
         placeholder="Причина — её увидит автор"
-        className="w-full rounded-xl bg-white ring-1 ring-black/10 focus:ring-brand-400 outline-none px-3 py-2 text-sm resize-none"
+        className="w-full rounded-xl bg-white ring-1 ring-black/10 focus:ring-accent-400 outline-none px-3 py-2 text-sm resize-none"
       />
       <div className="flex gap-2">
         <button type="button" onClick={onCancel} className="btn-outline h-9 px-3 text-sm rounded-xl">

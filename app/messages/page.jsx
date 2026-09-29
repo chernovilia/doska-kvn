@@ -195,7 +195,7 @@ function MessagesContent() {
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="Поиск по перепискам"
-                  className="w-full rounded-full bg-slate-100 focus:bg-white ring-1 ring-transparent focus:ring-brand-400 outline-none pl-9 pr-4 py-2 text-base"
+                  className="w-full rounded-full bg-slate-100 focus:bg-white ring-1 ring-transparent focus:ring-accent-400 outline-none pl-9 pr-4 py-2 text-base"
                 />
               </div>
             </div>
@@ -208,7 +208,7 @@ function MessagesContent() {
             {chatsState === 'error' && (
               <li className="p-6 text-center text-sm text-ink-500">
                 Не удалось загрузить переписки.{' '}
-                <button onClick={loadChats} className="text-brand-700 underline">
+                <button onClick={loadChats} className="text-accent-700 underline">
                   Повторить
                 </button>
               </li>
@@ -226,8 +226,8 @@ function MessagesContent() {
               <li key={c.id}>
                 <button
                   onClick={() => router.push(`/messages?chat=${c.id}`)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 text-left border-b border-black/5 hover:bg-brand-50 ${
-                    chatId === c.id ? 'bg-brand-50' : ''
+                  className={`w-full flex items-center gap-3 px-4 py-3 text-left border-b border-black/5 hover:bg-accent-50 ${
+                    chatId === c.id ? 'bg-accent-50' : ''
                   }`}
                 >
                   <Avatar person={c.other} size="md" />
@@ -243,7 +243,7 @@ function MessagesContent() {
                       )}
                     </div>
                     <div className="text-[12px] text-ink-500 truncate">
-                      <span className="text-brand-700">{c.ad.title}</span>
+                      <span className="text-accent-700">{c.ad.title}</span>
                       {c.lastMessage && (
                         <>
                           {' · '}
@@ -468,7 +468,7 @@ function ChatView({ chatId, me, onActivity }) {
           </div>
           <button
             onClick={() => router.push('/messages')}
-            className="mt-3 text-sm text-brand-700 underline"
+            className="mt-3 text-sm text-accent-700 underline"
           >
             К списку переписок
           </button>
@@ -528,7 +528,7 @@ function ChatView({ chatId, me, onActivity }) {
                 <div
                   className={`max-w-[80%] md:max-w-[70%] rounded-2xl px-3 py-2 text-sm ${
                     mine
-                      ? 'bg-brand-600 text-white rounded-br-sm'
+                      ? 'bg-accent-500 text-white rounded-br-sm'
                       : 'bg-white ring-1 ring-black/5 text-ink-900 rounded-bl-sm'
                   }`}
                 >
@@ -595,12 +595,12 @@ function ChatView({ chatId, me, onActivity }) {
             }}
             rows={1}
             placeholder="Сообщение"
-            className="flex-1 max-h-32 resize-none rounded-2xl bg-slate-100 focus:bg-white ring-1 ring-transparent focus:ring-brand-400 outline-none px-4 py-2.5 text-base"
+            className="flex-1 max-h-32 resize-none rounded-2xl bg-slate-100 focus:bg-white ring-1 ring-transparent focus:ring-accent-400 outline-none px-4 py-2.5 text-base"
           />
           <button
             type="submit"
             disabled={!draft.trim() || sending}
-            className="w-11 h-11 shrink-0 grid place-items-center rounded-full bg-brand-600 hover:bg-brand-700 text-white disabled:opacity-40"
+            className="w-11 h-11 shrink-0 grid place-items-center rounded-full bg-accent-500 hover:bg-accent-600 text-white disabled:opacity-40"
             aria-label="Отправить"
           >
             <Send className="w-5 h-5" />
@@ -619,22 +619,22 @@ function ListingHeader({ ad }) {
         <img src={ad.photo} alt="" className="w-11 h-11 rounded-lg object-cover ring-1 ring-black/5 shrink-0" />
       )}
       <div className="min-w-0 flex-1">
-        <div className="text-[10px] uppercase tracking-wide text-brand-700 font-bold flex items-center gap-1">
+        <div className="text-[10px] uppercase tracking-wide text-accent-700 font-bold flex items-center gap-1">
           <Info className="w-3 h-3" />
           {ad.available ? 'Объявление' : 'Объявление снято'}
         </div>
         <div className="text-sm font-semibold text-ink-900 truncate">{ad.title}</div>
       </div>
       {ad.available && ad.price != null && (
-        <div className="text-sm font-black text-brand-700 shrink-0">
+        <div className="text-sm font-black text-accent-700 shrink-0">
           {ad.price > 0 ? `${new Intl.NumberFormat('ru-RU').format(ad.price)} ₽` : 'Даром'}
         </div>
       )}
     </>
   );
-  const cls = 'mx-3 md:mx-5 mb-3 flex items-center gap-3 rounded-xl bg-brand-50 ring-1 ring-brand-100 p-2';
+  const cls = 'mx-3 md:mx-5 mb-3 flex items-center gap-3 rounded-xl bg-accent-50 ring-1 ring-accent-100 p-2';
   return ad.available && ad.id ? (
-    <Link href={`/ad/${ad.id}`} className={`${cls} hover:bg-brand-100 transition`}>
+    <Link href={`/ad/${ad.id}`} className={`${cls} hover:bg-accent-100 transition`}>
       {body}
     </Link>
   ) : (

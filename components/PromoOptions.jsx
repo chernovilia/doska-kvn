@@ -7,7 +7,7 @@ export const PROMO_OPTIONS = [
     id: 'bump',
     name: 'Поднять в ленте',
     icon: ArrowUpCircle,
-    iconCls: 'text-brand-600',
+    iconCls: 'text-accent-600',
     price: 'Бесплатно',
     text: 'Объявление встанет наверх ленты, как новое, и сутки будет выше остальных.'
   },
@@ -23,7 +23,7 @@ export const PROMO_OPTIONS = [
     id: 'highlight',
     name: 'Выделить цветом',
     icon: Palette,
-    iconCls: 'text-fuchsia-600',
+    iconCls: 'text-rose-600',
     soon: true,
     text: 'Цветная карточка заметнее в ленте и поиске.'
   },

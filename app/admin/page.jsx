@@ -142,7 +142,7 @@ function AdminContent() {
           <Link href="/" className="w-10 h-10 grid place-items-center rounded-full text-ink-800 hover:bg-slate-100" aria-label="На главную">
             <ArrowLeft className="w-[22px] h-[22px]" />
           </Link>
-          <ShieldCheck className="w-5 h-5 text-brand-700" />
+          <ShieldCheck className="w-5 h-5 text-accent-700" />
           <div className="font-extrabold text-lg text-ink-900 ml-1">Админка</div>
           <div className="ml-auto text-[12px] text-ink-500 truncate hidden sm:block">{user.email}</div>
         </div>
@@ -285,7 +285,7 @@ function OverviewTab({ stats, onReload, go }) {
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
           <h3 className="font-bold text-ink-900 w-full sm:w-auto sm:mr-auto">Новые за 14 дней</h3>
           <span className="inline-flex items-center gap-1 text-[12px] text-ink-500">
-            <span className="w-2.5 h-2.5 rounded-sm bg-brand-500" /> пользователи
+            <span className="w-2.5 h-2.5 rounded-sm bg-accent-500" /> пользователи
           </span>
           <span className="inline-flex items-center gap-1 text-[12px] text-ink-500">
             <span className="w-2.5 h-2.5 rounded-sm bg-accent-400" /> объявления
@@ -295,7 +295,7 @@ function OverviewTab({ stats, onReload, go }) {
           {stats.daily.map((d) => (
             <div key={d.day} className="flex-1 h-full flex flex-col justify-end" title={`${d.day}: ${d.users} польз., ${d.ads} объявл.`}>
               <div className="flex items-end gap-px h-full">
-                <div className="flex-1 rounded-t bg-brand-500" style={{ height: `${(d.users / maxDaily) * 100}%` }} />
+                <div className="flex-1 rounded-t bg-accent-500" style={{ height: `${(d.users / maxDaily) * 100}%` }} />
                 <div className="flex-1 rounded-t bg-accent-400" style={{ height: `${(d.ads / maxDaily) * 100}%` }} />
               </div>
             </div>
@@ -315,7 +315,7 @@ function OverviewTab({ stats, onReload, go }) {
               <div key={c.cityId} className="flex items-center gap-2 text-sm">
                 <span className="w-28 truncate text-ink-700">{cityName(c.cityId)}</span>
                 <div className="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden">
-                  <div className="h-full bg-brand-500" style={{ width: `${(c.count / stats.byCity[0].count) * 100}%` }} />
+                  <div className="h-full bg-accent-500" style={{ width: `${(c.count / stats.byCity[0].count) * 100}%` }} />
                 </div>
                 <span className="w-10 text-right tabular-nums text-ink-900 font-semibold">{c.count}</span>
               </div>
@@ -388,7 +388,7 @@ function SearchBox({ value, onChange, placeholder }) {
         e.preventDefault();
         onChange(draft.trim());
       }}
-      className="flex-1 min-w-[200px] flex items-center gap-2 h-10 px-3 rounded-xl bg-white ring-1 ring-black/10 focus-within:ring-brand-400"
+      className="flex-1 min-w-[200px] flex items-center gap-2 h-10 px-3 rounded-xl bg-white ring-1 ring-black/10 focus-within:ring-accent-400"
     >
       <Search className="w-4 h-4 text-ink-500 shrink-0" />
       <input
@@ -493,7 +493,7 @@ function AdsTab({ preset, onOpen, onChanged }) {
         <div className="flex items-center gap-2 text-sm">
           <span className="text-ink-500">Автор:</span>
           <span className="font-semibold text-ink-900">{author.name}</span>
-          <button onClick={() => { setOffset(0); setAuthor(null); }} className="text-brand-700 font-semibold">
+          <button onClick={() => { setOffset(0); setAuthor(null); }} className="text-accent-700 font-semibold">
             сбросить
           </button>
         </div>
@@ -877,11 +877,11 @@ function ReviewsTab({ onChanged }) {
                 </button>
               </div>
               <div className="text-[13px] text-ink-700 mt-1">
-                <Link href={`/user/${r.author.id}`} target="_blank" className="font-semibold hover:text-brand-700">
+                <Link href={`/user/${r.author.id}`} target="_blank" className="font-semibold hover:text-accent-700">
                   {r.author.name || 'Пользователь'}
                 </Link>{' '}
                 →{' '}
-                <Link href={`/user/${r.target.id}`} target="_blank" className="font-semibold hover:text-brand-700">
+                <Link href={`/user/${r.target.id}`} target="_blank" className="font-semibold hover:text-accent-700">
                   {r.target.name || 'Пользователь'}
                 </Link>
                 <span className="text-ink-500"> · «{r.adTitle}»</span>
@@ -991,12 +991,12 @@ function SettingsTab({ onChanged }) {
                   step={s.step || 'any'}
                   value={draft[s.key] ?? ''}
                   onChange={(e) => setDraft((d) => ({ ...d, [s.key]: e.target.value }))}
-                  className="w-20 h-9 rounded-xl bg-white ring-1 ring-black/10 focus:ring-brand-400 outline-none px-2 text-right tabular-nums"
+                  className="w-20 h-9 rounded-xl bg-white ring-1 ring-black/10 focus:ring-accent-400 outline-none px-2 text-right tabular-nums"
                 />
                 <button
                   onClick={() => save(s.key, draft[s.key])}
                   disabled={!changed || saving === s.key}
-                  className="h-9 px-3 rounded-xl bg-brand-600 hover:bg-brand-700 disabled:bg-slate-200 disabled:text-ink-400 text-white text-[13px] font-semibold"
+                  className="h-9 px-3 rounded-xl bg-accent-500 hover:bg-accent-600 disabled:bg-slate-200 disabled:text-ink-400 text-white text-[13px] font-semibold"
                 >
                   {saving === s.key ? '…' : 'OK'}
                 </button>
@@ -1098,7 +1098,7 @@ function SupportTicket({ ticket, focused, onChanged }) {
           <div key={m.id} className={`flex ${m.fromAdmin ? 'justify-end' : 'justify-start'}`}>
             <div
               className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap break-words ${
-                m.fromAdmin ? 'bg-brand-600 text-white rounded-br-sm' : 'bg-slate-100 text-ink-900 rounded-bl-sm'
+                m.fromAdmin ? 'bg-accent-500 text-white rounded-br-sm' : 'bg-slate-100 text-ink-900 rounded-bl-sm'
               }`}
             >
               {m.text}
@@ -1119,10 +1119,10 @@ function SupportTicket({ ticket, focused, onChanged }) {
             onChange={(e) => setReply(e.target.value.slice(0, 2000))}
             rows={2}
             placeholder="Ответ — придёт пользователю в уведомления и на почту"
-            className="w-full rounded-xl bg-white ring-1 ring-black/10 focus:ring-brand-400 outline-none px-3 py-2 text-sm resize-none"
+            className="w-full rounded-xl bg-white ring-1 ring-black/10 focus:ring-accent-400 outline-none px-3 py-2 text-sm resize-none"
           />
           <div className="flex gap-1.5">
-            <button type="submit" disabled={busy || !reply.trim()} className="h-8 px-3 rounded-lg bg-brand-600 hover:bg-brand-700 disabled:bg-slate-300 text-white text-[13px] font-semibold">
+            <button type="submit" disabled={busy || !reply.trim()} className="h-8 px-3 rounded-lg bg-accent-500 hover:bg-accent-600 disabled:bg-slate-300 text-white text-[13px] font-semibold">
               Ответить
             </button>
             <button type="button" onClick={() => run(() => adminSetSupportStatus(ticket.id, 'closed'))} disabled={busy} className="h-8 px-3 rounded-lg ring-1 ring-black/10 text-ink-700 hover:bg-slate-50 text-[13px] font-semibold">

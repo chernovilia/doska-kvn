@@ -9,7 +9,7 @@ import { resolvePlace, DEFAULT_REGION_ID } from '@/lib/api';
 
 const ACCENTS = {
   brand: {
-    bg: 'from-brand-600 to-brand-800',
+    bg: 'from-accent-600 to-accent-800',
     orb1: 'bg-white/10',
     orb2: 'bg-accent-500/30',
     eyebrow: 'text-white/70',
@@ -113,7 +113,7 @@ export default function HeroBanner({
                   href={slide.ctaHref || '/'}
                   className="inline-flex items-center gap-1.5 rounded-full bg-white text-ink-900 hover:bg-white/90 font-semibold text-sm px-4 py-2 shadow-card"
                 >
-                  <Sparkles className="w-4 h-4 text-brand-600" />
+                  <Sparkles className="w-4 h-4 text-accent-600" />
                   {slide.ctaLabel}
                 </Link>
               ) : slide.ctaKind === 'post' ? (
@@ -129,7 +129,7 @@ export default function HeroBanner({
                   onClick={onCta}
                   className="inline-flex items-center gap-1.5 rounded-full bg-white text-ink-900 hover:bg-white/90 font-semibold text-sm px-4 py-2 shadow-card"
                 >
-                  <TrendingUp className="w-4 h-4 text-brand-600" />
+                  <TrendingUp className="w-4 h-4 text-accent-600" />
                   {slide.ctaLabel}
                 </button>
               )}

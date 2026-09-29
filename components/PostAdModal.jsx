@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { CITIES, REGIONS, SECTIONS, getCategoryGroups, getSection, createAd, uploadAdPhoto } from '@/lib/api';
+import { CITIES, REGIONS, SECTIONS, getCategoryGroups, getSection, createAd, updateAd, uploadAdPhoto } from '@/lib/api';
 import { FREE_FROM_SECTIONS } from '@/data/categories';
 import { formatPrice, formatEventDate, thumbUrl, fallbackToFull } from '@/lib/format';
 import { getAttributeFields, describeAttributes, parseAttributeInput } from '@/data/attributes';
@@ -64,13 +64,43 @@ function emptyForm(user) {
   };
 }
 
+// Форма из существующего объявления — для правки.
+function formFromAd(ad) {
+  const attrs = Object.fromEntries(
+    Object.entries(ad.attributes || {}).map(([k, v]) => [k, v == null ? '' : String(v)])
+  );
+  return {
+    city: ad.cityId || ad.city,
+    section: ad.section,
+    group: ad.categoryGroup || null,
+    category: ad.category || null,
+    title: ad.title || '',
+    price: ad.price ? String(ad.price) : '',
+    priceTo: ad.priceTo ? String(ad.priceTo) : '',
+    attrs,
+    eventDate: ad.eventDate ? moscowLocalInput(ad.eventDate) : '',
+    address: ad.address && ad.address !== CITIES.find((c) => c.id === (ad.cityId || ad.city))?.name ? ad.address : '',
+    description: ad.description || '',
+    photos: (ad.photos?.map((p) => p.url) || ad.gallery || []).map((url, i) => ({ key: `old-${i}-${url}`, url, status: 'done' }))
+  };
+}
+
+// ISO → значение для <input type="datetime-local"> по Москве (UTC+3, без перехода на летнее время).
+function moscowLocalInput(iso) {
+  const d = new Date(new Date(iso).getTime() + 3 * 3_600_000);
+  return d.toISOString().slice(0, 16);
+}
+
 function defaultCity(user) {
   return user?.homeCityId || 'vyksa';
 }
 
-export default function PostAdModal({ open, onClose }) {
+// editAd — объявление для правки: форма заполнена, шаги можно открыть тапом по номеру,
+// «Сохранить» отправляет PUT /ads/:id (модерация — как при подаче). onSaved(ad) — после сохранения.
+export default function PostAdModal({ open, onClose, editAd = null, onSaved }) {
   const router = useRouter();
   const { user } = useAuth();
+  const editing = !!editAd;
   const [step, setStep] = useState(0);
   const [form, setForm] = useState(() => emptyForm(user));
   const [checking, setChecking] = useState(false);
@@ -105,15 +135,18 @@ export default function PostAdModal({ open, onClose }) {
   }, [stepId, done]);
   const attrErrors = attributeErrors(attrFields, form.attrs);
 
-  // При смене раздела — сбрасываем выбор подкатегории.
+  // Правка: при открытии — шаг «Описание» с заполненной формой. Только в момент открытия:
+  // после сохранения страница обновляет объявление, и форма не должна сбрасываться.
+  const wasOpen = useRef(false);
   useEffect(() => {
-    setForm((f) => ({ ...f, group: null, category: null }));
-  }, [form.section]);
-
-  // Другая подгруппа — другой набор характеристик.
-  useEffect(() => {
-    setForm((f) => ({ ...f, attrs: {} }));
-  }, [form.section, form.group]);
+    if (open && !wasOpen.current && editAd) {
+      setForm(formFromAd(editAd));
+      setStep(4);
+      setDone(false);
+      setError(null);
+    }
+    wasOpen.current = open;
+  }, [open, editAd]);
 
   // Если юзер загрузился позже и у него есть homeCityId — подставим дефолт.
   useEffect(() => {
@@ -125,7 +158,7 @@ export default function PostAdModal({ open, onClose }) {
 
   function reset() {
     setStep(0);
-    setForm(emptyForm(user));
+    setForm(editAd ? formFromAd(editAd) : emptyForm(user));
     setChecking(false);
     setDone(false);
     setPublishedAdId(null);
@@ -153,12 +186,13 @@ export default function PostAdModal({ open, onClose }) {
         description: form.description?.trim() || undefined,
         photoUrls: form.photos.filter((p) => p.status === 'done').map((p) => p.url)
       };
-      const ad = await createAd(payload);
+      const ad = editing ? await updateAd(editAd.id, payload) : await createAd(payload);
       setPublishedAdId(ad.id);
       setPublishedStatus(ad.status);
       setDone(true);
+      if (editing) onSaved?.(ad);
     } catch (err) {
-      setError(err.message || 'Не удалось опубликовать');
+      setError(err.message || (editing ? 'Не удалось сохранить' : 'Не удалось опубликовать'));
     } finally {
       setChecking(false);
     }
@@ -207,8 +241,8 @@ export default function PostAdModal({ open, onClose }) {
           ref={headerRef}
           className="sticky top-0 z-[5] -mx-5 md:-mx-6 px-5 md:px-6 pt-5 md:pt-6 pb-3 pr-14 bg-white border-b border-slate-100"
         >
-          <div className="text-xs uppercase tracking-wide text-brand-700 font-bold">
-            Подать объявление{!done && ` · шаг ${step + 1} из ${steps.length}`}
+          <div className="text-xs uppercase tracking-wide text-accent-700 font-bold">
+            {editing ? 'Редактирование' : 'Подать объявление'}{!done && ` · шаг ${step + 1} из ${steps.length}`}
           </div>
           <h3 className="text-xl md:text-2xl font-extrabold text-ink-900 mt-1">
             {done ? 'Готово' : STEP_LABELS[stepId]}
@@ -217,15 +251,20 @@ export default function PostAdModal({ open, onClose }) {
           <div className="mt-3 flex items-center gap-0.5 md:gap-1 overflow-x-auto no-scrollbar">
             {steps.map((s, i) => (
               <div key={s} title={STEP_LABELS[s]} className="flex items-center gap-0.5 md:gap-1 shrink-0">
-                <div
-                  className={`w-6 h-6 md:w-7 md:h-7 grid place-items-center rounded-full text-[11px] md:text-xs font-bold shrink-0 ${
-                    i <= step ? 'bg-brand-600 text-white' : 'bg-slate-100 text-ink-500'
-                  }`}
+                {/* При правке всё уже заполнено — к любому шагу можно перейти тапом по номеру */}
+                <button
+                  type="button"
+                  disabled={!editing || done || checking || uploading > 0}
+                  onClick={() => setStep(i)}
+                  aria-label={`Шаг ${i + 1}: ${STEP_LABELS[s]}`}
+                  className={`w-6 h-6 md:w-7 md:h-7 grid place-items-center rounded-full text-[11px] md:text-xs font-bold shrink-0 disabled:cursor-default ${
+                    i <= step ? 'bg-accent-500 text-white' : 'bg-slate-100 text-ink-500'
+                  } ${i === step && editing ? 'ring-2 ring-offset-1 ring-accent-300' : ''}`}
                 >
                   {i + 1}
-                </div>
+                </button>
                 {i < steps.length - 1 && (
-                  <div className={`w-2.5 md:w-4 h-[2px] rounded shrink-0 ${i < step ? 'bg-brand-600' : 'bg-slate-200'}`} />
+                  <div className={`w-2.5 md:w-4 h-[2px] rounded shrink-0 ${i < step ? 'bg-accent-500' : 'bg-slate-200'}`} />
                 )}
               </div>
             ))}
@@ -255,24 +294,32 @@ export default function PostAdModal({ open, onClose }) {
                 )}
                 {/* Статус — из ответа API: при выключенной автопубликации объявление ждёт проверки */}
                 <div className="mt-3 text-lg font-extrabold text-ink-900">
-                  {publishedStatus === 'pending' ? 'Отправлено на проверку' : 'Объявление опубликовано!'}
+                  {publishedStatus === 'pending'
+                    ? 'Отправлено на проверку'
+                    : editing
+                      ? 'Изменения сохранены'
+                      : 'Объявление опубликовано!'}
                 </div>
                 <div className="mt-1 text-sm text-ink-500">
                   {publishedStatus === 'pending'
-                    ? 'Модератор посмотрит его в ближайшее время — пришлём уведомление, когда оно появится в ленте.'
-                    : 'Оно уже видно всем в вашем городе.'}
+                    ? editing
+                      ? 'Пока модератор проверяет изменения, объявления нет в ленте — пришлём уведомление.'
+                      : 'Модератор посмотрит его в ближайшее время — пришлём уведомление, когда оно появится в ленте.'
+                    : editing
+                      ? 'Объявление в ленте с новыми данными.'
+                      : 'Оно уже видно всем в вашем городе.'}
                 </div>
               </div>
             ) : checking ? (
               <div className="text-center py-8">
-                <div className="mx-auto w-14 h-14 grid place-items-center rounded-full bg-brand-100 text-brand-700 animate-pulse">
+                <div className="mx-auto w-14 h-14 grid place-items-center rounded-full bg-accent-100 text-accent-700 animate-pulse">
                   <Sparkles className="w-8 h-8" />
                 </div>
                 <div className="mt-3 text-lg font-extrabold text-ink-900">
-                  Публикуем…
+                  {editing ? 'Сохраняем…' : 'Публикуем…'}
                 </div>
                 <div className="mt-1 text-sm text-ink-500">
-                  Сохраняем объявление и отправляем на витрину
+                  {editing ? 'Отправляем изменения' : 'Сохраняем объявление и отправляем на витрину'}
                 </div>
               </div>
             ) : stepId === 'city' ? (
@@ -303,12 +350,13 @@ export default function PostAdModal({ open, onClose }) {
                       <button
                         key={s.id}
                         onClick={() => {
-                          setForm((f) => ({ ...f, section: s.id }));
+                          // Другой раздел — заново подкатегория и характеристики.
+                          setForm((f) => (f.section === s.id ? f : { ...f, section: s.id, group: null, category: null, attrs: {} }));
                           goNext();
                         }}
                         className={`flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-2.5 rounded-2xl p-2.5 text-left border-[1.5px] transition-colors min-w-0 ${
                           form.section === s.id
-                            ? 'bg-brand-50 border-brand-400'
+                            ? 'bg-accent-50 border-accent-400'
                             : 'bg-slate-50 border-transparent hover:bg-slate-100'
                         }`}
                       >
@@ -333,7 +381,7 @@ export default function PostAdModal({ open, onClose }) {
                 <div className="text-sm font-semibold text-ink-700 mb-2">
                   Категория
                   {form.category && (
-                    <span className="ml-2 text-brand-700">
+                    <span className="ml-2 text-accent-700">
                       {form.group} → {form.category}
                     </span>
                   )}
@@ -344,7 +392,7 @@ export default function PostAdModal({ open, onClose }) {
                     {groups.map((g) => (
                       <button
                         key={g.name}
-                        onClick={() => setForm((f) => ({ ...f, group: g.name }))}
+                        onClick={() => setForm((f) => (f.group === g.name ? f : { ...f, group: g.name, category: null, attrs: {} }))}
                         className="flex items-center justify-between gap-2 rounded-2xl px-4 py-3 text-left bg-slate-50 hover:bg-slate-100 transition-colors"
                       >
                         <div className="min-w-0">
@@ -408,7 +456,7 @@ export default function PostAdModal({ open, onClose }) {
                     value={form.title}
                     onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
                     placeholder="Например: Сдам 2-к квартиру в центре Выксы"
-                    className="mt-1 w-full rounded-2xl bg-white ring-1 ring-black/10 focus:ring-brand-400 outline-none px-4 py-3 text-base"
+                    className="mt-1 w-full rounded-2xl bg-white ring-1 ring-black/10 focus:ring-accent-400 outline-none px-4 py-3 text-base"
                   />
                 </div>
                 <div>
@@ -420,7 +468,7 @@ export default function PostAdModal({ open, onClose }) {
                       placeholder={priceCfg.range ? 'от' : 'Не указана'}
                       aria-label={priceCfg.range ? 'Зарплата от' : priceCfg.label}
                       inputMode="numeric"
-                      className="w-full rounded-2xl bg-white ring-1 ring-black/10 focus:ring-brand-400 outline-none px-4 py-3 text-base"
+                      className="w-full rounded-2xl bg-white ring-1 ring-black/10 focus:ring-accent-400 outline-none px-4 py-3 text-base"
                     />
                     {priceCfg.range && (
                       <input
@@ -429,7 +477,7 @@ export default function PostAdModal({ open, onClose }) {
                         placeholder="до"
                         aria-label="Зарплата до"
                         inputMode="numeric"
-                        className="w-full rounded-2xl bg-white ring-1 ring-black/10 focus:ring-brand-400 outline-none px-4 py-3 text-base"
+                        className="w-full rounded-2xl bg-white ring-1 ring-black/10 focus:ring-accent-400 outline-none px-4 py-3 text-base"
                       />
                     )}
                   </div>
@@ -442,7 +490,7 @@ export default function PostAdModal({ open, onClose }) {
                     value={form.description}
                     onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
                     placeholder="Опишите товар или услугу, состояние, условия…"
-                    className="mt-1 w-full rounded-2xl bg-white ring-1 ring-black/10 focus:ring-brand-400 outline-none px-4 py-3 text-base"
+                    className="mt-1 w-full rounded-2xl bg-white ring-1 ring-black/10 focus:ring-accent-400 outline-none px-4 py-3 text-base"
                   />
                 </div>
               </div>
@@ -484,14 +532,16 @@ export default function PostAdModal({ open, onClose }) {
                         {form.photos.map((p, i) => (
                           <div key={p.key} className="relative w-14 h-14 rounded-lg overflow-hidden shrink-0 ring-1 ring-black/10">
                             <img src={p.status === 'done' ? thumbUrl(p.url) : p.local} onError={fallbackToFull(p.url)} alt="" className="w-full h-full object-cover" />
-                            {i === 0 && <span className="absolute inset-x-0 bottom-0 bg-brand-600/90 text-white text-[9px] font-bold text-center">обложка</span>}
+                            {i === 0 && <span className="absolute inset-x-0 bottom-0 bg-accent-500/90 text-white text-[9px] font-bold text-center">обложка</span>}
                           </div>
                         ))}
                       </div>
                     )}
                 </div>
                 <p className="text-[12px] text-ink-500">
-                  Нажимая «Опубликовать», вы соглашаетесь с правилами платформы «Доска/КВН».
+                  {editing
+                    ? 'После сохранения объявление может снова уйти на проверку модератору — как при подаче.'
+                    : 'Нажимая «Опубликовать», вы соглашаетесь с правилами платформы «Доска/КВН».'}
                 </p>
               </div>
             )}
@@ -512,9 +562,9 @@ export default function PostAdModal({ open, onClose }) {
             <button
               onClick={next}
               disabled={!canNext}
-              className="ml-auto inline-flex items-center gap-1.5 rounded-2xl bg-brand-600 hover:bg-brand-700 disabled:bg-slate-300 text-white px-4 py-3 text-sm font-semibold"
+              className="ml-auto inline-flex items-center gap-1.5 rounded-2xl bg-accent-500 hover:bg-accent-600 disabled:bg-slate-300 text-white px-4 py-3 text-sm font-semibold"
             >
-              {step === steps.length - 1 ? 'Опубликовать' : 'Далее'}
+              {step === steps.length - 1 ? (editing ? 'Сохранить' : 'Опубликовать') : 'Далее'}
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
@@ -537,14 +587,14 @@ export default function PostAdModal({ open, onClose }) {
             >
               Закрыть
             </button>
-            {publishedAdId && (
+            {publishedAdId && !editing && (
               <button
                 onClick={() => {
                   onClose?.();
                   setTimeout(reset, 300);
                   router.push(`/ad/${publishedAdId}`);
                 }}
-                className="ml-auto inline-flex items-center gap-1.5 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white px-4 py-3 text-sm font-semibold"
+                className="ml-auto inline-flex items-center gap-1.5 rounded-2xl bg-accent-500 hover:bg-accent-600 text-white px-4 py-3 text-sm font-semibold"
               >
                 Открыть объявление
                 <ArrowRight className="w-4 h-4" />
@@ -594,7 +644,7 @@ function attributeErrors(fields, raw) {
 
 // ── Шаг «Характеристики»: поля раздела, у афиши — дата, у жилья и афиши — адрес ──
 const INPUT =
-  'w-full rounded-2xl bg-white ring-1 ring-black/10 focus:ring-brand-400 outline-none px-4 py-3 text-base';
+  'w-full rounded-2xl bg-white ring-1 ring-black/10 focus:ring-accent-400 outline-none px-4 py-3 text-base';
 
 function DetailsStep({ fields, values, errors, onChange, isEvent, eventDate, onEventDate, askAddress, address, onAddress }) {
   return (
@@ -800,11 +850,11 @@ function PhotosStep({ photos, setPhotos, onError }) {
             />
             {p.status === 'uploading' && (
               <div className="absolute inset-0 grid place-items-center bg-white/60">
-                <Loader2 className="w-7 h-7 text-brand-600 animate-spin" />
+                <Loader2 className="w-7 h-7 text-accent-600 animate-spin" />
               </div>
             )}
             {i === 0 && (
-              <div className="absolute top-1 left-1 text-[10px] font-bold uppercase bg-brand-600 text-white rounded-md px-1.5 py-0.5">
+              <div className="absolute top-1 left-1 text-[10px] font-bold uppercase bg-accent-500 text-white rounded-md px-1.5 py-0.5">
                 Обложка
               </div>
             )}
@@ -823,7 +873,7 @@ function PhotosStep({ photos, setPhotos, onError }) {
         ))}
 
         {canAddMore && (
-          <label className="aspect-square rounded-2xl grid place-items-center ring-1 ring-dashed ring-black/20 bg-slate-50 text-ink-500 hover:bg-brand-50 hover:ring-brand-300 hover:text-brand-700 cursor-pointer">
+          <label className="aspect-square rounded-2xl grid place-items-center ring-1 ring-dashed ring-black/20 bg-slate-50 text-ink-500 hover:bg-accent-50 hover:ring-accent-300 hover:text-accent-700 cursor-pointer">
             <input
               type="file"
               accept="image/*"
@@ -844,7 +894,7 @@ function PhotosStep({ photos, setPhotos, onError }) {
 
       <div className="mt-3 text-xs text-ink-500">
         Фото: <b>{photos.length}</b> из {MAX_PHOTOS}
-        {uploading > 0 && <span className="text-brand-700"> · загружается {uploading}</span>}
+        {uploading > 0 && <span className="text-accent-700"> · загружается {uploading}</span>}
       </div>
     </div>
   );

@@ -49,7 +49,7 @@ export function ReviewsList({ reviews, empty = 'Пока нет отзывов.'
               <Avatar person={r.author} size="sm" />
             </Link>
             <div className="min-w-0">
-              <Link href={`/user/${r.author.id}`} className="block text-sm font-semibold text-ink-900 truncate hover:text-brand-700">
+              <Link href={`/user/${r.author.id}`} className="block text-sm font-semibold text-ink-900 truncate hover:text-accent-700">
                 {r.author.name || 'Пользователь'}
               </Link>
               <Stars value={r.rating} size="w-3.5 h-3.5" />
@@ -121,14 +121,14 @@ export function ReviewModal({ open, onClose, conversationId, targetName, onDone 
           onChange={(e) => setText(e.target.value.slice(0, 1000))}
           rows={4}
           placeholder="Как прошла сделка? Что понравилось или нет"
-          className="mt-4 w-full rounded-2xl bg-white ring-1 ring-black/10 focus:ring-brand-400 outline-none px-4 py-3 text-base resize-none"
+          className="mt-4 w-full rounded-2xl bg-white ring-1 ring-black/10 focus:ring-accent-400 outline-none px-4 py-3 text-base resize-none"
         />
         {error && <div className="mt-2 text-[13px] text-rose-700">{error}</div>}
 
         <button
           type="submit"
           disabled={!rating || sending}
-          className="mt-4 w-full rounded-2xl bg-brand-600 hover:bg-brand-700 disabled:bg-slate-300 text-white px-4 py-3 font-semibold"
+          className="mt-4 w-full rounded-2xl bg-accent-500 hover:bg-accent-600 disabled:bg-slate-300 text-white px-4 py-3 font-semibold"
         >
           {sending ? 'Отправляем…' : 'Отправить отзыв'}
         </button>

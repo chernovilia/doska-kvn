@@ -117,7 +117,7 @@ export default function ModerationModal({ open, adId, onClose, onChanged }) {
             </button>
 
             <div className="p-5 md:p-6 border-b border-black/5">
-              <div className="text-xs uppercase tracking-wide text-brand-700 font-bold">
+              <div className="text-xs uppercase tracking-wide text-accent-700 font-bold">
                 Модерация объявления
               </div>
               <h2 className="text-xl font-extrabold text-ink-900 mt-1">
@@ -153,7 +153,7 @@ export default function ModerationModal({ open, adId, onClose, onChanged }) {
                             key={p.url}
                             onClick={() => setActivePhoto(i)}
                             className={`aspect-square rounded-lg overflow-hidden ring-2 ${
-                              i === activePhoto ? 'ring-brand-500' : 'ring-transparent'
+                              i === activePhoto ? 'ring-accent-500' : 'ring-transparent'
                             }`}
                           >
                             <img src={thumbUrl(p.url)} onError={fallbackToFull(p.url)} alt="" className="w-full h-full object-cover" />
@@ -200,7 +200,7 @@ export default function ModerationModal({ open, adId, onClose, onChanged }) {
                         Адрес
                       </div>
                       <div className="text-sm text-ink-900 mt-1 flex items-center gap-1">
-                        <MapPin className="w-3.5 h-3.5 text-brand-600" />
+                        <MapPin className="w-3.5 h-3.5 text-accent-600" />
                         {ad.address || cityName(ad.cityId)}
                       </div>
                     </div>
@@ -236,7 +236,7 @@ export default function ModerationModal({ open, adId, onClose, onChanged }) {
                           href={safeAvitoUrl(ad.avitoUrl)}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-sm text-brand-700 hover:underline inline-flex items-center gap-1 mt-1"
+                          className="text-sm text-accent-700 hover:underline inline-flex items-center gap-1 mt-1"
                         >
                           Оригинал
                           <ExternalLink className="w-3 h-3" />
@@ -286,7 +286,7 @@ export default function ModerationModal({ open, adId, onClose, onChanged }) {
                     <Link
                       href={`/ad/${ad.id}`}
                       target="_blank"
-                      className="text-brand-700 hover:underline inline-flex items-center gap-1"
+                      className="text-accent-700 hover:underline inline-flex items-center gap-1"
                     >
                       Открыть публичную страницу
                       <ExternalLink className="w-3 h-3" />

@@ -133,7 +133,7 @@ function Onboarding() {
               onChange={(e) => set({ name: e.target.value.slice(0, 80) })}
               placeholder="Как вас зовут?"
               autoComplete="given-name"
-              className="w-full rounded-2xl bg-white ring-1 ring-black/10 focus:ring-brand-400 outline-none px-4 py-3 text-base"
+              className="w-full rounded-2xl bg-white ring-1 ring-black/10 focus:ring-accent-400 outline-none px-4 py-3 text-base"
             />
           </Field>
 
@@ -181,7 +181,7 @@ function Onboarding() {
                 placeholder="+7 (999) 123-45-67"
                 inputMode="tel"
                 autoComplete="tel"
-                className="mt-2 w-full rounded-2xl bg-white ring-1 ring-black/10 focus:ring-brand-400 outline-none px-4 py-3 text-base"
+                className="mt-2 w-full rounded-2xl bg-white ring-1 ring-black/10 focus:ring-accent-400 outline-none px-4 py-3 text-base"
               />
             )}
           </Field>
@@ -191,7 +191,7 @@ function Onboarding() {
               type="checkbox"
               checked={form.notifyEmail}
               onChange={(e) => set({ notifyEmail: e.target.checked })}
-              className="mt-0.5 w-4 h-4 accent-brand-600"
+              className="mt-0.5 w-4 h-4 accent-accent-600"
             />
             <span className="text-sm text-ink-800">
               Присылать уведомления на e-mail
@@ -211,7 +211,7 @@ function Onboarding() {
           <button
             type="submit"
             disabled={!canSubmit}
-            className="w-full rounded-2xl bg-brand-600 hover:bg-brand-700 text-white py-3.5 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full rounded-2xl bg-accent-500 hover:bg-accent-600 text-white py-3.5 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {busy ? 'Создаём аккаунт…' : 'Создать аккаунт'}
           </button>

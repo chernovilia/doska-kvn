@@ -69,7 +69,7 @@ export default function SearchBar({ value = '', onSubmit, onSelect }) {
         }}
         className="flex h-12"
       >
-        <div className="flex-1 min-w-0 flex items-center gap-2 pl-3.5 pr-1 rounded-l-2xl border-2 border-r-0 border-slate-200 bg-white focus-within:border-brand-400 transition-colors">
+        <div className="flex-1 min-w-0 flex items-center gap-2 pl-3.5 pr-1 rounded-l-2xl border-2 border-r-0 border-slate-200 bg-white focus-within:border-accent-400 transition-colors">
           <Search className="w-5 h-5 text-ink-500 shrink-0" />
           <input
             ref={inputRef}
@@ -95,7 +95,7 @@ export default function SearchBar({ value = '', onSubmit, onSelect }) {
         </div>
         <button
           type="submit"
-          className="px-5 rounded-r-2xl bg-brand-600 hover:bg-brand-700 text-white text-[15px] font-bold shrink-0"
+          className="px-5 rounded-r-2xl bg-accent-500 hover:bg-accent-600 text-white text-[15px] font-bold shrink-0"
         >
           Найти
         </button>
@@ -122,7 +122,7 @@ export default function SearchBar({ value = '', onSubmit, onSelect }) {
                     submit(s.text);
                   }
                 }}
-                className="w-full flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-brand-50 text-left"
+                className="w-full flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-accent-50 text-left"
               >
                 <SuggestionIcon s={s} />
                 <span className="text-sm text-ink-900">{s.text}</span>

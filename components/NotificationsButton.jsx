@@ -88,7 +88,7 @@ export default function NotificationsButton() {
               {items?.some((n) => !n.readAt) && (
                 <button
                   onClick={onReadAll}
-                  className="ml-auto text-[13px] font-semibold text-brand-700 hover:text-brand-800"
+                  className="ml-auto text-[13px] font-semibold text-accent-700 hover:text-accent-800"
                 >
                   Прочитать все
                 </button>
@@ -102,7 +102,7 @@ export default function NotificationsButton() {
                 </li>
               )}
               {items?.map((n) => {
-                const [Icon, tone] = ICONS[n.type] || [Bell, 'text-brand-700 bg-brand-50'];
+                const [Icon, tone] = ICONS[n.type] || [Bell, 'text-accent-700 bg-accent-50'];
                 return (
                   <li key={n.id} className="border-b last:border-b-0 border-black/5">
                     <button

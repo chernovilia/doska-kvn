@@ -35,7 +35,7 @@ export default function AvatarPicker({ value, name, onChange, onError }) {
           <Avatar person={{ name, avatar: value }} size="xl" />
           {uploading && (
             <span className="absolute inset-0 grid place-items-center rounded-full bg-white/70">
-              <Loader2 className="w-6 h-6 text-brand-600 animate-spin" />
+              <Loader2 className="w-6 h-6 text-accent-600 animate-spin" />
             </span>
           )}
         </div>

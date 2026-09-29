@@ -111,7 +111,7 @@ function PromoteContent() {
                     <button
                       onClick={onRenew}
                       disabled={renewing}
-                      className="mt-3 w-full inline-flex items-center justify-center gap-1.5 h-11 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-bold disabled:opacity-60"
+                      className="mt-3 w-full inline-flex items-center justify-center gap-1.5 h-11 rounded-2xl bg-accent-500 hover:bg-accent-600 text-white font-bold disabled:opacity-60"
                     >
                       <RefreshCw className={`w-4 h-4 ${renewing ? 'animate-spin' : ''}`} />
                       Вернуть в ленту
@@ -145,7 +145,7 @@ function PromoteContent() {
                   return (
                     <section
                       key={o.id}
-                      className={`rounded-2xl bg-white ring-1 p-4 ${o.soon ? 'ring-black/5' : 'ring-brand-200 shadow-card'}`}
+                      className={`rounded-2xl bg-white ring-1 p-4 ${o.soon ? 'ring-black/5' : 'ring-accent-200 shadow-card'}`}
                     >
                       <div className="flex items-start gap-3">
                         <div className={`w-10 h-10 grid place-items-center rounded-xl bg-slate-50 shrink-0 ${o.iconCls}`}>

@@ -14,12 +14,12 @@ export default function TermsPage() {
         <div className="max-w-3xl mx-auto px-4 md:px-6 py-3 flex items-center gap-3">
           <Link
             href="/"
-            className="w-9 h-9 grid place-items-center rounded-full ring-1 ring-black/10 hover:bg-brand-50"
+            className="w-9 h-9 grid place-items-center rounded-full ring-1 ring-black/10 hover:bg-accent-50"
             aria-label="На главную"
           >
             <ArrowLeft className="w-4 h-4 text-ink-800" />
           </Link>
-          <ShieldCheck className="w-5 h-5 text-brand-700" />
+          <ShieldCheck className="w-5 h-5 text-accent-700" />
           <div className="font-black tracking-tight text-lg text-ink-900">
             Условия использования
           </div>
@@ -35,11 +35,11 @@ export default function TermsPage() {
             Настоящие Условия регулируют использование сервиса «Доска/КВН» —
             онлайн-платформы объявлений для агломерации Кулебаки — Выкса — Навашино,
             размещённой по адресу{' '}
-            <Link href="/" className="text-brand-700 underline">
+            <Link href="/" className="text-accent-700 underline">
               доска-квн.рф
             </Link>
             . Регистрируясь и пользуясь сервисом, вы принимаете эти Условия и{' '}
-            <Link href="/privacy" className="text-brand-700 underline">
+            <Link href="/privacy" className="text-accent-700 underline">
               Политику конфиденциальности
             </Link>
             .
@@ -119,7 +119,7 @@ export default function TermsPage() {
           <p>
             Вопросы и жалобы — через раздел «Помощь» в профиле или по почте.
             Запросы по обработке персональных данных:{' '}
-            <a href="mailto:hello@доска-квн.рф" className="text-brand-700 underline">
+            <a href="mailto:hello@доска-квн.рф" className="text-accent-700 underline">
               hello@доска-квн.рф
             </a>
           </p>
@@ -127,7 +127,7 @@ export default function TermsPage() {
 
         <div className="pt-4 text-sm text-ink-500">
           Смежные документы:{' '}
-          <Link href="/privacy" className="text-brand-700 underline">
+          <Link href="/privacy" className="text-accent-700 underline">
             Политика конфиденциальности
           </Link>
         </div>

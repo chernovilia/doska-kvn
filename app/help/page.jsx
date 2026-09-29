@@ -106,12 +106,12 @@ export default function HelpPage() {
                 ? 'Кто и что сделал? Приложите ссылку на объявление или профиль'
                 : 'Опишите, что случилось или что хотите спросить'
             }
-            className="w-full rounded-2xl bg-white ring-1 ring-black/10 focus:ring-brand-400 outline-none px-4 py-3 text-base resize-none"
+            className="w-full rounded-2xl bg-white ring-1 ring-black/10 focus:ring-accent-400 outline-none px-4 py-3 text-base resize-none"
           />
           <button
             type="submit"
             disabled={sending || text.trim().length < 5}
-            className="w-full rounded-2xl bg-brand-600 hover:bg-brand-700 disabled:bg-slate-300 text-white px-4 py-3 font-semibold"
+            className="w-full rounded-2xl bg-accent-500 hover:bg-accent-600 disabled:bg-slate-300 text-white px-4 py-3 font-semibold"
           >
             {sending ? 'Отправляем…' : 'Отправить'}
           </button>
@@ -172,7 +172,7 @@ function Ticket({ ticket, onChanged }) {
           <div key={m.id} className={`flex ${m.fromAdmin ? 'justify-start' : 'justify-end'}`}>
             <div
               className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap break-words ${
-                m.fromAdmin ? 'bg-accent-50 ring-1 ring-accent-200 text-ink-900 rounded-bl-sm' : 'bg-brand-600 text-white rounded-br-sm'
+                m.fromAdmin ? 'bg-white ring-1 ring-black/5 text-ink-900 rounded-bl-sm' : 'bg-accent-500 text-white rounded-br-sm'
               }`}
             >
               {m.fromAdmin && <div className="text-[11px] font-bold text-accent-700 mb-0.5">Поддержка</div>}
@@ -188,12 +188,12 @@ function Ticket({ ticket, onChanged }) {
             onChange={(e) => setReply(e.target.value.slice(0, 2000))}
             rows={1}
             placeholder="Ответить"
-            className="flex-1 max-h-32 resize-none rounded-2xl bg-slate-100 focus:bg-white ring-1 ring-transparent focus:ring-brand-400 outline-none px-4 py-2.5 text-base"
+            className="flex-1 max-h-32 resize-none rounded-2xl bg-slate-100 focus:bg-white ring-1 ring-transparent focus:ring-accent-400 outline-none px-4 py-2.5 text-base"
           />
           <button
             type="submit"
             disabled={!reply.trim() || sending}
-            className="w-11 h-11 shrink-0 grid place-items-center rounded-full bg-brand-600 hover:bg-brand-700 text-white disabled:opacity-40"
+            className="w-11 h-11 shrink-0 grid place-items-center rounded-full bg-accent-500 hover:bg-accent-600 text-white disabled:opacity-40"
             aria-label="Отправить"
           >
             <Send className="w-5 h-5" />

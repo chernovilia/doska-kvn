@@ -61,7 +61,7 @@ export default function BumpButton({ ad, compact = false }) {
       onClick={onClick}
       disabled={busy}
       title="Бесплатно: сутки объявление будет выше в ленте"
-      className={`w-full inline-flex items-center justify-center gap-1.5 font-semibold bg-brand-600 hover:bg-brand-700 text-white disabled:opacity-60 ${
+      className={`w-full inline-flex items-center justify-center gap-1.5 font-semibold bg-accent-500 hover:bg-accent-600 text-white disabled:opacity-60 ${
         compact ? 'rounded-xl px-2 py-1.5 text-[12px]' : 'rounded-2xl px-4 py-3'
       }`}
     >

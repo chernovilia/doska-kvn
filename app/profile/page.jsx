@@ -127,11 +127,11 @@ function ProfileContent() {
                     {me.name}
                   </div>
                   {me.verified && (
-                    <BadgeCheck className="w-4.5 h-4.5 text-brand-600 shrink-0" />
+                    <BadgeCheck className="w-4.5 h-4.5 text-accent-600 shrink-0" />
                   )}
                 </div>
                 <div className="text-[12px] text-ink-500 flex items-center gap-1.5 mt-0.5">
-                  <MapPin className="w-3.5 h-3.5 text-brand-600" />
+                  <MapPin className="w-3.5 h-3.5 text-accent-600" />
                   {getCity(me.homeCityId)?.name || 'Город не указан'}
                 </div>
                 {me.vkUrl && (
@@ -170,7 +170,7 @@ function ProfileContent() {
               </div>
               <div className="mt-1 text-[11px] text-ink-500">
                 Другие видят ваше имя, город, оценки и опубликованные объявления — почту и телефон нет.{' '}
-                <Link href={`/user/${me.id}`} className="font-semibold text-brand-700 hover:underline">
+                <Link href={`/user/${me.id}`} className="font-semibold text-accent-700 hover:underline">
                   Моя страница продавца
                 </Link>
               </div>
@@ -191,8 +191,7 @@ function ProfileContent() {
         </section>
 
         <section>
-          {/* 4 вкладки на ширине телефона: иконка над подписью, чтобы ничего не уезжало за край */}
-          <div className="grid grid-cols-4 gap-1.5 md:flex md:gap-2">
+          <div className="flex gap-1 md:gap-2 overflow-x-auto no-scrollbar -mx-4 px-4 md:mx-0 md:px-0">
             {TABS.map((t) => {
               const Icon = t.icon;
               const active = t.id === tab;
@@ -200,7 +199,7 @@ function ProfileContent() {
                 <button
                   key={t.id}
                   onClick={() => setTab(t.id)}
-                  className={`chip relative !h-auto flex-col md:flex-row !gap-0.5 md:!gap-1.5 !px-1 md:!px-4 py-1.5 md:!h-9 md:py-0 !rounded-2xl md:!rounded-full text-[12px] md:text-[14px] ${
+                  className={`chip relative shrink-0 ${
                     active ? 'chip-on' : t.highlight ? '!bg-accent-50 !text-accent-700 ring-1 ring-accent-200' : ''
                   }`}
                 >
@@ -261,6 +260,7 @@ const AD_FILTERS = [
 
 function MyAdsTab({ ads, onPost, onReload }) {
   const [filter, setFilter] = useState('active');
+  const [editing, setEditing] = useState(null); // объявление в форме правки
 
   async function handleDelete(ad) {
     if (!window.confirm(`Удалить объявление «${ad.title}»?`)) return;
@@ -285,7 +285,7 @@ function MyAdsTab({ ads, onPost, onReload }) {
   if (ads.length === 0) {
     return (
       <div className="rounded-2xl bg-white ring-1 ring-black/5 shadow-card p-8 text-center">
-        <div className="mx-auto w-14 h-14 grid place-items-center rounded-2xl bg-brand-50 text-brand-700">
+        <div className="mx-auto w-14 h-14 grid place-items-center rounded-2xl bg-accent-50 text-accent-700">
           <ShoppingBag className="w-7 h-7" />
         </div>
         <div className="mt-3 text-lg font-extrabold text-ink-900">
@@ -296,7 +296,7 @@ function MyAdsTab({ ads, onPost, onReload }) {
         </div>
         <button
           onClick={onPost}
-          className="mt-4 inline-flex items-center gap-1.5 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold px-5 py-3"
+          className="mt-4 inline-flex items-center gap-1.5 rounded-2xl bg-accent-500 hover:bg-accent-600 text-white text-sm font-semibold px-5 py-3"
         >
           Создать первое объявление
         </button>
@@ -338,13 +338,21 @@ function MyAdsTab({ ads, onPost, onReload }) {
           {shown.map((ad) => (
             <div key={ad.id} className="flex flex-col gap-1.5">
               <div>
-                <AdCard ad={ad} showShare={ad.status === 'approved'} showStatus onDelete={handleDelete} />
+                <AdCard
+                  ad={ad}
+                  showShare={ad.status === 'approved'}
+                  showStatus
+                  onEdit={setEditing}
+                  onDelete={handleDelete}
+                />
               </div>
               <OwnerAdActions ad={ad} compact onChanged={onReload} />
             </div>
           ))}
         </div>
       )}
+
+      <PostAdModal open={!!editing} editAd={editing} onClose={() => setEditing(null)} onSaved={() => onReload?.()} />
     </div>
   );
 }
@@ -491,7 +499,7 @@ function SettingsTab({ me }) {
               onClick={() => (r.kind ? setEditKind(r.kind) : r.href ? router.push(r.href) : null)}
               className={`px-4 py-3 flex items-center gap-3 ${
                 i < rows.length - 1 ? 'border-b border-black/5' : ''
-              } ${r.kind || r.href ? 'hover:bg-brand-50 cursor-pointer' : 'opacity-60 cursor-not-allowed'}`}
+              } ${r.kind || r.href ? 'hover:bg-accent-50 cursor-pointer' : 'opacity-60 cursor-not-allowed'}`}
             >
               <div className="min-w-0">
                 <div className="text-sm font-semibold text-ink-900">{r.label}</div>

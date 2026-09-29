@@ -324,7 +324,7 @@ function Feed({ place, params }) {
                 <div className="text-sm text-ink-500">Проверьте интернет и попробуйте ещё раз.</div>
                 <button
                   onClick={() => setReloadKey((k) => k + 1)}
-                  className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-brand-600 hover:bg-brand-700 text-white font-semibold text-sm px-4 py-2"
+                  className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-accent-500 hover:bg-accent-600 text-white font-semibold text-sm px-4 py-2"
                 >
                   Повторить
                 </button>
@@ -355,7 +355,7 @@ function Feed({ place, params }) {
                 ) : (
                   <button
                     onClick={openPost}
-                    className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-brand-600 hover:bg-brand-700 text-white font-semibold text-sm px-4 py-2"
+                    className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-accent-500 hover:bg-accent-600 text-white font-semibold text-sm px-4 py-2"
                   >
                     + Подать объявление
                   </button>
@@ -466,7 +466,7 @@ function AttrFiltersModal({ open, onClose, fields, value, onApply }) {
   }
 
   const input =
-    'w-full rounded-2xl bg-white ring-1 ring-black/10 focus:ring-brand-400 outline-none px-4 py-2.5 text-base';
+    'w-full rounded-2xl bg-white ring-1 ring-black/10 focus:ring-accent-400 outline-none px-4 py-2.5 text-base';
 
   return (
     <Modal open={open} onClose={onClose} size="md">
@@ -527,7 +527,7 @@ function AttrFiltersModal({ open, onClose, fields, value, onApply }) {
           </button>
           <button
             type="submit"
-            className="flex-1 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white px-4 py-3 text-sm font-semibold"
+            className="flex-1 rounded-2xl bg-accent-500 hover:bg-accent-600 text-white px-4 py-3 text-sm font-semibold"
           >
             Показать
           </button>
@@ -553,7 +553,7 @@ function PriceModal({ open, onClose, min, max, onApply }) {
   if (a != null && b != null && a > b) [a, b] = [b, a];
 
   const input =
-    'w-full rounded-2xl bg-white ring-1 ring-black/10 focus:ring-brand-400 outline-none px-4 py-3 text-base';
+    'w-full rounded-2xl bg-white ring-1 ring-black/10 focus:ring-accent-400 outline-none px-4 py-3 text-base';
 
   return (
     <Modal open={open} onClose={onClose} size="sm">
@@ -593,7 +593,7 @@ function PriceModal({ open, onClose, min, max, onApply }) {
           </button>
           <button
             type="submit"
-            className="flex-1 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white px-4 py-3 text-sm font-semibold"
+            className="flex-1 rounded-2xl bg-accent-500 hover:bg-accent-600 text-white px-4 py-3 text-sm font-semibold"
           >
             Показать
           </button>
@@ -607,7 +607,7 @@ function NearbyBlock({ cityName, nearby, onExpand, regionName }) {
   return (
     <div className="mt-6 rounded-2xl bg-slate-50/70 ring-1 ring-black/5 p-3 md:p-4 relative">
       <div className="flex items-center gap-2 mb-3 px-0.5">
-        <MapPin className="w-4 h-4 text-brand-600" />
+        <MapPin className="w-4 h-4 text-accent-600" />
         <div className="min-w-0">
           <div className="text-sm font-bold text-ink-900">В соседних городах</div>
           <div className="text-[11px] text-ink-500">
@@ -618,7 +618,7 @@ function NearbyBlock({ cityName, nearby, onExpand, regionName }) {
           onClick={onExpand}
           className="ml-auto btn-outline h-9 px-3 text-xs"
         >
-          <Sparkles className="w-3.5 h-3.5 text-brand-600" />
+          <Sparkles className="w-3.5 h-3.5 text-accent-600" />
           Показать все
         </button>
       </div>
@@ -642,7 +642,7 @@ function NearbyBlock({ cityName, nearby, onExpand, regionName }) {
       <div className="mt-2 flex justify-center relative z-10">
         <button
           onClick={onExpand}
-          className="rounded-full bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold px-4 py-2 shadow-card"
+          className="rounded-full bg-accent-500 hover:bg-accent-600 text-white text-sm font-semibold px-4 py-2 shadow-card"
         >
           Показать все объявления региона
         </button>

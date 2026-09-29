@@ -90,7 +90,7 @@ export default function SettingsEditModal({ open, kind, me, onClose }) {
             </button>
 
             <div className="p-5 pb-20 md:p-6 overflow-y-auto">
-              <div className="text-xs uppercase tracking-wide text-brand-700 font-bold">
+              <div className="text-xs uppercase tracking-wide text-accent-700 font-bold">
                 Настройки
               </div>
               <h3 className="text-xl font-extrabold text-ink-900 mt-1">
@@ -121,7 +121,7 @@ export default function SettingsEditModal({ open, kind, me, onClose }) {
                 <button
                   onClick={submit}
                   disabled={!canSave}
-                  className="flex-[2] rounded-2xl bg-brand-600 hover:bg-brand-700 text-white py-3 text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-[2] rounded-2xl bg-accent-500 hover:bg-accent-600 text-white py-3 text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {busy ? 'Сохраняем…' : 'Сохранить'}
                 </button>
@@ -149,7 +149,7 @@ function PersonalFields({ form, setForm }) {
           type="text"
           value={form.name}
           onChange={(e) => setForm((f) => ({ ...f, name: e.target.value.slice(0, 80) }))}
-          className="w-full rounded-2xl bg-white ring-1 ring-black/10 focus:ring-brand-400 outline-none px-4 py-3 text-base"
+          className="w-full rounded-2xl bg-white ring-1 ring-black/10 focus:ring-accent-400 outline-none px-4 py-3 text-base"
           autoFocus
         />
       </div>
@@ -161,7 +161,7 @@ function PersonalFields({ form, setForm }) {
           value={form.bio}
           onChange={(e) => setForm((f) => ({ ...f, bio: e.target.value.slice(0, 200) }))}
           rows={3}
-          className="w-full rounded-2xl bg-white ring-1 ring-black/10 focus:ring-brand-400 outline-none px-4 py-3 text-base resize-none"
+          className="w-full rounded-2xl bg-white ring-1 ring-black/10 focus:ring-accent-400 outline-none px-4 py-3 text-base resize-none"
         />
         <div className="text-[11px] text-ink-500 mt-1 text-right">{form.bio.length}/200</div>
       </div>
@@ -177,29 +177,29 @@ function PhoneFields({ form, setForm }) {
           type="button"
           onClick={() => setForm((f) => ({ ...f, contactMethod: 'chat' }))}
           className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-left border-[1.5px] transition-colors ${
-            form.contactMethod === 'chat' ? 'bg-brand-50 border-brand-400' : 'bg-slate-50 border-transparent hover:bg-slate-100'
+            form.contactMethod === 'chat' ? 'bg-accent-50 border-accent-400' : 'bg-slate-50 border-transparent hover:bg-slate-100'
           }`}
         >
-          <MessageCircle className="w-5 h-5 text-brand-700" />
+          <MessageCircle className="w-5 h-5 text-accent-700" />
           <div className="flex-1">
             <div className="text-sm font-bold text-ink-900">Сообщения на сайте</div>
             <div className="text-[11px] text-ink-500">Номер не показываем</div>
           </div>
-          {form.contactMethod === 'chat' && <CheckCircle2 className="w-5 h-5 text-brand-600" />}
+          {form.contactMethod === 'chat' && <CheckCircle2 className="w-5 h-5 text-accent-600" />}
         </button>
         <button
           type="button"
           onClick={() => setForm((f) => ({ ...f, contactMethod: 'phone' }))}
           className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-left border-[1.5px] transition-colors ${
-            form.contactMethod === 'phone' ? 'bg-brand-50 border-brand-400' : 'bg-slate-50 border-transparent hover:bg-slate-100'
+            form.contactMethod === 'phone' ? 'bg-accent-50 border-accent-400' : 'bg-slate-50 border-transparent hover:bg-slate-100'
           }`}
         >
-          <PhoneIcon className="w-5 h-5 text-brand-700" />
+          <PhoneIcon className="w-5 h-5 text-accent-700" />
           <div className="flex-1">
             <div className="text-sm font-bold text-ink-900">Телефон</div>
             <div className="text-[11px] text-ink-500">Покажем номер в объявлениях</div>
           </div>
-          {form.contactMethod === 'phone' && <CheckCircle2 className="w-5 h-5 text-brand-600" />}
+          {form.contactMethod === 'phone' && <CheckCircle2 className="w-5 h-5 text-accent-600" />}
         </button>
       </div>
       <div>
@@ -213,7 +213,7 @@ function PhoneFields({ form, setForm }) {
           placeholder="+7 (999) 123-45-67"
           inputMode="tel"
           autoComplete="tel"
-          className="w-full rounded-2xl bg-white ring-1 ring-black/10 focus:ring-brand-400 outline-none px-4 py-3 text-base"
+          className="w-full rounded-2xl bg-white ring-1 ring-black/10 focus:ring-accent-400 outline-none px-4 py-3 text-base"
         />
       </div>
     </>
@@ -231,17 +231,17 @@ function CityFields({ form, setForm }) {
             type="button"
             onClick={() => setForm((f) => ({ ...f, homeCityId: c.id }))}
             className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-left border-[1.5px] transition-colors ${
-              active ? 'bg-brand-50 border-brand-400' : 'bg-slate-50 border-transparent hover:bg-slate-100'
+              active ? 'bg-accent-50 border-accent-400' : 'bg-slate-50 border-transparent hover:bg-slate-100'
             }`}
           >
-            <MapPin className="w-5 h-5 text-brand-700" />
+            <MapPin className="w-5 h-5 text-accent-700" />
             <div className="flex-1">
               <div className="font-bold text-ink-900">{c.name}</div>
               <div className="text-[11px] text-ink-500">
                 {c.population.toLocaleString('ru-RU')} жителей
               </div>
             </div>
-            {active && <CheckCircle2 className="w-5 h-5 text-brand-600" />}
+            {active && <CheckCircle2 className="w-5 h-5 text-accent-600" />}
           </button>
         );
       })}
@@ -256,7 +256,7 @@ function NotificationsFields({ form, setForm }) {
         type="checkbox"
         checked={form.notifyEmail}
         onChange={(e) => setForm((f) => ({ ...f, notifyEmail: e.target.checked }))}
-        className="mt-0.5 w-4 h-4 accent-brand-600"
+        className="mt-0.5 w-4 h-4 accent-accent-600"
       />
       <div>
         <div className="text-sm font-semibold text-ink-900">

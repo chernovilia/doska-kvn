@@ -14,12 +14,12 @@ export default function PrivacyPage() {
         <div className="max-w-3xl mx-auto px-4 md:px-6 py-3 flex items-center gap-3">
           <Link
             href="/"
-            className="w-9 h-9 grid place-items-center rounded-full ring-1 ring-black/10 hover:bg-brand-50"
+            className="w-9 h-9 grid place-items-center rounded-full ring-1 ring-black/10 hover:bg-accent-50"
             aria-label="На главную"
           >
             <ArrowLeft className="w-4 h-4 text-ink-800" />
           </Link>
-          <Lock className="w-5 h-5 text-brand-700" />
+          <Lock className="w-5 h-5 text-accent-700" />
           <div className="font-black tracking-tight text-lg text-ink-900">
             Политика конфиденциальности
           </div>
@@ -159,7 +159,7 @@ export default function PrivacyPage() {
           <h2 className="text-lg font-extrabold text-ink-900 mb-2">10. Контакты</h2>
           <p>
             Вопросы, запросы по обработке персональных данных, отзыв согласия:{' '}
-            <a href="mailto:privacy@доска-квн.рф" className="text-brand-700 underline">
+            <a href="mailto:privacy@доска-квн.рф" className="text-accent-700 underline">
               privacy@доска-квн.рф
             </a>
           </p>
@@ -167,7 +167,7 @@ export default function PrivacyPage() {
 
         <div className="pt-4 text-sm text-ink-500">
           Смежные документы:{' '}
-          <Link href="/terms" className="text-brand-700 underline">
+          <Link href="/terms" className="text-accent-700 underline">
             Условия использования
           </Link>
         </div>

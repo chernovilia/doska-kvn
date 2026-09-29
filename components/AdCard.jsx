@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { BadgeCheck, Calendar, Camera, Crown, ExternalLink, Flame, Heart, Link as LinkIcon, Trash2 } from 'lucide-react';
+import { BadgeCheck, Calendar, Camera, Crown, ExternalLink, Flame, Heart, Link as LinkIcon, Pencil, Trash2 } from 'lucide-react';
 import { cityName, getSection } from '@/lib/api';
 import { formatPrice, formatRelative, formatEventDate, safeAvitoUrl, thumbUrl, fallbackToFull } from '@/lib/format';
 import { accountTypeLabel, accountTypeEmoji, accountTypeBadgeClass, isBusiness } from '@/lib/accountType';
@@ -20,9 +20,10 @@ import { useToast } from './Toast';
  * @param {Object}   props.ad
  * @param {boolean}  [props.showShare] — кнопка «скопировать ссылку» (в профиле)
  * @param {Function} [props.onDelete]  — кнопка удаления (в профиле)
+ * @param {Function} [props.onEdit]    — кнопка правки (в профиле)
  * @param {boolean}  [props.showStatus] — плашка статуса, если объявление не в ленте (в профиле)
  */
-export default function AdCard({ ad, showShare = false, onDelete, showStatus = false }) {
+export default function AdCard({ ad, showShare = false, onDelete, onEdit, showStatus = false }) {
   const { toast } = useToast();
   const { isFavorite, toggle, userId } = useFavorites();
   const liked = isFavorite(ad.id);
@@ -144,6 +145,11 @@ export default function AdCard({ ad, showShare = false, onDelete, showStatus = f
         {showShare && ad.status !== 'pending' && ad.status !== 'rejected' && ad.status !== 'hidden' && (
           <IconButton label="Скопировать ссылку" onClick={onCopyLink}>
             <LinkIcon className="h-4 w-4 text-ink-700" />
+          </IconButton>
+        )}
+        {onEdit && (
+          <IconButton label="Редактировать" onClick={() => onEdit(ad)}>
+            <Pencil className="h-4 w-4 text-ink-700" />
           </IconButton>
         )}
         {onDelete && (

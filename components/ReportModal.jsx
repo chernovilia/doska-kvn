@@ -68,7 +68,7 @@ export default function ReportModal({ open, onClose, adId, onDone }) {
           onChange={(e) => setComment(e.target.value.slice(0, 500))}
           rows={2}
           placeholder="Подробности — по желанию"
-          className="mt-3 w-full rounded-2xl bg-white ring-1 ring-black/10 focus:ring-brand-400 outline-none px-4 py-3 text-base resize-none"
+          className="mt-3 w-full rounded-2xl bg-white ring-1 ring-black/10 focus:ring-accent-400 outline-none px-4 py-3 text-base resize-none"
         />
         {error && <div className="mt-2 text-[13px] text-rose-700">{error}</div>}
         <button

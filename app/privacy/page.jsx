@@ -27,7 +27,7 @@ export default function PrivacyPage() {
       </header>
 
       <main className="max-w-3xl mx-auto px-4 md:px-6 py-8 space-y-6 text-[15px] text-ink-800 leading-relaxed">
-        <p className="text-ink-500 text-sm">Редакция от 26 сентября 2026 года.</p>
+        <p className="text-ink-500 text-sm">Редакция от 29 сентября 2026 года.</p>
 
         <section>
           <h2 className="text-lg font-extrabold text-ink-900 mb-2">1. Кто мы</h2>
@@ -47,7 +47,17 @@ export default function PrivacyPage() {
               связи), домашний город, короткое «О себе».
             </li>
             <li>
-              <strong>Публикуемый контент:</strong> тексты и фотографии объявлений.
+              <strong>Публикуемый контент:</strong> тексты и фотографии объявлений,
+              отзывы о других пользователях.
+            </li>
+            <li>
+              <strong>Переписка:</strong> сообщения в чатах с другими пользователями,
+              обращения в поддержку и жалобы на объявления.
+            </li>
+            <li>
+              <strong>Действия на сайте:</strong> избранные объявления; просмотры
+              объявлений — по случайному идентификатору браузера (хранится в localStorage)
+              или по хэшу IP-адреса, сам IP-адрес для этого не сохраняется.
             </li>
             <li>
               <strong>Технические:</strong> IP-адрес и User-Agent — для защиты от
@@ -55,8 +65,8 @@ export default function PrivacyPage() {
             </li>
             <li>
               <strong>Cookies:</strong> httpOnly cookies с идентификатором сессии
-              (access_token, refresh_token). Не используем сторонних трекеров без
-              явного согласия.
+              (access_token, refresh_token) и localStorage для идентификатора
+              просмотров. Не используем сторонних трекеров без явного согласия.
             </li>
           </ul>
         </section>
@@ -65,7 +75,9 @@ export default function PrivacyPage() {
           <h2 className="text-lg font-extrabold text-ink-900 mb-2">3. Зачем мы это используем</h2>
           <ul className="list-disc pl-6 mt-2 space-y-1">
             <li>для обеспечения работы сервиса и вашей авторизации;</li>
-            <li>для отображения ваших объявлений и профиля другим пользователям;</li>
+            <li>для отображения ваших объявлений и страницы продавца другим пользователям
+              (имя, город, оценки и отзывы, дата регистрации; e-mail и телефон там не показываются);</li>
+            <li>для связи покупателей и продавцов, модерации и ответов на обращения;</li>
             <li>для отправки уведомлений на e-mail (можно отключить в настройках);</li>
             <li>для защиты от спама, мошенничества и злоупотреблений;</li>
             <li>для выполнения требований законодательства.</li>

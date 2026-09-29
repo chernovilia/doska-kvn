@@ -5,7 +5,7 @@ import { CITIES, REGIONS, SECTIONS, getCategoryGroups, getSection, createAd, upl
 import { FREE_FROM_SECTIONS } from '@/data/categories';
 import { formatPrice, formatEventDate, thumbUrl, fallbackToFull } from '@/lib/format';
 import { getAttributeFields, describeAttributes, parseAttributeInput } from '@/data/attributes';
-import { CheckCircle2, Clock, Sparkles, ArrowLeft, ArrowRight, ChevronRight, AlertCircle, X, ImagePlus } from 'lucide-react';
+import { CheckCircle2, Clock, Sparkles, ArrowLeft, ArrowRight, ChevronRight, AlertCircle, X, ImagePlus, Loader2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Modal from './Modal';
@@ -60,7 +60,7 @@ function emptyForm(user) {
     eventDate: '', // datetime-local у афиши
     address: '',
     description: '',
-    photos: [] // Массив { url } с бэка
+    photos: [] // { key, url?, local?, status: 'uploading' | 'done' } — порядок = порядок в объявлении
   };
 }
 
@@ -73,7 +73,6 @@ export default function PostAdModal({ open, onClose }) {
   const { user } = useAuth();
   const [step, setStep] = useState(0);
   const [form, setForm] = useState(() => emptyForm(user));
-  const [uploading, setUploading] = useState(0); // Количество активных загрузок
   const [checking, setChecking] = useState(false);
   const [done, setDone] = useState(false);
   const [publishedAdId, setPublishedAdId] = useState(null);
@@ -81,6 +80,7 @@ export default function PostAdModal({ open, onClose }) {
   const [error, setError] = useState(null);
   const headerRef = useRef(null);
 
+  const uploading = form.photos.filter((p) => p.status === 'uploading').length;
   const groups = getCategoryGroups(form.section);
   const priceCfg = priceConfig(form);
   const attrFields = getAttributeFields(form.section, form.group);
@@ -131,7 +131,6 @@ export default function PostAdModal({ open, onClose }) {
     setPublishedAdId(null);
     setPublishedStatus(null);
     setError(null);
-    setUploading(0);
   }
 
   async function publish() {
@@ -152,7 +151,7 @@ export default function PostAdModal({ open, onClose }) {
         eventDate: isEvent && form.eventDate ? `${form.eventDate}:00+03:00` : undefined,
         address: askAddress ? form.address.trim() || undefined : undefined,
         description: form.description?.trim() || undefined,
-        photoUrls: form.photos.map((p) => p.url)
+        photoUrls: form.photos.filter((p) => p.status === 'done').map((p) => p.url)
       };
       const ad = await createAd(payload);
       setPublishedAdId(ad.id);
@@ -171,6 +170,11 @@ export default function PostAdModal({ open, onClose }) {
       return;
     }
     setStep((s) => Math.min(s + 1, steps.length - 1));
+  }
+
+  // Выбор города, раздела или категории — один тап, без прокрутки к «Далее».
+  function goNext() {
+    setStep((st) => Math.min(st + 1, steps.length - 1));
   }
 
   function back() {
@@ -278,7 +282,10 @@ export default function PostAdModal({ open, onClose }) {
                   {POST_CITIES.map((c) => (
                     <button
                       key={c.id}
-                      onClick={() => setForm((f) => ({ ...f, city: c.id }))}
+                      onClick={() => {
+                          setForm((f) => ({ ...f, city: c.id }));
+                          goNext();
+                        }}
                       className={`chip h-11 w-full ${form.city === c.id ? 'chip-on' : ''}`}
                     >
                       {c.name}
@@ -295,7 +302,10 @@ export default function PostAdModal({ open, onClose }) {
                     return (
                       <button
                         key={s.id}
-                        onClick={() => setForm((f) => ({ ...f, section: s.id }))}
+                        onClick={() => {
+                          setForm((f) => ({ ...f, section: s.id }));
+                          goNext();
+                        }}
                         className={`flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-2.5 rounded-2xl p-2.5 text-left border-[1.5px] transition-colors min-w-0 ${
                           form.section === s.id
                             ? 'bg-brand-50 border-brand-400'
@@ -364,7 +374,10 @@ export default function PostAdModal({ open, onClose }) {
                       {(groups.find((g) => g.name === form.group)?.items || []).map((c) => (
                         <button
                           key={c}
-                          onClick={() => setForm((f) => ({ ...f, category: c }))}
+                          onClick={() => {
+                              setForm((f) => ({ ...f, category: c }));
+                              goNext();
+                            }}
                           className={`chip ${form.category === c ? 'chip-on' : ''}`}
                         >
                           {c}
@@ -443,8 +456,6 @@ export default function PostAdModal({ open, onClose }) {
                       typeof nextOrFn === 'function' ? nextOrFn(f.photos) : nextOrFn
                   }))
                 }
-                uploading={uploading}
-                setUploading={setUploading}
                 onError={setError}
               />
             ) : (
@@ -467,7 +478,17 @@ export default function PostAdModal({ open, onClose }) {
                   }).map((r) => (
                     <div key={r.label}><b>{r.label}:</b> {r.value}</div>
                   ))}
-                  <div><b>Фото:</b> {form.photos.length}</div>
+                  <div><b>Фото:</b> {form.photos.length ? '' : 'нет'}</div>
+                    {form.photos.length > 0 && (
+                      <div className="mt-1.5 flex gap-1.5 overflow-x-auto no-scrollbar">
+                        {form.photos.map((p, i) => (
+                          <div key={p.key} className="relative w-14 h-14 rounded-lg overflow-hidden shrink-0 ring-1 ring-black/10">
+                            <img src={p.status === 'done' ? thumbUrl(p.url) : p.local} onError={fallbackToFull(p.url)} alt="" className="w-full h-full object-cover" />
+                            {i === 0 && <span className="absolute inset-x-0 bottom-0 bg-brand-600/90 text-white text-[9px] font-bold text-center">обложка</span>}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                 </div>
                 <p className="text-[12px] text-ink-500">
                   Нажимая «Опубликовать», вы соглашаетесь с правилами платформы «Доска/КВН».
@@ -642,76 +663,162 @@ function DetailsStep({ fields, values, errors, onChange, isEvent, eventDate, onE
   );
 }
 
-// ── Шаг «Фото»: реальная загрузка через POST /uploads/ad-photo ─────
+// ── Шаг «Фото»: параллельная загрузка, у каждого фото своё превью и спиннер ──
+// Порядок меняется долгим нажатием и перетаскиванием; первое фото — обложка.
 const MAX_PHOTOS = 6;
+const UPLOAD_CONCURRENCY = 3;
+const LONG_PRESS_MS = 350;
 
-function PhotosStep({ photos, setPhotos, uploading, setUploading, onError }) {
-  async function handleFiles(fileList) {
+function PhotosStep({ photos, setPhotos, onError }) {
+  const gridRef = useRef(null);
+  const [dragKey, setDragKey] = useState(null);
+  const dragRef = useRef(null);
+  const pressRef = useRef(null);
+
+  // Пока тащим фото — страница не прокручивается (обработчик должен быть не passive).
+  useEffect(() => {
+    const el = gridRef.current;
+    if (!el) return;
+    const stop = (e) => {
+      if (dragRef.current) e.preventDefault();
+    };
+    el.addEventListener('touchmove', stop, { passive: false });
+    return () => el.removeEventListener('touchmove', stop);
+  }, []);
+
+  function handleFiles(fileList) {
     const files = Array.from(fileList || []);
     if (!files.length) return;
+    onError?.(null);
     const room = MAX_PHOTOS - photos.length;
-    const accepted = files.slice(0, room);
-
-    for (const file of accepted) {
-      setUploading((n) => n + 1);
-      try {
-        const res = await uploadAdPhoto(file);
-        setPhotos((prev) => [...prev, { url: res.url, size: res.size }]);
-      } catch (err) {
-        onError?.(err.message || 'Не удалось загрузить фото');
-      } finally {
-        setUploading((n) => Math.max(0, n - 1));
+    if (files.length > room) onError?.(`Можно добавить не больше ${MAX_PHOTOS} фото`);
+    const accepted = files.slice(0, Math.max(0, room));
+    const items = accepted.map((file) => ({
+      key: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      local: URL.createObjectURL(file),
+      status: 'uploading',
+      file
+    }));
+    // Все выбранные сразу видны с превью и спиннером, грузятся по 3 одновременно.
+    setPhotos((prev) => [...prev, ...items.map(({ file, ...rest }) => rest)]);
+    let next = 0;
+    const worker = async () => {
+      while (next < items.length) {
+        const item = items[next++];
+        try {
+          const res = await uploadAdPhoto(item.file);
+          setPhotos((prev) => prev.map((p) => (p.key === item.key ? { ...p, url: res.url, status: 'done' } : p)));
+        } catch (err) {
+          setPhotos((prev) => prev.filter((p) => p.key !== item.key));
+          onError?.(err.message || 'Не удалось загрузить фото');
+        }
       }
-    }
+    };
+    for (let i = 0; i < Math.min(UPLOAD_CONCURRENCY, items.length); i++) worker();
   }
 
-  function removeAt(idx) {
-    setPhotos(photos.filter((_, i) => i !== idx));
+  function remove(key) {
+    setPhotos((prev) => prev.filter((p) => p.key !== key));
+  }
+
+  // ── Перестановка: долгое нажатие → тащим → отпускаем ──
+  function onPointerDown(e, key) {
+    const start = { x: e.clientX, y: e.clientY };
+    clearTimeout(pressRef.current?.timer);
+    pressRef.current = {
+      start,
+      timer: setTimeout(() => {
+        dragRef.current = key;
+        setDragKey(key);
+        navigator.vibrate?.(15);
+      }, LONG_PRESS_MS)
+    };
+  }
+
+  function onPointerMove(e) {
+    if (!dragRef.current) {
+      // Палец сдвинулся до долгого нажатия — это прокрутка, не перестановка.
+      const p = pressRef.current;
+      if (p && Math.hypot(e.clientX - p.start.x, e.clientY - p.start.y) > 8) clearTimeout(p.timer);
+      return;
+    }
+    const over = document.elementFromPoint(e.clientX, e.clientY)?.closest('[data-photo-key]');
+    const overKey = over?.getAttribute('data-photo-key');
+    if (!overKey || overKey === dragRef.current) return;
+    setPhotos((prev) => {
+      const from = prev.findIndex((p) => p.key === dragRef.current);
+      const to = prev.findIndex((p) => p.key === overKey);
+      if (from < 0 || to < 0) return prev;
+      const nextList = [...prev];
+      const [moved] = nextList.splice(from, 1);
+      nextList.splice(to, 0, moved);
+      return nextList;
+    });
+  }
+
+  function onPointerEnd() {
+    clearTimeout(pressRef.current?.timer);
+    pressRef.current = null;
+    dragRef.current = null;
+    setDragKey(null);
   }
 
   const canAddMore = photos.length < MAX_PHOTOS;
+  const uploading = photos.filter((p) => p.status === 'uploading').length;
 
   return (
     <div>
       <div className="text-sm font-semibold text-ink-700 mb-1">
         Фотографии
-        <span className="ml-1 font-normal text-ink-500">
-          — до {MAX_PHOTOS} штук, JPG/PNG/WebP/HEIC
-        </span>
+        <span className="ml-1 font-normal text-ink-500">— до {MAX_PHOTOS} штук</span>
       </div>
       <div className="text-[12px] text-ink-500 mb-3">
-        Первое фото станет обложкой. Сжимаем автоматически до 1600 px.
+        Первое фото — обложка. {photos.length > 1 ? 'Удерживайте фото и перетащите, чтобы поменять порядок.' : 'Можно выбрать сразу несколько.'}
       </div>
 
-      <div className="grid grid-cols-3 gap-2">
+      <div ref={gridRef} className="grid grid-cols-3 gap-2 select-none">
         {photos.map((p, i) => (
           <div
-            key={p.url}
-            className="relative aspect-square rounded-2xl overflow-hidden ring-1 ring-black/10 bg-slate-50 group"
+            key={p.key}
+            data-photo-key={p.key}
+            onPointerDown={(e) => onPointerDown(e, p.key)}
+            onPointerMove={onPointerMove}
+            onPointerUp={onPointerEnd}
+            onPointerCancel={onPointerEnd}
+            onContextMenu={(e) => e.preventDefault()}
+            style={{ WebkitTouchCallout: 'none' }}
+            className={`relative aspect-square rounded-2xl overflow-hidden ring-1 bg-slate-100 transition-transform ${
+              dragKey === p.key ? 'scale-105 ring-2 ring-accent-500 shadow-soft z-10' : 'ring-black/10'
+            }`}
           >
-            <img src={thumbUrl(p.url)} onError={fallbackToFull(p.url)} alt="" className="w-full h-full object-cover" />
+            <img
+              src={p.status === 'done' ? thumbUrl(p.url) : p.local}
+              onError={fallbackToFull(p.url)}
+              alt=""
+              draggable={false}
+              className="w-full h-full object-cover pointer-events-none"
+            />
+            {p.status === 'uploading' && (
+              <div className="absolute inset-0 grid place-items-center bg-white/60">
+                <Loader2 className="w-7 h-7 text-brand-600 animate-spin" />
+              </div>
+            )}
             {i === 0 && (
               <div className="absolute top-1 left-1 text-[10px] font-bold uppercase bg-brand-600 text-white rounded-md px-1.5 py-0.5">
                 Обложка
               </div>
             )}
-            <button
-              type="button"
-              onClick={() => removeAt(i)}
-              className="absolute top-1 right-1 w-6 h-6 grid place-items-center rounded-full bg-white/90 shadow ring-1 ring-black/10 hover:bg-rose-50"
-              aria-label="Удалить"
-            >
-              <X className="w-3.5 h-3.5 text-rose-600" />
-            </button>
-          </div>
-        ))}
-
-        {Array.from({ length: uploading }).map((_, i) => (
-          <div
-            key={`up-${i}`}
-            className="aspect-square rounded-2xl grid place-items-center ring-1 ring-brand-200 bg-brand-50 text-brand-700 animate-pulse"
-          >
-            <div className="text-[11px] font-semibold">Загрузка…</div>
+            {p.status === 'done' && (
+              <button
+                type="button"
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={() => remove(p.key)}
+                className="absolute top-1 right-1 w-6 h-6 grid place-items-center rounded-full bg-white/90 shadow ring-1 ring-black/10 hover:bg-rose-50"
+                aria-label="Удалить фото"
+              >
+                <X className="w-3.5 h-3.5 text-rose-600" />
+              </button>
+            )}
           </div>
         ))}
 
@@ -722,7 +829,10 @@ function PhotosStep({ photos, setPhotos, uploading, setUploading, onError }) {
               accept="image/*"
               multiple
               className="sr-only"
-              onChange={(e) => handleFiles(e.target.files)}
+              onChange={(e) => {
+                handleFiles(e.target.files);
+                e.target.value = '';
+              }}
             />
             <div className="text-center">
               <ImagePlus className="w-6 h-6 mx-auto" />
@@ -733,10 +843,8 @@ function PhotosStep({ photos, setPhotos, uploading, setUploading, onError }) {
       </div>
 
       <div className="mt-3 text-xs text-ink-500">
-        Загружено: <b>{photos.length}</b> из {MAX_PHOTOS}
-        {uploading > 0 && (
-          <span className="text-brand-700"> · в очереди: {uploading}</span>
-        )}
+        Фото: <b>{photos.length}</b> из {MAX_PHOTOS}
+        {uploading > 0 && <span className="text-brand-700"> · загружается {uploading}</span>}
       </div>
     </div>
   );

@@ -34,7 +34,7 @@ import {
   getSimilarAds,
   registerView
 } from '@/lib/api';
-import { formatPrice, formatRelative, formatEventDate, formatMonthYear, pluralRu, safeAvitoUrl, thumbUrl, fallbackToFull } from '@/lib/format';
+import { formatPrice, formatRelative, formatEventDate, formatMonthYear, pluralRu, safeAvitoUrl, thumbUrl, fallbackToFull, formatDayMonth } from '@/lib/format';
 import { accountTypeLabel, accountTypeEmoji, accountTypeBadgeClass, isBusiness } from '@/lib/accountType';
 import { useAuth } from '@/lib/auth';
 import { describeAttributes } from '@/data/attributes';
@@ -45,7 +45,7 @@ import AdCard from './AdCard';
 import BottomNav from './BottomNav';
 import Footer from './Footer';
 import PostAdModal from './PostAdModal';
-import BumpButton from './BumpButton';
+import OwnerAdActions from './OwnerAdActions';
 import ReportModal from './ReportModal';
 
 export default function AdDetail({ ad }) {
@@ -351,7 +351,7 @@ export default function AdDetail({ ad }) {
                   <div className="text-sm font-bold text-ink-900">Это ваше объявление</div>
                   <OwnerStatus status={ad.status} />
                 </div>
-                <BumpButton ad={ad} />
+                <OwnerAdActions ad={ad} onChanged={() => router.refresh()} />
                 <button
                   onClick={onDelete}
                   disabled={deleting}
@@ -631,14 +631,16 @@ const OWNER_STATUS = {
   pending: ['На модерации', 'bg-amber-50 text-amber-800 ring-amber-200'],
   rejected: ['Отклонено', 'bg-rose-50 text-rose-700 ring-rose-200'],
   hidden: ['Скрыто модератором', 'bg-rose-50 text-rose-700 ring-rose-200'],
-  expired: ['Истёк срок', 'bg-slate-100 text-slate-700 ring-slate-200']
+  expired: ['Истёк срок', 'bg-slate-100 text-slate-700 ring-slate-200'],
+  archived: ['В архиве', 'bg-slate-100 text-slate-700 ring-slate-200']
 };
 
 // Плашка над объявлением, которого нет в ленте: его видят только автор и админы.
 const STATUS_BANNER = {
   pending: ['bg-amber-50 ring-amber-200 text-amber-900', 'Объявление на проверке', 'Оно появится в ленте после одобрения модератором — пришлём уведомление.'],
   rejected: ['bg-rose-50 ring-rose-200 text-rose-900', 'Объявление отклонено', 'Его не видно в ленте и поиске.'],
-  hidden: ['bg-rose-50 ring-rose-200 text-rose-900', 'Объявление скрыто модератором', 'Его не видно в ленте и поиске. Если это ошибка — напишите в поддержку.']
+  hidden: ['bg-rose-50 ring-rose-200 text-rose-900', 'Объявление скрыто модератором', 'Его не видно в ленте и поиске. Если это ошибка — напишите в поддержку.'],
+  archived: ['bg-slate-100 ring-slate-200 text-ink-900', 'Объявление в архиве', 'Его не видно в ленте и поиске. Вернуть можно кнопкой ниже.']
 };
 
 function StatusBanner({ ad }) {
@@ -650,7 +652,12 @@ function StatusBanner({ ad }) {
       <div className="font-bold">{title}</div>
       {ad.moderationNotes && <div className="text-sm mt-0.5">Причина: {ad.moderationNotes}</div>}
       <div className="text-[13px] mt-0.5 opacity-80">{text}</div>
-      {ad.status !== 'pending' && (
+      {ad.deleteAt && (
+        <div className="text-[13px] mt-0.5 font-semibold" suppressHydrationWarning>
+          Удалим {formatDayMonth(ad.deleteAt)} вместе с фото.
+        </div>
+      )}
+      {ad.status !== 'pending' && ad.status !== 'archived' && (
         <Link href="/help" className="inline-block mt-1.5 text-[13px] font-semibold underline">
           Написать в поддержку
         </Link>

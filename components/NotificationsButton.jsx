@@ -1,6 +1,6 @@
 'use client';
 
-import { Bell, CheckCircle2, Clock, EyeOff, LifeBuoy, Star, Trash2, XCircle } from 'lucide-react';
+import { Archive, Bell, CheckCircle2, Clock, EyeOff, Hourglass, LifeBuoy, Star, Trash2, XCircle } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -14,6 +14,9 @@ const ICONS = {
   ad_hidden: [EyeOff, 'text-rose-600 bg-rose-50'],
   ad_removed: [Trash2, 'text-rose-600 bg-rose-50'],
   ad_pending: [Clock, 'text-amber-600 bg-amber-50'],
+  ad_expiring: [Hourglass, 'text-accent-600 bg-accent-50'],
+  ad_archived: [Archive, 'text-slate-600 bg-slate-100'],
+  ad_deleting: [Trash2, 'text-amber-600 bg-amber-50'],
   review_new: [Star, 'text-amber-600 bg-amber-50'],
   support_new: [LifeBuoy, 'text-accent-600 bg-accent-50'],
   support_reply: [LifeBuoy, 'text-accent-600 bg-accent-50']

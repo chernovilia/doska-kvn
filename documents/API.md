@@ -42,8 +42,8 @@
 | POST | `/favorites/:adId` | Добавить (auth; повтор — не ошибка; своё нельзя) |
 | DELETE | `/favorites/:adId` | Убрать (auth) |
 | GET | `/users/:id/reviews` | Отзывы о пользователе (публично, до 100, свежие сверху) |
-| GET | `/conversations/:id/review` | Можно ли оставить отзыв по диалогу: `{ eligible, reason: 'no_dialog' \| 'already' \| null, review }` (auth) |
-| POST | `/reviews` | Отзыв `{ conversationId, rating 1–5, text? до 1000 }`: только участник диалога, где писали оба, один на диалог; пересчитывает `rating`/`reviewsCount`, уведомляет (auth; 20/сутки) |
+| GET | `/conversations/:id/review` | Можно ли оставить отзыв: `{ eligible, reason: 'no_dialog' \| 'too_early' \| 'already' \| null, review, need: { messages, hours }, mine, theirs, readyAt }` (auth) |
+| POST | `/reviews` | Отзыв `{ conversationId, rating 1–5, text? до 1000 }`: участник диалога, где каждый написал ≥ `reviews.min_messages` (4) и с первого сообщения прошло `reviews.min_hours` (1 ч); один на диалог; пересчитывает `rating`/`reviewsCount`, уведомляет (auth; 20/сутки) |
 | GET | `/notifications` | Последние 50 уведомлений (auth) |
 | GET | `/notifications/unread-count` | Непрочитанные (auth; опрос раз в минуту) |
 | POST | `/notifications/read-all` · `/notifications/:id/read` | Прочитать все / одно (auth) |
@@ -51,9 +51,11 @@
 | POST | `/support` | Новое обращение `{ topic: question \| problem \| complaint \| idea, text 5–2000 }` — админам уведомление (auth; 10/сутки; можно и заблокированным) |
 | POST | `/support/:id/messages` | Написать в своё обращение `{ text }` — возвращает его в очередь (auth) |
 | POST | `/ads` | Создать (auth; 5/час, 20/сутки; `photoUrls[]` до 10; `attributes` — плоский объект характеристик, до 20 полей; `eventDate` — у афиши) |
-| POST | `/ads/:id/bump` | Бесплатно поднять своё опубликованное (auth; пауза `ranking.bump_cooldown_hours`, по умолчанию 72 ч) |
+| POST | `/ads/:id/bump` | Бесплатно поднять своё опубликованное (auth; пауза `ranking.bump_cooldown_days`, по умолчанию 10 дней) |
+| POST | `/ads/:id/archive` | «Продано / неактуально»: своё опубликованное → `archived` (auth) |
+| POST | `/ads/:id/renew` | Продлить своё опубликованное или вернуть из архива → `approved`, `expiresAt = сейчас + ads.lifetime_days` (auth) |
 | DELETE | `/ads/:id` | Удалить своё (auth); фото удаляются из S3 |
-| GET | `/me/ads` | Свои объявления во всех статусах (auth) |
+| GET | `/me/ads` | Свои объявления во всех статусах (auth); у каждого `expiresAt`, `deleteAt`, `canRenew`, `nextBumpAt` |
 | POST | `/uploads/ad-photo` | Фото: multipart `file`, до 12 MB → WebP 1600px в S3 (auth; 30/час) |
 
 **Сообщения** (только вошедшие; чужой диалог — 404)
@@ -77,19 +79,28 @@
 | DELETE | `/admin/users/:id` | Удалить пользователя с его данными |
 | GET | `/admin/ads?limit&offset&status&q&authorId` | Объявления с фильтром статуса |
 | GET | `/admin/ads/:id` | Объявление с фото и контактами автора |
-| PATCH | `/admin/ads/:id/status` | `{ status: pending \| approved \| rejected \| hidden, note? }`. `hidden` — скрыть опубликованное из ленты и поиска; автору уведомление с причиной о каждом переходе; возврат скрытого не сбрасывает дату публикации |
+| PATCH | `/admin/ads/:id/status` | `{ status: pending \| approved \| rejected \| hidden, note? }`. `approved` ставит новый срок показа, `rejected` — отсчёт до удаления. `hidden` — скрыть опубликованное из ленты и поиска; автору уведомление с причиной о каждом переходе; возврат скрытого не сбрасывает дату публикации |
 | DELETE | `/admin/ads/:id?reason=` | Удалить объявление, автору — уведомление с причиной |
 | GET | `/admin/reviews` | Последние 200 отзывов |
 | DELETE | `/admin/reviews/:id` | Удалить отзыв, пересчитать рейтинг |
 | GET | `/admin/reports?status=pending` | Жалобы на объявления с объявлением, автором и жалующимся |
 | PATCH | `/admin/reports/:id` | `{ status: resolved \| dismissed }` — закрывает все открытые жалобы на то же объявление |
 | PATCH | `/admin/users/:id/block` | `{ blocked, reason? }` — нельзя публиковать, писать, загружать, оценивать; объявления и страница скрыты, сессии отозваны |
-| GET / PATCH | `/admin/settings` | Настройки ленты и модерации: автопубликация, через сколько дней можно поднять, бонус новым, свежесть, веса ранжирования. PATCH `{ key, value }` с проверкой диапазона |
+| GET / PATCH | `/admin/settings` | Настройки: автопубликация; срок показа, хранение архива и отклонённых, за сколько дней предупреждать (`ads.*`); порог отзыва (`reviews.*`); подъём, бонус новым, свежесть, веса (`ranking.*`). PATCH `{ key, value }` с проверкой диапазона |
 | GET | `/admin/support?status=open` | Обращения в поддержку с перепиской и автором |
 | POST | `/admin/support/:id/reply` | Ответ `{ text }` → статус answered, пользователю уведомление и письмо |
 | PATCH | `/admin/support/:id` | `{ status: open \| answered \| closed }` |
 | GET, PATCH | `/admin/moderation` | Автопубликация вкл/выкл (`Setting['moderation.autoApprove']`) |
 | POST | `/admin/wipe?confirm=WIPE_ALL` | Стереть всех пользователей и объявления |
+
+## Жизненный цикл объявления
+
+`AdLifecycleService`, раз в час (первый прогон через минуту после старта; `AD_LIFECYCLE=off` — выключить):
+
+1. Опубликованное живёт `ads.lifetime_days` (60). За `ads.lifecycle_warn_days` (3) — уведомление `ad_expiring` «Продлить».
+2. Срок вышел → `archived`, уведомление `ad_archived`. Автор может вернуть (`/renew`) или сам убрать в архив (`/archive`).
+3. Архив хранится `ads.archive_keep_days` (90), отклонённые — `ads.rejected_keep_days` (30) с момента отклонения; за 3 дня — `ad_deleting`, потом удаление вместе с фото.
+4. Скрытые модератором не трогаем. Старым объявлениям без срока ставится срок от публикации, но не раньше чем через 7 дней.
 
 ## Rate-limit
 

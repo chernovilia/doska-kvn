@@ -161,7 +161,8 @@ const OWN_STATUS = {
   pending: ['На проверке', 'bg-amber-400 text-amber-950'],
   rejected: ['Отклонено', 'bg-rose-600 text-white'],
   hidden: ['Скрыто', 'bg-rose-600 text-white'],
-  expired: ['Истёк срок', 'bg-slate-600 text-white']
+  expired: ['Истёк срок', 'bg-slate-600 text-white'],
+  archived: ['В архиве', 'bg-slate-600 text-white']
 };
 
 function Badge({ className = '', children }) {

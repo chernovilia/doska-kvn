@@ -272,7 +272,7 @@ function OverviewTab({ stats, onReload, go }) {
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
         <Kpi icon={Users} label="Пользователи" value={stats.users} delta={stats.usersNew7d} hint={`${stats.usersOnboarded} заполнили профиль`} />
-        <Kpi icon={ShoppingBag} label="Опубликовано" value={stats.approvedAds} delta={stats.adsNew7d} hint={`всего ${stats.ads}, откл. ${stats.rejectedAds}, скрыто ${stats.hiddenAds}`} />
+        <Kpi icon={ShoppingBag} label="Опубликовано" value={stats.approvedAds} delta={stats.adsNew7d} hint={`всего ${stats.ads}, откл. ${stats.rejectedAds}, скрыто ${stats.hiddenAds}, архив ${stats.archivedAds ?? 0}`} />
         <Kpi icon={MessageCircle} label="Переписки" value={stats.conversations} hint={`${stats.messages7d} сообщ. за 7 дней`} />
         <Kpi icon={Eye} label="Просмотры" value={stats.views} hint="всех объявлений" />
         <Kpi icon={Heart} label="В избранном" value={stats.favorites} />
@@ -425,7 +425,8 @@ const STATUS_FILTERS = [
   { key: 'pending', label: 'На модерации' },
   { key: 'approved', label: 'Опубликованы' },
   { key: 'rejected', label: 'Отклонены' },
-  { key: 'hidden', label: 'Скрытые' }
+  { key: 'hidden', label: 'Скрытые' },
+  { key: 'archived', label: 'Архив' }
 ];
 
 function AdsTab({ preset, onOpen, onChanged }) {

@@ -7,7 +7,8 @@ export const AD_STATUS = {
   pending: ['На модерации', 'bg-amber-100 text-amber-800'],
   rejected: ['Отклонено', 'bg-rose-100 text-rose-800'],
   hidden: ['Скрыто', 'bg-rose-100 text-rose-800'],
-  expired: ['Истёк срок', 'bg-slate-100 text-slate-700']
+  expired: ['Истёк срок', 'bg-slate-100 text-slate-700'],
+  archived: ['В архиве', 'bg-slate-100 text-slate-700']
 };
 
 export function StatusBadge({ status }) {

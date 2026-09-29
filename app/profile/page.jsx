@@ -4,7 +4,7 @@ import Avatar from '@/components/Avatar';
 import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { AnimatePresence, motion } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
   BadgeCheck,
   ChevronRight,
@@ -16,7 +16,8 @@ import {
   ShoppingBag,
   MapPin,
   Briefcase,
-  LifeBuoy
+  LifeBuoy,
+  Rocket
 } from 'lucide-react';
 
 import VkIcon from '@/components/icons/VkIcon';
@@ -27,17 +28,19 @@ import AdCard from '@/components/AdCard';
 import AdCardSkeleton from '@/components/AdCardSkeleton';
 import PostAdModal from '@/components/PostAdModal';
 import SettingsEditModal from '@/components/SettingsEditModal';
-import BumpButton from '@/components/BumpButton';
+import OwnerAdActions from '@/components/OwnerAdActions';
+import { PROMO_OPTIONS } from '@/components/PromoOptions';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/lib/auth';
 import { getCity } from '@/data/regions';
 
 import { getMyAds, getUserReviews, deleteAd } from '@/lib/api';
 import { RatingSummary, ReviewsList } from '@/components/Reviews';
-import { formatRelative } from '@/lib/format';
+import { formatRelative, formatTimeLeft, thumbUrl, fallbackToFull } from '@/lib/format';
 
 const TABS = [
   { id: 'ads', name: 'Объявления', icon: ShoppingBag },
+  { id: 'promo', name: 'Продвижение', icon: Rocket, highlight: true },
   { id: 'reviews', name: 'Отзывы', icon: Star },
   { id: 'settings', name: 'Настройки', icon: Settings }
 ];
@@ -188,7 +191,8 @@ function ProfileContent() {
         </section>
 
         <section>
-          <div className="flex gap-1 md:gap-2 overflow-x-auto no-scrollbar">
+          {/* 4 вкладки на ширине телефона: иконка над подписью, чтобы ничего не уезжало за край */}
+          <div className="grid grid-cols-4 gap-1.5 md:flex md:gap-2">
             {TABS.map((t) => {
               const Icon = t.icon;
               const active = t.id === tab;
@@ -196,7 +200,9 @@ function ProfileContent() {
                 <button
                   key={t.id}
                   onClick={() => setTab(t.id)}
-                  className={`chip relative shrink-0 ${active ? 'chip-on' : ''}`}
+                  className={`chip relative !h-auto flex-col md:flex-row !gap-0.5 md:!gap-1.5 !px-1 md:!px-4 py-1.5 md:!h-9 md:py-0 !rounded-2xl md:!rounded-full text-[12px] md:text-[14px] ${
+                    active ? 'chip-on' : t.highlight ? '!bg-accent-50 !text-accent-700 ring-1 ring-accent-200' : ''
+                  }`}
                 >
                   <Icon className="w-4 h-4" />
                   {t.name}
@@ -206,25 +212,25 @@ function ProfileContent() {
           </div>
         </section>
 
-        <AnimatePresence mode="wait">
-          <motion.section
-            key={tab}
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            transition={{ duration: 0.2 }}
-          >
-            {tab === 'ads' && (
-              <MyAdsTab
-                ads={myAds}
-                onPost={() => setPostOpen(true)}
-                onReload={() => getMyAds().then(setMyAds).catch(() => {})}
-              />
-            )}
-            {tab === 'reviews' && <ReviewsTab me={me} />}
-            {tab === 'settings' && <SettingsTab me={me} />}
-          </motion.section>
-        </AnimatePresence>
+        {/* Без AnimatePresence mode="wait": он ждёт конца анимации ухода, и если анимации
+            приостановлены (фоновая вкладка), новая вкладка не появлялась */}
+        <motion.section
+          key={tab}
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.2 }}
+        >
+          {tab === 'ads' && (
+            <MyAdsTab
+              ads={myAds}
+              onPost={() => setPostOpen(true)}
+              onReload={() => getMyAds().then(setMyAds).catch(() => {})}
+            />
+          )}
+          {tab === 'promo' && <PromoTab ads={myAds} />}
+          {tab === 'reviews' && <ReviewsTab me={me} />}
+          {tab === 'settings' && <SettingsTab me={me} />}
+        </motion.section>
       </main>
 
       <PostAdModal open={postOpen} onClose={() => setPostOpen(false)} />
@@ -245,7 +251,16 @@ function Metric({ value, label, icon }) {
   );
 }
 
+// Вкладки «Моих объявлений» по статусу. Скрытые модератором — вместе с отклонёнными.
+const AD_FILTERS = [
+  { id: 'active', name: 'Активные', statuses: ['approved'], empty: 'Опубликованных объявлений нет.' },
+  { id: 'pending', name: 'На проверке', statuses: ['pending'], empty: 'Ничего не ждёт проверки.' },
+  { id: 'rejected', name: 'Отклонённые', statuses: ['rejected', 'hidden'], empty: 'Отклонённых нет — отлично.' },
+  { id: 'archive', name: 'Архив', statuses: ['archived', 'expired'], empty: 'Архив пуст. Сюда попадают снятые и истёкшие объявления.' }
+];
+
 function MyAdsTab({ ads, onPost, onReload }) {
+  const [filter, setFilter] = useState('active');
 
   async function handleDelete(ad) {
     if (!window.confirm(`Удалить объявление «${ad.title}»?`)) return;
@@ -289,40 +304,122 @@ function MyAdsTab({ ads, onPost, onReload }) {
     );
   }
 
+  const current = AD_FILTERS.find((f) => f.id === filter) || AD_FILTERS[0];
+  const shown = ads.filter((a) => current.statuses.includes(a.status));
+
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between px-0.5">
-        <div className="text-sm font-bold text-ink-900">
-          Мои объявления · {ads.length}
+      <div className="flex items-center gap-2">
+        <div className="flex-1 min-w-0 flex gap-1.5 overflow-x-auto no-scrollbar">
+          {AD_FILTERS.map((f) => {
+            const count = ads.filter((a) => f.statuses.includes(a.status)).length;
+            const on = f.id === filter;
+            return (
+              <button key={f.id} onClick={() => setFilter(f.id)} className={`chip chip-sm !px-3 shrink-0 ${on ? 'chip-on' : ''}`}>
+                {f.name}
+                {count > 0 && <span className={on ? 'opacity-80' : 'text-ink-500'}> {count}</span>}
+              </button>
+            );
+          })}
         </div>
-        <button
-          onClick={onPost}
-          className="btn-outline h-9 px-3.5 text-sm"
-        >
+        <button onClick={onPost} className="hidden md:inline-flex btn-outline h-9 px-3.5 text-sm shrink-0">
           + Добавить
         </button>
       </div>
-      {/* Без auto-rows-fr: под карточкой кнопка или подпись разной высоты, и соседняя
-          карточка растягивалась до высоты самой высокой ячейки ряда */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 items-start">
-        {ads.map((ad) => (
-          <div key={ad.id} className="flex flex-col gap-1.5">
-            <div>
-              <AdCard
-                ad={ad}
-                showShare
-                showStatus
-                onDelete={handleDelete}
-              />
+
+      {shown.length === 0 ? (
+        <div className="rounded-2xl bg-white ring-1 ring-black/5 px-4 py-8 text-center text-sm text-ink-500">
+          {current.empty}
+        </div>
+      ) : (
+        /* Без auto-rows-fr: под карточками действия разной высоты, и соседняя
+           карточка растягивалась до высоты самой высокой ячейки ряда */
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 items-start">
+          {shown.map((ad) => (
+            <div key={ad.id} className="flex flex-col gap-1.5">
+              <div>
+                <AdCard ad={ad} showShare={ad.status === 'approved'} showStatus onDelete={handleDelete} />
+              </div>
+              <OwnerAdActions ad={ad} compact onChanged={onReload} />
             </div>
-            <BumpButton ad={ad} compact />
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
 
+// Продвижение: что можно сделать и список опубликованных — у каждого «Продвинуть».
+function PromoTab({ ads }) {
+  const active = (ads || []).filter((a) => a.status === 'approved');
+  return (
+    <div className="space-y-3">
+      <div className="rounded-2xl bg-gradient-to-br from-accent-50 to-white ring-1 ring-accent-200 p-4">
+        <div className="flex items-center gap-2 font-extrabold text-ink-900">
+          <Rocket className="w-5 h-5 text-accent-600" />
+          Продвижение
+        </div>
+        <div className="text-[13px] text-ink-700 mt-1">
+          Помогает объявлению быстрее найти покупателя. Сейчас работает бесплатный подъём, остальное скоро.
+        </div>
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          {PROMO_OPTIONS.map((o) => {
+            const Icon = o.icon;
+            return (
+              <div key={o.id} className="rounded-xl bg-white ring-1 ring-black/5 px-3 py-2.5">
+                <div className="flex items-center gap-1.5 text-[13px] font-bold text-ink-900">
+                  <Icon className={`w-4 h-4 ${o.iconCls}`} />
+                  {o.name}
+                </div>
+                <div className={`text-[11px] mt-0.5 font-semibold ${o.soon ? 'text-ink-500' : 'text-emerald-700'}`}>
+                  {o.soon ? 'Скоро' : o.price}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {ads === null ? (
+        <div className="h-24 rounded-2xl bg-slate-100 animate-pulse" />
+      ) : active.length === 0 ? (
+        <div className="rounded-2xl bg-white ring-1 ring-black/5 px-4 py-8 text-center text-sm text-ink-500">
+          Продвигать можно опубликованные объявления — пока их нет.
+        </div>
+      ) : (
+        <div className="rounded-2xl bg-white ring-1 ring-black/5 divide-y divide-slate-100">
+          {active.map((ad) => {
+            const wait = ad.nextBumpAt ? formatTimeLeft(ad.nextBumpAt) : '';
+            return (
+              <Link key={ad.id} href={`/promote?ad=${ad.id}`} className="flex items-center gap-3 px-3 py-2.5 hover:bg-slate-50">
+                {ad.image ? (
+                  <img
+                    src={thumbUrl(ad.image)}
+                    onError={fallbackToFull(ad.image)}
+                    alt=""
+                    className="w-12 h-12 rounded-xl object-cover bg-slate-100 shrink-0"
+                  />
+                ) : (
+                  <div className="w-12 h-12 rounded-xl bg-slate-100 shrink-0" />
+                )}
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-semibold text-ink-900 truncate">{ad.title}</div>
+                  <div className="text-[12px] text-ink-500" suppressHydrationWarning>
+                    {wait ? `Поднять можно через ${wait}` : 'Можно поднять сейчас'}
+                  </div>
+                </div>
+                <span className="inline-flex items-center gap-1 h-8 px-3 rounded-full bg-accent-500 text-white text-[12px] font-bold shrink-0">
+                  <Rocket className="w-3.5 h-3.5" />
+                  Продвинуть
+                </span>
+              </Link>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function ReviewsTab({ me }) {
   const [reviews, setReviews] = useState(null);

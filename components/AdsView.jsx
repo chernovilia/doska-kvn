@@ -11,7 +11,6 @@ import AdCard from '@/components/AdCard';
 import AdCardSkeleton from '@/components/AdCardSkeleton';
 import Modal from '@/components/Modal';
 import PostAdModal from '@/components/PostAdModal';
-import PricingModal from '@/components/PricingModal';
 import Footer from '@/components/Footer';
 import BottomNav from '@/components/BottomNav';
 import { ChevronDown, ListFilter, MapPin, SlidersHorizontal, Sparkles, X } from 'lucide-react';
@@ -97,7 +96,6 @@ function Feed({ place, params }) {
   const [reloadKey, setReloadKey] = useState(0);
 
   const [postOpen, setPostOpen] = useState(false);
-  const [pricingOpen, setPricingOpen] = useState(false);
   const [priceOpen, setPriceOpen] = useState(false);
   const [attrOpen, setAttrOpen] = useState(false);
   const [catalogOpen, setCatalogOpen] = useState(false);
@@ -201,7 +199,6 @@ function Feed({ place, params }) {
           <div className="hidden md:block">
             <HeroBanner
               place={place}
-              onPricing={() => setPricingOpen(true)}
               onPostAd={() => setPostOpen(true)}
             />
           </div>
@@ -400,7 +397,6 @@ function Feed({ place, params }) {
         }}
       />
       <PostAdModal open={postOpen} onClose={() => setPostOpen(false)} />
-      <PricingModal open={pricingOpen} onClose={() => setPricingOpen(false)} />
 
       <BottomNav onPost={() => setPostOpen(true)} />
     </div>

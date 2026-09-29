@@ -35,7 +35,6 @@ const AUTOPLAY_MS = 6500;
 
 export default function HeroBanner({
   place = DEFAULT_REGION_ID,
-  onPricing,
   onPostAd
 }) {
   const [i, setI] = useState(0);
@@ -62,7 +61,6 @@ export default function HeroBanner({
 
   function onCta() {
     if (slide.ctaKind === 'post') return onPostAd?.();
-    if (slide.ctaKind === 'pricing') return onPricing?.();
   }
 
   const title = slide.title.replace('{place}', placeLine);

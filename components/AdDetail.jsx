@@ -33,7 +33,7 @@ import {
   getSimilarAds,
   registerView
 } from '@/lib/api';
-import { formatPrice, formatRelative, formatEventDate, formatMonthYear, pluralRu, safeAvitoUrl } from '@/lib/format';
+import { formatPrice, formatRelative, formatEventDate, formatMonthYear, pluralRu, safeAvitoUrl, thumbUrl, fallbackToFull } from '@/lib/format';
 import { accountTypeLabel, accountTypeEmoji, accountTypeBadgeClass, isBusiness } from '@/lib/accountType';
 import { useAuth } from '@/lib/auth';
 import { describeAttributes } from '@/data/attributes';
@@ -626,7 +626,7 @@ function Gallery({ photos, title, section, children }) {
               }`}
               aria-label={`Фото ${i + 1}`}
             >
-              <img src={src} alt="" className="w-full h-full object-cover" />
+              <img src={thumbUrl(src)} onError={fallbackToFull(src)} alt="" loading="lazy" className="w-full h-full object-cover" />
             </button>
           ))}
         </div>

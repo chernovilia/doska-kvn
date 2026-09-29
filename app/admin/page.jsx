@@ -48,7 +48,7 @@ import {
   cityName,
   getSection
 } from '@/lib/api';
-import { formatPrice, formatRelative, pluralRu } from '@/lib/format';
+import { formatPrice, formatRelative, pluralRu, thumbUrl, fallbackToFull } from '@/lib/format';
 import ModerationModal from '@/components/admin/ModerationModal';
 import { Empty, ErrorBox, ListSkeleton, REPORT_REASONS, ReasonForm, StatusBadge } from '@/components/admin/ui';
 import { Stars } from '@/components/Reviews';
@@ -503,7 +503,7 @@ function AdsTab({ preset, onOpen, onChanged }) {
             <li key={a.id} className="rounded-2xl bg-white ring-1 ring-black/5 shadow-card p-3">
               <button onClick={() => onOpen(a.id)} className="w-full flex gap-3 text-left">
                 <div className="w-16 h-16 rounded-xl bg-slate-100 overflow-hidden shrink-0">
-                  {a.photos?.[0]?.url && <img src={a.photos[0].url} alt="" className="w-full h-full object-cover" />}
+                  {a.photos?.[0]?.url && <img src={thumbUrl(a.photos[0].url)} onError={fallbackToFull(a.photos[0].url)} alt="" loading="lazy" className="w-full h-full object-cover" />}
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start gap-2">
@@ -648,7 +648,7 @@ function ReportsTab({ onOpen, onChanged }) {
               {r.ad ? (
                 <button onClick={() => onOpen(r.ad.id)} className="w-full flex items-center gap-3 rounded-xl bg-slate-50 p-2 text-left hover:bg-slate-100">
                   <div className="w-12 h-12 rounded-lg bg-slate-200 overflow-hidden shrink-0">
-                    {r.ad.photos?.[0]?.url && <img src={r.ad.photos[0].url} alt="" className="w-full h-full object-cover" />}
+                    {r.ad.photos?.[0]?.url && <img src={thumbUrl(r.ad.photos[0].url)} onError={fallbackToFull(r.ad.photos[0].url)} alt="" loading="lazy" className="w-full h-full object-cover" />}
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="text-sm font-semibold text-ink-900 truncate">{r.ad.title}</div>

@@ -3,7 +3,7 @@
 import { usePathname, useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { peekAd, cityName } from '@/lib/api';
-import { formatPrice } from '@/lib/format';
+import { formatPrice, thumbUrl, fallbackToFull } from '@/lib/format';
 
 // Показывается сразу по нажатию на карточку, пока сервер отдаёт страницу.
 // Раскладка повторяет AdDetail, чтобы переход выглядел как в приложении, без мигания.
@@ -30,7 +30,8 @@ export default function AdLoading() {
         <div className="md:grid md:grid-cols-[1.4fr_1fr] md:gap-6">
           <div className="relative aspect-[4/3] bg-slate-100 md:rounded-2xl overflow-hidden">
             {ad?.image ? (
-              <img src={ad.image} alt={ad.title} className="w-full h-full object-contain" />
+              // Миниатюра уже в кеше браузера (её показала карточка) — картинка появляется мгновенно
+              <img src={thumbUrl(ad.image)} onError={fallbackToFull(ad.image)} alt={ad.title} className="w-full h-full object-contain" />
             ) : (
               <div className="w-full h-full animate-pulse bg-slate-200" />
             )}

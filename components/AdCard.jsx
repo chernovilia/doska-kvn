@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { BadgeCheck, Calendar, Camera, Crown, ExternalLink, Flame, Heart, Link as LinkIcon, Trash2 } from 'lucide-react';
 import { cityName, getSection } from '@/lib/api';
-import { formatPrice, formatRelative, formatEventDate, safeAvitoUrl } from '@/lib/format';
+import { formatPrice, formatRelative, formatEventDate, safeAvitoUrl, thumbUrl, fallbackToFull } from '@/lib/format';
 import { accountTypeLabel, accountTypeEmoji, accountTypeBadgeClass, isBusiness } from '@/lib/accountType';
 import { shareOrCopy } from '@/lib/share';
 import { attributesSummary } from '@/data/attributes';
@@ -64,9 +64,11 @@ export default function AdCard({ ad, showShare = false, onDelete, showStatus = f
         <div className="relative aspect-square w-full overflow-hidden bg-slate-100">
           {ad.image ? (
             <img
-              src={ad.image}
+              src={thumbUrl(ad.image)}
+              onError={fallbackToFull(ad.image)}
               alt={ad.title}
               loading="lazy"
+              decoding="async"
               className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
             />
           ) : (

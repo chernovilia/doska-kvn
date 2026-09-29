@@ -3,7 +3,7 @@
 import { motion } from 'framer-motion';
 import { CITIES, REGIONS, SECTIONS, getCategoryGroups, getSection, createAd, uploadAdPhoto } from '@/lib/api';
 import { FREE_FROM_SECTIONS } from '@/data/categories';
-import { formatPrice, formatEventDate } from '@/lib/format';
+import { formatPrice, formatEventDate, thumbUrl, fallbackToFull } from '@/lib/format';
 import { getAttributeFields, describeAttributes, parseAttributeInput } from '@/data/attributes';
 import { CheckCircle2, Clock, Sparkles, ArrowLeft, ArrowRight, ChevronRight, AlertCircle, X, ImagePlus } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
@@ -689,7 +689,7 @@ function PhotosStep({ photos, setPhotos, uploading, setUploading, onError }) {
             key={p.url}
             className="relative aspect-square rounded-2xl overflow-hidden ring-1 ring-black/10 bg-slate-50 group"
           >
-            <img src={p.url} alt="" className="w-full h-full object-cover" />
+            <img src={thumbUrl(p.url)} onError={fallbackToFull(p.url)} alt="" className="w-full h-full object-cover" />
             {i === 0 && (
               <div className="absolute top-1 left-1 text-[10px] font-bold uppercase bg-brand-600 text-white rounded-md px-1.5 py-0.5">
                 Обложка

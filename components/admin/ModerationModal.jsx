@@ -14,7 +14,7 @@ import {
   MapPin, Calendar, ShieldCheck, AlertCircle, ExternalLink
 } from 'lucide-react';
 import { adminGetAd, adminSetAdStatus, adminDeleteAd, cityName, getSection } from '@/lib/api';
-import { formatPrice, safeAvitoUrl } from '@/lib/format';
+import { formatPrice, safeAvitoUrl, thumbUrl, fallbackToFull } from '@/lib/format';
 import { describeAttributes } from '@/data/attributes';
 import { ReasonForm, StatusBadge } from './ui';
 
@@ -156,7 +156,7 @@ export default function ModerationModal({ open, adId, onClose, onChanged }) {
                               i === activePhoto ? 'ring-brand-500' : 'ring-transparent'
                             }`}
                           >
-                            <img src={p.url} alt="" className="w-full h-full object-cover" />
+                            <img src={thumbUrl(p.url)} onError={fallbackToFull(p.url)} alt="" className="w-full h-full object-cover" />
                           </button>
                         ))}
                       </div>

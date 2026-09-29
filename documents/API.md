@@ -19,7 +19,7 @@
 
 | Метод | URL | |
 |---|---|---|
-| POST | `/auth/email/request` | Отправить 6-значный код на email |
+| POST | `/auth/email/request` | Отправить 6-значный код на email (с адреса 5/мин, 20/час, 50/сутки) |
 | POST | `/auth/email/verify` | Проверить код, выставить cookies |
 | POST | `/auth/refresh` | Ротация refresh-токена |
 | POST | `/auth/logout` | Отзыв refresh, очистка cookies |
@@ -72,6 +72,7 @@
 | Метод | URL | |
 |---|---|---|
 | GET | `/admin/stats` | Счётчики таблиц |
+| GET | `/admin/whoami` | Какой IP сервер видит у админа — проверка, что лимиты считаются по настоящим адресам |
 | GET | `/admin/users?limit&offset&q&blocked=1` | Пользователи |
 | DELETE | `/admin/users/:id` | Удалить пользователя с его данными |
 | GET | `/admin/ads?limit&offset&status&q&authorId` | Объявления с фильтром статуса |

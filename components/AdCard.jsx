@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { BadgeCheck, Calendar, Camera, Crown, ExternalLink, Flame, Heart, Link as LinkIcon, Trash2 } from 'lucide-react';
 import { cityName, getSection } from '@/lib/api';
-import { formatPrice, formatRelative, formatEventDate } from '@/lib/format';
+import { formatPrice, formatRelative, formatEventDate, safeAvitoUrl } from '@/lib/format';
 import { accountTypeLabel, accountTypeEmoji, accountTypeBadgeClass, isBusiness } from '@/lib/accountType';
 import { shareOrCopy } from '@/lib/share';
 import { attributesSummary } from '@/data/attributes';
@@ -89,7 +89,7 @@ export default function AdCard({ ad, showShare = false, onDelete, showStatus = f
                 Срочно
               </Badge>
             )}
-            {ad.avitoUrl && (
+            {safeAvitoUrl(ad.avitoUrl) && (
               <Badge className="bg-emerald-600 text-white">
                 <ExternalLink className="h-3 w-3" />
                 Авито

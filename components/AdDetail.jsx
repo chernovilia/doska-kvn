@@ -33,7 +33,7 @@ import {
   getSimilarAds,
   registerView
 } from '@/lib/api';
-import { formatPrice, formatRelative, formatEventDate, formatMonthYear, pluralRu } from '@/lib/format';
+import { formatPrice, formatRelative, formatEventDate, formatMonthYear, pluralRu, safeAvitoUrl } from '@/lib/format';
 import { accountTypeLabel, accountTypeEmoji, accountTypeBadgeClass, isBusiness } from '@/lib/accountType';
 import { useAuth } from '@/lib/auth';
 import { describeAttributes } from '@/data/attributes';
@@ -442,9 +442,9 @@ export default function AdDetail({ ad }) {
               )}
             </div>
 
-            {ad.avitoUrl && (
+            {safeAvitoUrl(ad.avitoUrl) && (
               <a
-                href={ad.avitoUrl}
+                href={safeAvitoUrl(ad.avitoUrl)}
                 target="_blank"
                 rel="noreferrer"
                 className="btn-outline w-full rounded-2xl px-4 py-3 text-sm text-emerald-700"

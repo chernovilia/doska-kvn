@@ -14,7 +14,7 @@ import {
   MapPin, Calendar, ShieldCheck, AlertCircle, ExternalLink
 } from 'lucide-react';
 import { adminGetAd, adminSetAdStatus, adminDeleteAd, cityName, getSection } from '@/lib/api';
-import { formatPrice } from '@/lib/format';
+import { formatPrice, safeAvitoUrl } from '@/lib/format';
 import { describeAttributes } from '@/data/attributes';
 import { ReasonForm, StatusBadge } from './ui';
 
@@ -227,13 +227,13 @@ export default function ModerationModal({ open, adId, onClose, onChanged }) {
                       </div>
                     )}
 
-                    {ad.avitoUrl && (
+                    {safeAvitoUrl(ad.avitoUrl) && (
                       <div>
                         <div className="text-[11px] uppercase tracking-wide text-ink-500 font-bold">
                           Импорт с Авито
                         </div>
                         <a
-                          href={ad.avitoUrl}
+                          href={safeAvitoUrl(ad.avitoUrl)}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-sm text-brand-700 hover:underline inline-flex items-center gap-1 mt-1"

@@ -34,6 +34,7 @@ import {
   adminDeleteAd,
   adminWipeAll,
   adminGetSettings,
+  adminWhoami,
   adminSetSetting,
   adminListSupport,
   adminReplySupport,
@@ -206,6 +207,10 @@ function useAdminChanged(fn) {
 
 function OverviewTab({ stats, onReload, go }) {
   const [wiping, setWiping] = useState(false);
+  const [whoami, setWhoami] = useState(null);
+  useEffect(() => {
+    adminWhoami().then(setWhoami).catch(() => {});
+  }, []);
   const [error, setError] = useState(null);
 
   async function wipe() {
@@ -320,6 +325,12 @@ function OverviewTab({ stats, onReload, go }) {
 
       <p className="text-[12px] text-ink-500">
         Техническое: фото {stats.tech.adPhotos}, активных сессий {stats.tech.refreshTokens}, кодов входа {stats.tech.emailCodes}.
+        {whoami && (
+          <>
+            {' '}Ваш IP глазами сервера: <b className="text-ink-700">{whoami.ip}</b> — должен совпадать с вашим настоящим
+            адресом, иначе лимиты запросов общие для всех.
+          </>
+        )}
       </p>
 
       <ErrorBox message={error} />

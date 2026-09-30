@@ -43,7 +43,8 @@ const QUIET_PATHS = /^\/(login|onboarding|admin|terms|privacy)/;
  * - открытие с иконки — метрика «установлено/пользуется»;
  * - счётчик непрочитанных на иконке;
  * - окно установки: после каждого опубликованного (или отправленного на проверку) объявления
- *   и на каждый второй заход на сайт — если сайт ещё не установлен как приложение;
+ *   и на каждый второй заход на сайт — если сайт ещё не установлен; «Не сейчас» — пауза 14 дней
+ *   для всех автопоказов (из Настроек открывается всегда);
  * - после первого сообщения за заход — предложение включить уведомления (не чаще раза в 14 дней),
  *   на iPhone в браузере вместо него — окно установки (уведомления там только у приложения).
  */
@@ -87,7 +88,7 @@ export default function AppShell({ children }) {
     if (autoTried.current || QUIET_PATHS.test(pathname || '')) return;
     autoTried.current = true;
     const visits = countVisit();
-    if (visits % 2 !== 0 || !installSupported()) return;
+    if (visits % 2 !== 0 || !installSupported() || installDismissedRecently()) return;
     const t = setTimeout(() => setGuide((g) => (g.open ? g : { open: true, reason: null })), 8000);
     return () => clearTimeout(t);
   }, [pathname]);
@@ -106,10 +107,10 @@ export default function AppShell({ children }) {
     }
   }, [user]);
 
-  // После публикации объявления (или отправки на проверку) — окно установки каждый раз.
-  // Уже установлено — вместо него предложение уведомлений.
+  // После публикации объявления (или отправки на проверку) — окно установки каждый раз,
+  // кроме 14 дней после «Не сейчас». Уже установлено или отказались — предложение уведомлений.
   const afterAdPublished = useCallback(() => {
-    if (installSupported()) setGuide({ open: true, reason: null });
+    if (installSupported() && !installDismissedRecently()) setGuide({ open: true, reason: null });
     else afterUsefulAction();
   }, [afterUsefulAction]);
 

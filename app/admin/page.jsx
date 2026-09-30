@@ -50,7 +50,8 @@ import {
   getSection,
   getSiteSettings,
   adminSetNeighbors,
-  adminSetContacts
+  adminSetContacts,
+  adminAppStats
 } from '@/lib/api';
 import { CITIES } from '@/data/regions';
 import { formatPrice, formatRelative, pluralRu, thumbUrl, fallbackToFull } from '@/lib/format';
@@ -284,6 +285,8 @@ function OverviewTab({ stats, onReload, go }) {
         <Kpi icon={Flag} label="Жалобы" value={stats.pendingReports} hint="ждут разбора" />
         <Kpi icon={Ban} label="Заблокированы" value={stats.blockedUsers} />
       </div>
+
+      <AppStats />
 
       <section className="rounded-2xl bg-white ring-1 ring-black/5 shadow-card p-4">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
@@ -1168,6 +1171,100 @@ function ContactsSettings() {
         {busy ? 'Сохраняем…' : 'Сохранить контакты'}
       </button>
     </form>
+  );
+}
+
+// ── Приложение: установки, активность, пуши, воронка окна установки ──
+
+const PLATFORM_LABEL = { ios: 'iPhone', android: 'Android', desktop: 'Компьютер' };
+const FUNNEL = [
+  ['install_prompt_shown', 'Показали окно установки'],
+  ['install_clicked', 'Нажали «Установить» (Android/ПК)'],
+  ['install_accepted', 'Установили через системное окно'],
+  ['install_dismissed', 'Нажали «Не сейчас»'],
+  ['push_prompt_shown', 'Предложили уведомления'],
+  ['push_enabled', 'Включили уведомления']
+];
+
+function AppStats() {
+  const [data, setData] = useState(null);
+  const [error, setError] = useState(null);
+  useEffect(() => {
+    adminAppStats().then(setData).catch((err) => setError(err.message));
+  }, []);
+  if (error) return <ErrorBox message={error} />;
+  if (!data) return <div className="h-32 rounded-2xl bg-white ring-1 ring-black/5 animate-pulse" />;
+  const platforms = Object.entries(data.byPlatform);
+
+  return (
+    <section className="rounded-2xl bg-white ring-1 ring-black/5 shadow-card p-4 space-y-3">
+      <div>
+        <h3 className="font-bold text-ink-900">Приложение</h3>
+        <p className="text-[12px] text-ink-500">
+          «Установлено» — открыли с иконки на экране (на iPhone другого способа узнать нет) или Android сообщил об установке.
+          Удаление браузер не сообщает — смотрите на «пользуются за 7 дней».
+        </p>
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+        <MiniStat label="Установили" value={data.total} hint={`+${data.new7d} за 7 дней`} />
+        <MiniStat label="Пользуются" value={data.active7d} hint="открывали за 7 дней" />
+        <MiniStat label="С уведомлениями" value={data.pushUsers} hint="пользователей" />
+        <MiniStat
+          label="Платформы"
+          value={platforms.length ? platforms.map(([p, n]) => `${PLATFORM_LABEL[p] || p} ${n}`).join(' · ') : '—'}
+          small
+        />
+      </div>
+      <details className="text-sm">
+        <summary className="cursor-pointer font-semibold text-ink-700">Воронка за 30 дней</summary>
+        <ul className="mt-2 divide-y divide-slate-100">
+          {FUNNEL.map(([key, label]) => (
+            <li key={key} className="py-1.5 flex justify-between gap-3">
+              <span className="text-ink-700">{label}</span>
+              <span className="font-bold tabular-nums">{data.funnel30d[key] || 0}</span>
+            </li>
+          ))}
+        </ul>
+      </details>
+      <details className="text-sm">
+        <summary className="cursor-pointer font-semibold text-ink-700">Кто установил ({data.devices.length})</summary>
+        <ul className="mt-2 divide-y divide-slate-100">
+          {data.devices.map((d) => (
+            <li key={d.id} className="py-2 flex items-center gap-3">
+              {d.user ? <Avatar person={d.user} size="xs" /> : <span className="w-8 h-8 rounded-full bg-slate-100 shrink-0" />}
+              <div className="min-w-0 flex-1">
+                <div className="font-semibold text-ink-900 truncate">
+                  {d.user ? d.user.name || d.user.email : 'Гость (ещё не вошёл)'}
+                </div>
+                <div className="text-[12px] text-ink-500" suppressHydrationWarning>
+                  {PLATFORM_LABEL[d.platform] || d.platform}
+                  {d.browser ? ` · ${d.browser}` : ''} · установил {formatRelative(d.installedAt)} · открывал {formatRelative(d.lastOpenAt)} ·{' '}
+                  {d.opens} {pluralRu(d.opens, ['раз', 'раза', 'раз'])}
+                </div>
+              </div>
+              <span
+                className={`text-[11px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                  d.push ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'
+                }`}
+              >
+                {d.push ? 'пуши вкл' : 'без пушей'}
+              </span>
+            </li>
+          ))}
+          {!data.devices.length && <li className="py-2 text-ink-500">Пока никто не установил</li>}
+        </ul>
+      </details>
+    </section>
+  );
+}
+
+function MiniStat({ label, value, hint, small }) {
+  return (
+    <div className="rounded-xl bg-slate-50 p-3">
+      <div className="text-[12px] text-ink-500">{label}</div>
+      <div className={`${small ? 'text-sm' : 'text-xl'} font-black text-ink-900 mt-0.5`}>{value}</div>
+      {hint && <div className="text-[11px] text-ink-500">{hint}</div>}
+    </div>
   );
 }
 

@@ -7,6 +7,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, Search, Info, Send, MessageCircle, Star, X } from 'lucide-react';
 import { listConversations, getConversationMessages, sendChatMessage, getReviewEligibility } from '@/lib/api';
 import { ReviewModal } from '@/components/Reviews';
+import { useApp } from '@/components/AppShell';
 import { formatRelative } from '@/lib/format';
 import { useAuth } from '@/lib/auth';
 import { refreshUnread } from '@/lib/chats';
@@ -288,6 +289,7 @@ function MessagesContent() {
 
 function ChatView({ chatId, me, onActivity }) {
   const router = useRouter();
+  const { afterUsefulAction } = useApp();
   const [conv, setConv] = useState(null);
   const [review, setReview] = useState(null); // { eligible, reason, review, need, readyAt } с сервера
   const [reviewOpen, setReviewOpen] = useState(false);
@@ -448,6 +450,13 @@ function ChatView({ chatId, me, onActivity }) {
       append([msg]);
       setDraft('');
       onActivity();
+      // Первое сообщение за сессию — предложить уведомления (или установку на iPhone), чтобы не пропустить ответ
+      try {
+        if (!sessionStorage.getItem('app.afterMessage')) {
+          sessionStorage.setItem('app.afterMessage', '1');
+          setTimeout(afterUsefulAction, 1500);
+        }
+      } catch {}
     } catch (err) {
       setSendError(err.message || 'Не удалось отправить');
     } finally {

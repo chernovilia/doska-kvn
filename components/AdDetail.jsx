@@ -33,7 +33,8 @@ import {
   getAdContact,
   openConversation,
   getSimilarAds,
-  registerView
+  registerView,
+  userPath
 } from '@/lib/api';
 import { formatPrice, formatRelative, formatEventDate, formatMonthYear, pluralRu, safeAvitoUrl, thumbUrl, fallbackToFull, formatDayMonth } from '@/lib/format';
 import { accountTypeLabel, accountTypeEmoji, accountTypeBadgeClass, isBusiness } from '@/lib/accountType';
@@ -413,7 +414,7 @@ export default function AdDetail({ ad }) {
                 )}
               </div>
               <Link
-                href={`/user/${ad.authorId}`}
+                href={userPath({ id: ad.authorId, username: ad.author?.username })}
                 className="mt-3 -mx-1 px-1 py-2 flex items-center justify-between rounded-xl text-[15px] font-semibold text-accent-700 hover:bg-slate-50"
               >
                 {isOwner ? 'Как вашу страницу видят другие' : 'Все объявления продавца'}

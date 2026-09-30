@@ -9,10 +9,13 @@
 
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, AlertCircle, MapPin, MessageCircle, Phone as PhoneIcon, CheckCircle2 } from 'lucide-react';
+import { X, AlertCircle, BellRing, MapPin, MessageCircle, Phone as PhoneIcon, CheckCircle2 } from 'lucide-react';
 import { CITIES } from '@/data/regions';
 import { useAuth } from '@/lib/auth';
 import AvatarPicker from './AvatarPicker';
+import { useApp } from './AppShell';
+import { checkUsername } from '@/lib/api';
+import { disablePush, enablePush, pushState } from '@/lib/pwa';
 
 const HOME_CITIES = CITIES.filter((c) => c.regionId === 'kvn');
 
@@ -171,6 +174,7 @@ function PersonalFields({ form, setForm, onError }) {
           className="w-full rounded-2xl bg-white ring-1 ring-black/10 focus:ring-accent-400 outline-none px-4 py-3 text-base"
         />
       </div>
+      <UsernameField form={form} setForm={setForm} />
       <div>
         <div className="text-xs font-semibold text-ink-700 mb-1">
           О себе <span className="font-normal text-ink-500">— не обязательно</span>
@@ -184,6 +188,112 @@ function PersonalFields({ form, setForm, onError }) {
         <div className="text-[11px] text-ink-500 mt-1 text-right">{(form.bio || '').length}/200</div>
       </div>
     </>
+  );
+}
+
+// Свой адрес страницы: доска-квн.рф/u/<адрес>. Свободен ли — проверяем при вводе.
+function UsernameField({ form, setForm }) {
+  const value = form.username || '';
+  useEffect(() => {
+    const u = value.trim().toLowerCase().replace(/^@/, '');
+    if (!u || u === form.usernameSaved) {
+      setForm((f) => ({ ...f, usernameStatus: null, usernameReason: null }));
+      return;
+    }
+    setForm((f) => ({ ...f, usernameStatus: 'checking' }));
+    const t = setTimeout(async () => {
+      const r = await checkUsername(u).catch(() => ({ available: false, reason: 'Не удалось проверить' }));
+      setForm((f) =>
+        (f.username || '').trim().toLowerCase().replace(/^@/, '') === u
+          ? { ...f, usernameStatus: r.available ? 'ok' : 'bad', usernameReason: r.reason || null }
+          : f
+      );
+    }, 400);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
+
+  return (
+    <div>
+      <div className="text-xs font-semibold text-ink-700 mb-1">
+        Адрес страницы <span className="font-normal text-ink-500">— не обязательно</span>
+      </div>
+      <div className="flex items-center rounded-2xl bg-white ring-1 ring-black/10 focus-within:ring-accent-400 px-4">
+        <span className="text-ink-500 text-[15px] shrink-0">доска-квн.рф/u/</span>
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => setForm((f) => ({ ...f, username: e.target.value.replace(/\s/g, '').slice(0, 30) }))}
+          placeholder="ivan"
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
+          className="flex-1 min-w-0 bg-transparent outline-none py-3 text-base"
+        />
+      </div>
+      <div className="text-[11px] mt-1 min-h-[16px]">
+        {form.usernameStatus === 'checking' && <span className="text-ink-500">Проверяем…</span>}
+        {form.usernameStatus === 'ok' && <span className="text-emerald-700">Адрес свободен</span>}
+        {form.usernameStatus === 'bad' && <span className="text-rose-700">{form.usernameReason}</span>}
+        {!form.usernameStatus && (
+          <span className="text-ink-500">Латиница, цифры и «_». Ссылка на вашу страницу продавца.</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Пуши на этом устройстве: включаются сразу, без «Сохранить».
+function PushToggle() {
+  const [state, setState] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const { openInstallGuide } = useApp();
+  useEffect(() => {
+    pushState().then(setState);
+  }, []);
+
+  if (!state || state === 'unsupported') return null;
+
+  async function toggle() {
+    setBusy(true);
+    try {
+      setState(state === 'on' ? await disablePush() : await enablePush());
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="flex items-start gap-3 rounded-2xl bg-slate-50 ring-1 ring-black/5 p-3">
+      <BellRing className="w-5 h-5 text-accent-700 mt-0.5 shrink-0" />
+      <div className="flex-1 min-w-0">
+        <div className="text-sm font-semibold text-ink-900">Уведомления на этом устройстве</div>
+        <div className="text-[12px] text-ink-500">
+          {state === 'on' && 'Включены: новые сообщения и события приходят сразу'}
+          {state === 'off' && 'Сообщения и ответы — сразу, даже когда сайт закрыт'}
+          {state === 'denied' && 'Запрещены в настройках браузера — разрешите уведомления для сайта'}
+          {state === 'needs-install' && 'На iPhone уведомления приходят только в установленное приложение'}
+        </div>
+        {state === 'needs-install' && (
+          <button type="button" onClick={() => openInstallGuide('push')} className="mt-1 text-[13px] font-semibold text-accent-700">
+            Как установить →
+          </button>
+        )}
+      </div>
+      {(state === 'on' || state === 'off') && (
+        <button
+          type="button"
+          onClick={toggle}
+          disabled={busy}
+          role="switch"
+          aria-checked={state === 'on'}
+          aria-label="Уведомления на этом устройстве"
+          className={`relative w-12 h-7 rounded-full transition-colors shrink-0 disabled:opacity-50 ${state === 'on' ? 'bg-emerald-500' : 'bg-slate-300'}`}
+        >
+          <span className={`absolute top-0.5 w-6 h-6 rounded-full bg-white shadow transition-all ${state === 'on' ? 'left-[22px]' : 'left-0.5'}`} />
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -269,6 +379,8 @@ function CityFields({ form, setForm }) {
 
 function NotificationsFields({ form, setForm }) {
   return (
+    <>
+    <PushToggle />
     <label className="flex items-start gap-3 rounded-2xl bg-slate-50 ring-1 ring-black/5 p-3 cursor-pointer">
       <input
         type="checkbox"
@@ -285,6 +397,7 @@ function NotificationsFields({ form, setForm }) {
         </div>
       </div>
     </label>
+    </>
   );
 }
 
@@ -292,7 +405,15 @@ function NotificationsFields({ form, setForm }) {
 
 function initialFor(kind, me) {
   if (!me) return {};
-  if (kind === 'personal') return { name: me.name || '', bio: me.bio || '', avatar: me.avatar || null };
+  if (kind === 'personal') {
+    return {
+      name: me.name || '',
+      bio: me.bio || '',
+      avatar: me.avatar || null,
+      username: me.username || '',
+      usernameSaved: me.username || ''
+    };
+  }
   if (kind === 'phone') return { contactMethod: me.contactMethod || 'chat', phone: me.phone || '' };
   if (kind === 'city') return { homeCityId: me.homeCityId || '' };
   if (kind === 'notifications') return { notifyEmail: me.notifyEmail ?? true };
@@ -300,7 +421,14 @@ function initialFor(kind, me) {
 }
 
 function patchFrom(kind, form) {
-  if (kind === 'personal') return { name: form.name.trim(), bio: form.bio.trim() || undefined, avatar: form.avatar };
+  if (kind === 'personal') {
+    return {
+      name: form.name.trim(),
+      bio: form.bio.trim() || undefined,
+      avatar: form.avatar,
+      username: (form.username || '').trim().toLowerCase().replace(/^@/, '')
+    };
+  }
   if (kind === 'phone') return {
     contactMethod: form.contactMethod,
     phone: form.phone || undefined
@@ -312,7 +440,9 @@ function patchFrom(kind, form) {
 
 function validate(kind, form) {
   if (!form) return false;
-  if (kind === 'personal') return form.name?.trim().length >= 2;
+  if (kind === 'personal') {
+    return form.name?.trim().length >= 2 && form.usernameStatus !== 'bad' && form.usernameStatus !== 'checking';
+  }
   if (kind === 'phone') {
     if (form.contactMethod === 'phone') return form.phone?.replace(/\D/g, '').length >= 10;
     return true;

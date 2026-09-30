@@ -50,6 +50,13 @@
 | GET | `/support` | Мои обращения с перепиской (auth) |
 | POST | `/support` | Новое обращение `{ topic: question \| problem \| complaint \| idea, text 5–2000 }` — админам уведомление (auth; 10/сутки; можно и заблокированным). Пока есть обращение без ответа — 409 |
 | POST | `/support/:id/messages` | Дописать в своё обращение `{ text }` — только после ответа поддержки (`answered`), иначе 409; возвращает обращение в очередь (auth) |
+| GET | `/push/key` | Публичный VAPID-ключ для подписки; `null` — пуши на сервере выключены |
+| POST | `/push/subscribe` | Подписка браузера `{ endpoint, keys: { p256dh, auth }, platform?, deviceId? }` (auth). Пуш уходит на каждое уведомление (колокольчик) и на каждое сообщение в чате (`tag` — одно уведомление на диалог), в пуше — число непрочитанных для иконки; подписки с ответом 404/410 удаляются |
+| DELETE | `/push/subscribe` | `{ endpoint }` — отписать этот браузер (auth) |
+| POST | `/app/open` | Приложение открыто с иконки или установлено `{ deviceId, platform: ios\|android\|desktop, browser, source: standalone\|appinstalled }` (гостям тоже; вошедшему — привязка к аккаунту) |
+| POST | `/app/event` | Воронка: `install_prompt_shown`, `install_clicked`, `install_dismissed`, `push_prompt_shown`, `push_enabled` — счётчик по дням |
+| GET | `/users/username-available?u=` | Свободен ли адрес `/u/<u>`: `{ available, reason? }` (свой текущий — свободен) |
+| GET | `/users/by-username/:username` | Публичная страница по своему адресу (как `/users/:id`) |
 | GET | `/site` | Публичные настройки из админки: `{ neighbors: { cityId: [cityId…] }, contacts: { email, phone, telegram, vk } }` |
 | POST | `/ads` | Создать (auth; 5/час, 20/сутки; `photoUrls[]` до 10; `attributes` — плоский объект характеристик, до 20 полей; `eventDate` — у афиши) |
 | POST | `/ads/:id/bump` | Бесплатно поднять своё опубликованное (auth; пауза `ranking.bump_cooldown_days`, по умолчанию 10 дней) |
@@ -93,6 +100,7 @@
 | POST | `/admin/support/:id/reply` | Ответ `{ text }` → статус answered, пользователю уведомление и письмо |
 | PATCH | `/admin/support/:id` | `{ status: open \| answered \| closed }` |
 | GET, PATCH | `/admin/moderation` | Автопубликация вкл/выкл (`Setting['moderation.autoApprove']`) |
+| GET | `/admin/app` | Приложение: установили (всего, за 7 дней), пользуются за 7 дней, платформы, с пушами, воронка за 30 дней, последние 100 устройств |
 | PUT | `/admin/neighbors` | `{ cityId, neighbors: [cityId…] \| null }` — соседи города для блока «В соседних городах»; `null` — по умолчанию (остальные города региона и запущенные соседние регионы) |
 | PUT | `/admin/contacts` | `{ email?, phone?, telegram?, vk? }` — контакты в подвале, пустые не показываются |
 | POST | `/admin/wipe?confirm=WIPE_ALL` | Стереть всех пользователей и объявления |

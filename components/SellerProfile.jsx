@@ -4,7 +4,7 @@ import Avatar from './Avatar';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { ArrowLeft, BadgeCheck, MapPin, Share2, Star } from 'lucide-react';
-import { cityName } from '@/lib/api';
+import { cityName, userPath } from '@/lib/api';
 import { formatMonthYear, pluralRu } from '@/lib/format';
 import { shareOrCopy } from '@/lib/share';
 import { useAuth } from '@/lib/auth';
@@ -29,7 +29,7 @@ export default function SellerProfile({ user, ads, reviews = [] }) {
 
   async function onShare() {
     const status = await shareOrCopy({
-      url: `/user/${user.id}`,
+      url: userPath(user),
       title: user.name,
       text: `Объявления продавца ${user.name} на Доске/КВН`
     });

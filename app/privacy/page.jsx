@@ -27,7 +27,7 @@ export default function PrivacyPage() {
       </header>
 
       <main className="max-w-3xl mx-auto px-4 md:px-6 py-8 space-y-6 text-[15px] text-ink-800 leading-relaxed">
-        <p className="text-ink-500 text-sm">Редакция от 29 сентября 2026 года.</p>
+        <p className="text-ink-500 text-sm">Редакция от 30 сентября 2026 года.</p>
 
         <section>
           <h2 className="text-lg font-extrabold text-ink-900 mb-2">1. Кто мы</h2>
@@ -44,7 +44,7 @@ export default function PrivacyPage() {
           <ul className="list-disc pl-6 mt-2 space-y-1">
             <li>
               <strong>Указанные вами:</strong> имя, e-mail, телефон (при выборе способа
-              связи), домашний город, короткое «О себе».
+              связи), город, короткое «О себе», свой адрес страницы (если задали).
             </li>
             <li>
               <strong>Публикуемый контент:</strong> тексты и фотографии объявлений,
@@ -56,8 +56,14 @@ export default function PrivacyPage() {
             </li>
             <li>
               <strong>Действия на сайте:</strong> избранные объявления; просмотры
-              объявлений — по случайному идентификатору браузера (хранится в localStorage)
-              или по хэшу IP-адреса, сам IP-адрес для этого не сохраняется.
+              объявлений — по случайному идентификатору браузера (хранится в localStorage или
+              cookie gid); IP-адрес для этого не используется.
+            </li>
+            <li>
+              <strong>Приложение и уведомления:</strong> если вы установили сайт как приложение —
+              тип устройства (iPhone, Android, компьютер), браузер, даты установки и последнего
+              открытия; если включили push-уведомления — адрес подписки вашего браузера, чтобы
+              доставлять уведомления. Отключить можно в настройках профиля или браузера.
             </li>
             <li>
               <strong>Технические:</strong> IP-адрес и User-Agent — для защиты от
@@ -65,8 +71,8 @@ export default function PrivacyPage() {
             </li>
             <li>
               <strong>Cookies:</strong> httpOnly cookies с идентификатором сессии
-              (access_token, refresh_token) и localStorage для идентификатора
-              просмотров. Не используем сторонних трекеров без явного согласия.
+              (access_token, refresh_token), cookie gid — анонимный идентификатор для защиты
+              от перегрузки сайта, и localStorage для идентификаторов просмотров и приложения. Не используем сторонних трекеров без явного согласия.
             </li>
           </ul>
         </section>

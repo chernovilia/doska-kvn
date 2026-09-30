@@ -1,9 +1,23 @@
 import { notFound } from 'next/navigation';
-import { getBusinessBySlug, getAdsByAuthor } from '@/lib/api';
+import { getBusinessBySlug, getAdsByAuthor, getUserByUsername, getUserReviews } from '@/lib/api';
 import BusinessProfile from '@/components/BusinessProfile';
+import SellerProfile from '@/components/SellerProfile';
+
+// /u/<адрес>: сначала свой адрес пользователя (UserHandle), потом — страница бизнеса (пока выключены).
 import { tierLabel } from '@/lib/accountType';
 
 export async function generateMetadata({ params }) {
+  const user = await getUserByUsername(params.slug);
+  if (user) {
+    const title = `${user.name || 'Продавец'} — объявления продавца`;
+    const description = user.bio?.slice(0, 180) || `Все объявления продавца ${user.name || ''} на Доске/КВН.`;
+    return {
+      title,
+      description,
+      openGraph: { title, description, type: 'profile', locale: 'ru_RU', siteName: 'Доска/КВН' },
+      alternates: { canonical: `/u/${user.username}` }
+    };
+  }
   const biz = await getBusinessBySlug(params.slug).catch(() => null);
 
   if (!biz) {
@@ -42,6 +56,14 @@ export async function generateMetadata({ params }) {
 }
 
 export default async function UserPage({ params }) {
+  const user = await getUserByUsername(params.slug);
+  if (user) {
+    const [ads, reviews] = await Promise.all([
+      getAdsByAuthor(user.id).catch(() => []),
+      getUserReviews(user.id).catch(() => [])
+    ]);
+    return <SellerProfile user={user} ads={ads} reviews={reviews} />;
+  }
   const biz = await getBusinessBySlug(params.slug).catch(() => null);
   if (!biz) notFound();
 

@@ -30,12 +30,14 @@ import AdCardSkeleton from '@/components/AdCardSkeleton';
 import PostAdModal from '@/components/PostAdModal';
 import SettingsEditModal from '@/components/SettingsEditModal';
 import OwnerAdActions from '@/components/OwnerAdActions';
+import { useApp } from '@/components/AppShell';
+import { installSupported } from '@/lib/pwa';
 import { PROMO_OPTIONS } from '@/components/PromoOptions';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/lib/auth';
 import { getCity } from '@/data/regions';
 
-import { getMyAds, getUserReviews, deleteAd } from '@/lib/api';
+import { getMyAds, getUserReviews, deleteAd, userPath } from '@/lib/api';
 import { RatingSummary, ReviewsList } from '@/components/Reviews';
 import { formatRelative, formatTimeLeft, thumbUrl, fallbackToFull } from '@/lib/format';
 
@@ -183,7 +185,7 @@ function ProfileContent() {
               </div>
               <div className="mt-1 text-[11px] text-ink-500">
                 Другие видят ваше имя, город, оценки и опубликованные объявления — почту и телефон нет.{' '}
-                <Link href={`/user/${me.id}`} className="font-semibold text-accent-700 hover:underline">
+                <Link href={userPath(me)} className="font-semibold text-accent-700 hover:underline">
                   Моя страница продавца
                 </Link>
               </div>
@@ -469,6 +471,9 @@ function ReviewsTab({ me }) {
 }
 
 function SettingsTab({ me }) {
+  const { openInstallGuide } = useApp();
+  const [canInstall, setCanInstall] = useState(false);
+  useEffect(() => setCanInstall(installSupported()), []);
   const router = useRouter();
   const [editKind, setEditKind] = useState(null);
 
@@ -479,12 +484,14 @@ function SettingsTab({ me }) {
   })();
 
   const rows = [
-    { kind: 'personal', label: 'Личные данные', hint: me.name || 'Не заполнено' },
+    { kind: 'personal', label: 'Личные данные', hint: me.username ? `${me.name} · /u/${me.username}` : me.name || 'Не заполнено' },
     { kind: 'phone', label: 'Телефон и способ связи', hint: phoneHint },
     { kind: 'city', label: 'Ваш город', hint: getCity(me.homeCityId)?.name || 'Не указан' },
     { kind: null, label: 'Тип аккаунта', hint: 'Личный (приватный)', disabled: true },
     { kind: null, label: 'Способы оплаты', hint: 'Не подключены', disabled: true },
     { kind: 'notifications', label: 'Уведомления', hint: me.notifyEmail ? 'E-mail включён' : 'Отключены' },
+    // Уже открыто как приложение — пункт не нужен
+    ...(canInstall ? [{ action: () => openInstallGuide(), label: 'Установить приложение', hint: 'Иконка на экране и мгновенные уведомления' }] : []),
     { href: '/terms', label: 'Правила и политика', hint: 'Условия использования и обработка данных' }
   ];
 
@@ -510,10 +517,10 @@ function SettingsTab({ me }) {
           {rows.map((r, i) => (
             <li
               key={r.label}
-              onClick={() => (r.kind ? setEditKind(r.kind) : r.href ? router.push(r.href) : null)}
+              onClick={() => (r.kind ? setEditKind(r.kind) : r.href ? router.push(r.href) : r.action ? r.action() : null)}
               className={`px-4 py-3 flex items-center gap-3 ${
                 i < rows.length - 1 ? 'border-b border-black/5' : ''
-              } ${r.kind || r.href ? 'hover:bg-accent-50 cursor-pointer' : 'opacity-60 cursor-not-allowed'}`}
+              } ${r.kind || r.href || r.action ? 'hover:bg-accent-50 cursor-pointer' : 'opacity-60 cursor-not-allowed'}`}
             >
               <div className="min-w-0">
                 <div className="text-sm font-semibold text-ink-900">{r.label}</div>

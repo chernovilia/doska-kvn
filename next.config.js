@@ -16,7 +16,11 @@ const nextConfig = {
   // Оптимизатор картинок Next не используем (обычные <img>), внешних источников ему не даём:
   // через remotePatterns работала DoS-уязвимость Next 14 (GHSA-9g9p-9gw9-jx7f).
   async headers() {
-    return [{ source: '/:path*', headers: securityHeaders }];
+    return [
+      { source: '/:path*', headers: securityHeaders },
+      // Service worker всегда свежий: браузер проверяет обновление при каждом заходе
+      { source: '/sw.js', headers: [{ key: 'Cache-Control', value: 'no-cache' }] }
+    ];
   }
 };
 

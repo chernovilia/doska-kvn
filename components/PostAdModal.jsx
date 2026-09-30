@@ -9,6 +9,7 @@ import { CheckCircle2, Clock, Sparkles, ArrowLeft, ArrowRight, ChevronRight, Ale
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Modal from './Modal';
+import { useApp } from './AppShell';
 import { useAuth } from '@/lib/auth';
 
 const STEP_LABELS = {
@@ -109,6 +110,17 @@ export default function PostAdModal({ open, onClose, editAd = null, onSaved }) {
   const [publishedStatus, setPublishedStatus] = useState(null);
   const [error, setError] = useState(null);
   const headerRef = useRef(null);
+  const { afterUsefulAction } = useApp();
+  // Опубликовали — после закрытия окна предложим уведомления или установку приложения
+  const publishedRef = useRef(false);
+  function closeModal() {
+    onClose?.();
+    setTimeout(reset, 300);
+    if (publishedRef.current) {
+      publishedRef.current = false;
+      setTimeout(afterUsefulAction, 600);
+    }
+  }
 
   const uploading = form.photos.filter((p) => p.status === 'uploading').length;
   const groups = getCategoryGroups(form.section);
@@ -191,6 +203,7 @@ export default function PostAdModal({ open, onClose, editAd = null, onSaved }) {
       setPublishedStatus(ad.status);
       setDone(true);
       if (editing) onSaved?.(ad);
+      else publishedRef.current = true;
     } catch (err) {
       setError(err.message || (editing ? 'Не удалось сохранить' : 'Не удалось опубликовать'));
     } finally {
@@ -228,10 +241,7 @@ export default function PostAdModal({ open, onClose, editAd = null, onSaved }) {
   return (
     <Modal
       open={open}
-      onClose={() => {
-        onClose?.();
-        setTimeout(reset, 300);
-      }}
+      onClose={closeModal}
       size="md"
     >
       <div className="px-5 md:px-6 pb-5 md:pb-6">
@@ -585,10 +595,7 @@ export default function PostAdModal({ open, onClose, editAd = null, onSaved }) {
         {done && (
           <div className="mt-4 flex items-center gap-2">
             <button
-              onClick={() => {
-                onClose?.();
-                setTimeout(reset, 300);
-              }}
+              onClick={closeModal}
               className="btn-outline rounded-2xl text-ink-700 px-4 py-3 text-sm font-semibold"
             >
               Закрыть
@@ -596,8 +603,7 @@ export default function PostAdModal({ open, onClose, editAd = null, onSaved }) {
             {publishedAdId && !editing && (
               <button
                 onClick={() => {
-                  onClose?.();
-                  setTimeout(reset, 300);
+                  closeModal();
                   router.push(`/ad/${publishedAdId}`);
                 }}
                 className="ml-auto inline-flex items-center gap-1.5 rounded-2xl btn-primary px-4 py-3 text-sm"

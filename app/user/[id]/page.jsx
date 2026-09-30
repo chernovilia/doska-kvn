@@ -1,4 +1,4 @@
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { getAdsByAuthor, getPublicUser, getUserReviews } from '@/lib/api';
 import SellerProfile from '@/components/SellerProfile';
 
@@ -13,7 +13,7 @@ export async function generateMetadata({ params }) {
     title,
     description,
     openGraph: { title, description, type: 'profile', locale: 'ru_RU', siteName: 'Доска/КВН' },
-    alternates: { canonical: `/user/${user.id}` }
+    alternates: { canonical: user.username ? `/u/${user.username}` : `/user/${user.id}` }
   };
 }
 
@@ -24,5 +24,7 @@ export default async function UserPage({ params }) {
     getUserReviews(params.id).catch(() => [])
   ]);
   if (!user) notFound();
+  // Есть свой адрес — ведём на него: одна страница, одна ссылка
+  if (user.username) redirect(`/u/${user.username}`);
   return <SellerProfile user={user} ads={ads} reviews={reviews} />;
 }

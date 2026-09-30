@@ -51,8 +51,11 @@ import {
   getSiteSettings,
   adminSetNeighbors,
   adminSetContacts,
-  adminAppStats
+  adminAppStats,
+  adminSetAppTexts
 } from '@/lib/api';
+import { useApp } from '@/components/AppShell';
+import { loadAppConfig } from '@/lib/pwa';
 import { CITIES } from '@/data/regions';
 import { formatPrice, formatRelative, pluralRu, thumbUrl, fallbackToFull } from '@/lib/format';
 import ModerationModal from '@/components/admin/ModerationModal';
@@ -942,7 +945,10 @@ function SettingsTab({ onChanged }) {
   }
 
   if (!items) return error ? <ErrorBox message={error} /> : <ListSkeleton rows={3} />;
-  const [toggles, numbers] = [items.filter((i) => i.type === 'bool'), items.filter((i) => i.type === 'number')];
+  // app.* — отдельным блоком «Приложение и уведомления»
+  const general = items.filter((i) => !i.key.startsWith('app.'));
+  const appItems = items.filter((i) => i.key.startsWith('app.'));
+  const [toggles, numbers] = [general.filter((i) => i.type === 'bool'), general.filter((i) => i.type === 'number')];
 
   return (
     <div className="space-y-3">
@@ -1016,9 +1022,157 @@ function SettingsTab({ onChanged }) {
         </div>
       </section>
 
+      <AppPromptsSettings items={appItems} draft={draft} setDraft={setDraft} save={save} saving={saving} />
       <NeighborsSettings />
       <ContactsSettings />
     </div>
+  );
+}
+
+// Когда показывать окно установки приложения и предложение уведомлений, тексты окна.
+// Правила применяются на устройствах при следующем открытии сайта (кеш настроек — до 5 минут).
+const APP_TEXT_INPUTS = [
+  ['title', 'Заголовок', 'Установите приложение!'],
+  ['subtitle', 'Подзаголовок', 'Бесплатно, без App Store и Google Play'],
+  ['benefit1Title', 'Пункт 1 — заголовок', 'Ничего не пропустите'],
+  ['benefit1Text', 'Пункт 1 — текст', 'ответы продавцов и покупателей сразу приходят уведомлением'],
+  ['benefit2Title', 'Пункт 2 — заголовок', 'Скоро'],
+  ['benefit2Text', 'Пункт 2 — текст', 'уведомления о новых объявлениях в любимых категориях']
+];
+
+function AppPromptsSettings({ items, draft, setDraft, save, saving }) {
+  const { openInstallGuide } = useApp();
+  const [texts, setTexts] = useState(null);
+  const [savedTexts, setSavedTexts] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    getSiteSettings().then((s) => {
+      const t = Object.fromEntries(APP_TEXT_INPUTS.map(([k]) => [k, s.app?.texts?.[k] || '']));
+      setTexts(t);
+      setSavedTexts(t);
+    });
+  }, []);
+
+  async function saveTexts(e) {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    try {
+      const t = await adminSetAppTexts(texts);
+      const next = Object.fromEntries(APP_TEXT_INPUTS.map(([k]) => [k, t[k] || '']));
+      setTexts(next);
+      setSavedTexts(next);
+      await loadAppConfig(); // чтобы «Показать окно» сразу показало новые тексты
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const textsChanged = texts && savedTexts && APP_TEXT_INPUTS.some(([k]) => texts[k] !== savedTexts[k]);
+
+  return (
+    <section className="rounded-2xl bg-white ring-1 ring-black/5 shadow-card p-4 space-y-3">
+      <div>
+        <h3 className="font-bold text-ink-900">Приложение и уведомления</h3>
+        <p className="text-[13px] text-ink-500 mt-0.5">
+          Когда само появляется окно «Установите приложение!» и предложение включить уведомления. Уже установленным окно
+          установки не показывается. Изменения доходят до телефонов в течение 5 минут.
+        </p>
+      </div>
+
+      <div className="divide-y divide-slate-100">
+        {items.map((s) => {
+          if (s.type === 'bool') {
+            const on = s.value === 'true';
+            return (
+              <div key={s.key} className="py-3 flex items-center gap-3">
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-semibold text-ink-900">{s.label}</div>
+                  {s.hint && <div className="text-[12px] text-ink-500">{s.hint}</div>}
+                </div>
+                <button
+                  onClick={() => save(s.key, !on)}
+                  disabled={saving === s.key}
+                  role="switch"
+                  aria-checked={on}
+                  aria-label={s.label}
+                  className={`relative w-12 h-7 rounded-full transition-colors shrink-0 disabled:opacity-50 ${on ? 'bg-emerald-500' : 'bg-slate-300'}`}
+                >
+                  <span className={`absolute top-0.5 w-6 h-6 rounded-full bg-white shadow transition-all ${on ? 'left-[22px]' : 'left-0.5'}`} />
+                </button>
+              </div>
+            );
+          }
+          const changed = String(draft[s.key]) !== String(s.value);
+          return (
+            <div key={s.key} className="py-3 flex items-center gap-3">
+              <div className="min-w-0 flex-1">
+                <div className="text-sm font-semibold text-ink-900">{s.label}</div>
+                {s.hint && <div className="text-[12px] text-ink-500">{s.hint}</div>}
+                <div className="text-[11px] text-ink-400">
+                  от {s.min} до {s.max}, по умолчанию {s.default}
+                </div>
+              </div>
+              <input
+                type="number"
+                inputMode="numeric"
+                min={s.min}
+                max={s.max}
+                step={s.step || 1}
+                value={draft[s.key] ?? ''}
+                onChange={(e) => setDraft((d) => ({ ...d, [s.key]: e.target.value }))}
+                className="w-20 h-9 rounded-xl bg-white ring-1 ring-black/10 focus:ring-accent-400 outline-none px-2 text-right tabular-nums"
+              />
+              <button
+                onClick={() => save(s.key, draft[s.key])}
+                disabled={!changed || saving === s.key}
+                className="h-9 px-3 rounded-xl btn-primary text-[13px]"
+              >
+                {saving === s.key ? '…' : 'OK'}
+              </button>
+            </div>
+          );
+        })}
+      </div>
+
+      <form onSubmit={saveTexts} className="space-y-2 pt-1">
+        <div className="text-sm font-bold text-ink-900">Тексты окна установки</div>
+        <div className="text-[12px] text-ink-500">Пустое поле — текст по умолчанию (виден серым).</div>
+        <ErrorBox message={error} />
+        {!texts ? (
+          <div className="h-24 rounded-xl bg-slate-50 animate-pulse" />
+        ) : (
+          <div className="grid gap-2 sm:grid-cols-2">
+            {APP_TEXT_INPUTS.map(([k, label, ph]) => (
+              <label key={k} className="block">
+                <div className="text-[12px] font-semibold text-ink-700 mb-1">{label}</div>
+                <input
+                  value={texts[k]}
+                  onChange={(e) => setTexts((t) => ({ ...t, [k]: e.target.value.slice(0, 120) }))}
+                  placeholder={ph}
+                  className="w-full h-10 rounded-xl bg-white ring-1 ring-black/10 focus:ring-accent-400 outline-none px-3 text-base"
+                />
+              </label>
+            ))}
+          </div>
+        )}
+        <div className="flex flex-wrap gap-2">
+          <button type="submit" disabled={!textsChanged || busy} className="h-10 px-4 rounded-xl btn-primary text-sm">
+            {busy ? 'Сохраняем…' : 'Сохранить тексты'}
+          </button>
+          <button type="button" onClick={() => openInstallGuide()} className="h-10 px-4 rounded-xl btn-outline text-sm">
+            Показать окно сейчас
+          </button>
+          <Link href="/app-status" target="_blank" className="h-10 px-4 rounded-xl btn-outline text-sm">
+            Диагностика устройства
+          </Link>
+        </div>
+      </form>
+    </section>
   );
 }
 

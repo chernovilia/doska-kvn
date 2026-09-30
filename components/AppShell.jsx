@@ -10,6 +10,8 @@ import { useAuth } from '@/lib/auth';
 import { useUnreadCount } from '@/lib/chats';
 import {
   countVisit,
+  getAppConfig,
+  loadAppConfig,
   touchVisit,
   dismissInstall,
   enablePush,
@@ -81,7 +83,8 @@ export default function AppShell({ children }) {
     setAppBadge(unread);
   }, [unread]);
 
-  const openInstallGuide = useCallback((reason = null) => setGuide({ open: true, reason }), []);
+  // Открыто вручную (Настройки, админка, диагностика) — закрытие не ставит паузу «Не сейчас»
+  const openInstallGuide = useCallback((reason = null) => setGuide({ open: true, reason, manual: true }), []);
 
   // Каждый второй заход (2-й, 4-й, 6-й…) — через 8 секунд после начала захода.
   // Заход начинается и при возвращении в давно открытую вкладку (через 30+ минут).
@@ -92,7 +95,8 @@ export default function AppShell({ children }) {
   const scheduleAuto = useCallback(() => {
     let tries = 0;
     const attempt = () => {
-      if (QUIET_PATHS.test(pathRef.current || '') || !installSupported() || installDismissedRecently()) return;
+      const cfg = getAppConfig();
+      if (!cfg['app.install.enabled'] || QUIET_PATHS.test(pathRef.current || '') || !installSupported() || installDismissedRecently()) return;
       // Открыто другое окно (Modal блокирует прокрутку страницы) — повторим позже, до 6 раз
       if (document.body.style.overflow === 'hidden') {
         if (tries++ < 6) autoTimer.current = setTimeout(attempt, 5000);
@@ -101,19 +105,23 @@ export default function AppShell({ children }) {
       setGuide((g) => (g.open ? g : { open: true, reason: null }));
     };
     clearTimeout(autoTimer.current);
-    autoTimer.current = setTimeout(attempt, 8000);
+    autoTimer.current = setTimeout(attempt, getAppConfig()['app.install.delay_sec'] * 1000);
   }, []);
 
   useEffect(() => {
+    let alive = true;
+    // Правила показа — из админки; до ответа сервера заход не считаем
     const check = () => {
       const { visits, isNew } = countVisit();
-      if (isNew && visits % 2 === 0) scheduleAuto();
+      const n = getAppConfig()['app.install.every_nth_visit'];
+      if (isNew && n > 0 && visits % n === 0) scheduleAuto();
     };
-    check();
+    loadAppConfig().then(() => alive && check());
     const onVisibility = () => (document.visibilityState === 'visible' ? check() : touchVisit());
     document.addEventListener('visibilitychange', onVisibility);
     const keepAlive = setInterval(() => document.visibilityState === 'visible' && touchVisit(), 60_000);
     return () => {
+      alive = false;
       document.removeEventListener('visibilitychange', onVisibility);
       clearInterval(keepAlive);
       clearTimeout(autoTimer.current);
@@ -121,15 +129,22 @@ export default function AppShell({ children }) {
   }, [scheduleAuto]);
 
   // После сообщения: сначала уведомления (если можно), иначе — установка
-  const afterUsefulAction = useCallback(async () => {
+  const afterUsefulAction = useCallback(async ({ source = 'message' } = {}) => {
+    const cfg = getAppConfig();
+    const pushAllowed = source === 'publish' ? cfg['app.push.after_publish'] : cfg['app.push.after_message'];
     const state = await pushState();
-    if (state === 'off' && user && !pushAskedRecently()) {
+    if (pushAllowed && state === 'off' && user && !pushAskedRecently()) {
       markPushAsked();
       trackAppEvent('push_prompt_shown');
       setPushAsk(true);
       return;
     }
-    if ((state === 'needs-install' || state === 'unsupported') && installSupported() && !installDismissedRecently()) {
+    if (
+      cfg['app.install.enabled'] &&
+      (state === 'needs-install' || state === 'unsupported') &&
+      installSupported() &&
+      !installDismissedRecently()
+    ) {
       setGuide({ open: true, reason: state === 'needs-install' ? 'push' : null });
     }
   }, [user]);
@@ -137,8 +152,10 @@ export default function AppShell({ children }) {
   // После публикации объявления (или отправки на проверку) — окно установки каждый раз,
   // кроме 14 дней после «Не сейчас». Уже установлено или отказались — предложение уведомлений.
   const afterAdPublished = useCallback(() => {
-    if (installSupported() && !installDismissedRecently()) setGuide({ open: true, reason: null });
-    else afterUsefulAction();
+    const cfg = getAppConfig();
+    if (cfg['app.install.enabled'] && cfg['app.install.after_publish'] && installSupported() && !installDismissedRecently()) {
+      setGuide({ open: true, reason: null });
+    } else afterUsefulAction({ source: 'publish' });
   }, [afterUsefulAction]);
 
   async function turnOnPush() {
@@ -155,7 +172,7 @@ export default function AppShell({ children }) {
         open={guide.open}
         reason={guide.reason}
         onClose={() => setGuide({ open: false, reason: null })}
-        onDismiss={dismissInstall}
+        onDismiss={guide.manual ? undefined : dismissInstall}
       />
       <Modal open={pushAsk} onClose={() => setPushAsk(false)} size="sm">
         <div className="p-5 pb-6 space-y-4">

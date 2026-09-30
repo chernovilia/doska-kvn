@@ -454,7 +454,7 @@ function ChatView({ chatId, me, onActivity }) {
       try {
         if (!sessionStorage.getItem('app.afterMessage')) {
           sessionStorage.setItem('app.afterMessage', '1');
-          setTimeout(afterUsefulAction, 1500);
+          setTimeout(() => afterUsefulAction(), 1500);
         }
       } catch {}
     } catch (err) {

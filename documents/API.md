@@ -57,7 +57,7 @@
 | POST | `/app/event` | Воронка: `install_prompt_shown`, `install_clicked`, `install_dismissed`, `push_prompt_shown`, `push_enabled` — счётчик по дням |
 | GET | `/users/username-available?u=` | Свободен ли адрес `/u/<u>`: `{ available, reason? }` (свой текущий — свободен) |
 | GET | `/users/by-username/:username` | Публичная страница по своему адресу (как `/users/:id`) |
-| GET | `/site` | Публичные настройки из админки: `{ neighbors: { cityId: [cityId…] }, contacts: { email, phone, telegram, vk } }` |
+| GET | `/site` | Публичные настройки из админки: `{ neighbors: { cityId: [cityId…] }, contacts: { email, phone, telegram, vk }, app: { 'app.install.*', 'app.push.*', texts } }` — правила и тексты окон приложения |
 | POST | `/ads` | Создать (auth; 5/час, 20/сутки; `photoUrls[]` до 10; `attributes` — плоский объект характеристик, до 20 полей; `eventDate` — у афиши) |
 | POST | `/ads/:id/bump` | Бесплатно поднять своё опубликованное (auth; пауза `ranking.bump_cooldown_days`, по умолчанию 10 дней) |
 | PUT | `/ads/:id` | Правка своего объявления: тело как у `POST /ads`. Модерация как при подаче (автопубликация → сразу в ленте, иначе `pending` и уведомление админам); отклонённое и скрытое — всегда `pending`. Дата публикации и срок показа сохраняются; убранные фото удаляются из S3 (auth; 30/час) |
@@ -102,6 +102,7 @@
 | GET, PATCH | `/admin/moderation` | Автопубликация вкл/выкл (`Setting['moderation.autoApprove']`) |
 | GET | `/admin/app` | Приложение: установили (всего, за 7 дней), пользуются за 7 дней, платформы, с пушами, воронка за 30 дней, последние 100 устройств |
 | PUT | `/admin/neighbors` | `{ cityId, neighbors: [cityId…] \| null }` — соседи города для блока «В соседних городах»; `null` — по умолчанию (остальные города региона и запущенные соседние регионы) |
+| PUT | `/admin/app-texts` | Тексты окна установки `{ title, subtitle, benefit1Title, benefit1Text, benefit2Title, benefit2Text }`; пустые — по умолчанию |
 | PUT | `/admin/contacts` | `{ email?, phone?, telegram?, vk? }` — контакты в подвале, пустые не показываются |
 | POST | `/admin/wipe?confirm=WIPE_ALL` | Стереть всех пользователей и объявления — только при `ADMIN_WIPE_ENABLED=true` (на проде выключено, 403) |
 

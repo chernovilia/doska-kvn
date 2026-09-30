@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import Modal from './Modal';
 import { useToast } from './Toast';
-import { canPromptInstall, detectPlatform, onInstallAvailability, promptInstall, trackAppEvent } from '@/lib/pwa';
+import { canPromptInstall, detectPlatform, getAppConfig, onInstallAvailability, promptInstall, trackAppEvent } from '@/lib/pwa';
 
 /**
  * Гайд «Установить приложение». Шаги — под платформу и браузер: на Android и в Chrome на
@@ -55,6 +55,8 @@ export default function InstallGuide({ open, onClose, onDismiss, reason }) {
   }
 
   const guide = platform ? guideFor(platform, canPrompt) : null;
+  // Тексты из админки (Настройки → Приложение и уведомления); пустые — по умолчанию
+  const texts = getAppConfig().texts || {};
 
   return (
     <Modal open={open} onClose={later} size="sm">
@@ -63,8 +65,8 @@ export default function InstallGuide({ open, onClose, onDismiss, reason }) {
       <div className="sticky top-0 z-[5] bg-white border-b border-slate-100 px-5 pt-5 pb-3 pr-14 flex items-center gap-3">
         <img src="/icons/icon-192.png" alt="" className="w-12 h-12 rounded-2xl ring-1 ring-black/10 shadow-card shrink-0" />
         <div className="min-w-0">
-          <div className="font-extrabold text-lg text-ink-900 leading-tight">Установите приложение!</div>
-          <div className="text-[13px] text-ink-500">Бесплатно, без App Store и Google Play</div>
+          <div className="font-extrabold text-lg text-ink-900 leading-tight">{texts.title || 'Установите приложение!'}</div>
+          <div className="text-[13px] text-ink-500">{texts.subtitle || 'Бесплатно, без App Store и Google Play'}</div>
         </div>
       </div>
 
@@ -76,8 +78,12 @@ export default function InstallGuide({ open, onClose, onDismiss, reason }) {
         )}
 
         <ul className="space-y-1.5">
-          <Benefit icon={BellRing} title="Ничего не пропустите">ответы продавцов и покупателей сразу приходят уведомлением</Benefit>
-          <Benefit icon={Sparkles} title="Скоро">уведомления о новых объявлениях в любимых категориях</Benefit>
+          <Benefit icon={BellRing} title={texts.benefit1Title || 'Ничего не пропустите'}>
+            {texts.benefit1Text || 'ответы продавцов и покупателей сразу приходят уведомлением'}
+          </Benefit>
+          <Benefit icon={Sparkles} title={texts.benefit2Title || 'Скоро'}>
+            {texts.benefit2Text || 'уведомления о новых объявлениях в любимых категориях'}
+          </Benefit>
         </ul>
 
         {guide && (

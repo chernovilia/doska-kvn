@@ -10,6 +10,7 @@ import { useAuth } from '@/lib/auth';
 import { useUnreadCount } from '@/lib/chats';
 import {
   countVisit,
+  touchVisit,
   dismissInstall,
   enablePush,
   installDismissedRecently,
@@ -55,7 +56,6 @@ export default function AppShell({ children }) {
   const unread = useUnreadCount(!!user);
   const [guide, setGuide] = useState({ open: false, reason: null });
   const [pushAsk, setPushAsk] = useState(false);
-  const autoTried = useRef(false);
 
   // Service worker и «открыто с иконки» — один раз за запуск
   useEffect(() => {
@@ -83,15 +83,42 @@ export default function AppShell({ children }) {
 
   const openInstallGuide = useCallback((reason = null) => setGuide({ open: true, reason }), []);
 
-  // Каждый второй заход (2-й, 4-й, 6-й…), через несколько секунд после загрузки — не мешая первому впечатлению
+  // Каждый второй заход (2-й, 4-й, 6-й…) — через 8 секунд после начала захода.
+  // Заход начинается и при возвращении в давно открытую вкладку (через 30+ минут).
+  // Переходы по сайту таймер не сбрасывают; если в этот момент открыто другое окно — ждём.
+  const pathRef = useRef(pathname);
+  pathRef.current = pathname;
+  const autoTimer = useRef(null);
+  const scheduleAuto = useCallback(() => {
+    let tries = 0;
+    const attempt = () => {
+      if (QUIET_PATHS.test(pathRef.current || '') || !installSupported() || installDismissedRecently()) return;
+      // Открыто другое окно (Modal блокирует прокрутку страницы) — повторим позже, до 6 раз
+      if (document.body.style.overflow === 'hidden') {
+        if (tries++ < 6) autoTimer.current = setTimeout(attempt, 5000);
+        return;
+      }
+      setGuide((g) => (g.open ? g : { open: true, reason: null }));
+    };
+    clearTimeout(autoTimer.current);
+    autoTimer.current = setTimeout(attempt, 8000);
+  }, []);
+
   useEffect(() => {
-    if (autoTried.current || QUIET_PATHS.test(pathname || '')) return;
-    autoTried.current = true;
-    const visits = countVisit();
-    if (visits % 2 !== 0 || !installSupported() || installDismissedRecently()) return;
-    const t = setTimeout(() => setGuide((g) => (g.open ? g : { open: true, reason: null })), 8000);
-    return () => clearTimeout(t);
-  }, [pathname]);
+    const check = () => {
+      const { visits, isNew } = countVisit();
+      if (isNew && visits % 2 === 0) scheduleAuto();
+    };
+    check();
+    const onVisibility = () => (document.visibilityState === 'visible' ? check() : touchVisit());
+    document.addEventListener('visibilitychange', onVisibility);
+    const keepAlive = setInterval(() => document.visibilityState === 'visible' && touchVisit(), 60_000);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility);
+      clearInterval(keepAlive);
+      clearTimeout(autoTimer.current);
+    };
+  }, [scheduleAuto]);
 
   // После сообщения: сначала уведомления (если можно), иначе — установка
   const afterUsefulAction = useCallback(async () => {

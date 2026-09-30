@@ -111,15 +111,24 @@ export default function PostAdModal({ open, onClose, editAd = null, onSaved }) {
   const [error, setError] = useState(null);
   const headerRef = useRef(null);
   const { afterAdPublished } = useApp();
-  // Опубликовали — после закрытия окна предложим уведомления или установку приложения
+  // Опубликовали — когда окно закроется (кнопкой, крестиком, фоном, жестом «назад» или уходом
+  // со страницы), предложим установку приложения или уведомления.
   const publishedRef = useRef(false);
+  const afterPublishRef = useRef(afterAdPublished);
+  afterPublishRef.current = afterAdPublished;
+  function firePublished() {
+    if (!publishedRef.current) return;
+    publishedRef.current = false;
+    setTimeout(() => afterPublishRef.current?.(), 600);
+  }
+  useEffect(() => {
+    if (!open) firePublished();
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => firePublished, []); // eslint-disable-line react-hooks/exhaustive-deps
   function closeModal() {
     onClose?.();
     setTimeout(reset, 300);
-    if (publishedRef.current) {
-      publishedRef.current = false;
-      setTimeout(afterAdPublished, 600);
-    }
+    firePublished();
   }
 
   const uploading = form.photos.filter((p) => p.status === 'uploading').length;

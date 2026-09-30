@@ -185,6 +185,9 @@ UNISENDER_GO_SENDER_NAME=Доска/КВН
 EMAIL_CODE_INTERVAL_SEC=60
 EMAIL_CODE_MAX_ATTEMPTS=5
 
+# Полный сброс данных из админки — только локально; на проде НЕ задавать
+ADMIN_WIPE_ENABLED=true
+
 # Пуши (Web Push). Без них пуши выключены и не предлагаются.
 # Сгенерировать пару: npx web-push generate-vapid-keys
 VAPID_PUBLIC_KEY=…

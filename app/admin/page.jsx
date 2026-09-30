@@ -350,6 +350,8 @@ function OverviewTab({ stats, onReload, go }) {
       )}
 
       <ErrorBox message={error} />
+      {/* Полный сброс — только если разрешён на сервере (ADMIN_WIPE_ENABLED); на проде выключен */}
+      {stats.wipeEnabled && (
       <details className="rounded-2xl bg-rose-50 ring-1 ring-rose-200 p-4">
         <summary className="text-sm font-bold text-rose-900 cursor-pointer">Опасная зона</summary>
         <p className="mt-2 text-[13px] text-rose-800">
@@ -364,6 +366,7 @@ function OverviewTab({ stats, onReload, go }) {
           {wiping ? 'Удаляем…' : 'Стереть всех пользователей и объявления'}
         </button>
       </details>
+      )}
     </div>
   );
 }

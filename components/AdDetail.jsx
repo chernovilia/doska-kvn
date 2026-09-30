@@ -199,6 +199,12 @@ export default function AdDetail({ ad }) {
 
   // Связаться можно только по опубликованному: чужое неопубликованное видит лишь админ.
   const showActionBar = !isOwner && ad.status === 'approved';
+  const descriptionBlock = ad.description ? (
+    <div className="rounded-2xl bg-white ring-1 ring-black/5 shadow-card p-4">
+      <h2 className="text-base font-bold text-ink-900 mb-1.5">Описание</h2>
+      <p className="text-[15px] text-ink-800 leading-relaxed whitespace-pre-line break-words">{ad.description}</p>
+    </div>
+  ) : null;
 
   return (
     <div className={`min-h-screen bg-slate-50 md:pb-0 ${showActionBar ? 'pb-28' : 'pb-24'}`}>
@@ -248,8 +254,9 @@ export default function AdDetail({ ad }) {
       <main className="max-w-5xl mx-auto px-0 md:px-6 py-0 md:py-6">
         <StatusBanner ad={ad} />
         <div className="md:grid md:grid-cols-[1.4fr_1fr] md:gap-6">
-          {/* Левая колонка — галерея */}
-          <div className="md:sticky md:top-20 md:self-start">
+          {/* Левая колонка — галерея и (на компьютере) описание. Не закреплена:
+              страница прокручивается целиком, обе колонки вместе */}
+          <div className="md:self-start">
             <Gallery photos={gallery} title={ad.title} section={ad.section}>
               <div className="absolute top-3 left-3 flex flex-col items-start gap-1 pointer-events-none">
                 {ad.top && (
@@ -272,6 +279,7 @@ export default function AdDetail({ ad }) {
                 )}
               </div>
             </Gallery>
+            {descriptionBlock && <div className="hidden md:block mt-4">{descriptionBlock}</div>}
           </div>
 
           {/* Правая колонка — детали */}
@@ -330,23 +338,6 @@ export default function AdDetail({ ad }) {
               )}
             </div>
 
-            {/* Связь — на компьютере; на телефоне те же кнопки в панели снизу */}
-            {showActionBar && (
-              <div className="hidden md:block rounded-2xl bg-white ring-1 ring-black/5 shadow-card p-4 space-y-2">
-                <div className="flex gap-2">
-                  {writeBtn}
-                  {phoneBtn}
-                </div>
-                {ready && (!acceptsPhone || !authed) && (
-                  <div className="text-[12px] text-ink-500">
-                    {acceptsPhone
-                      ? 'Телефон и сообщения доступны после входа — это защищает продавцов от спама.'
-                      : 'Продавец отвечает только в сообщениях на сайте.'}
-                  </div>
-                )}
-              </div>
-            )}
-
             {isOwner && (
               <div className="rounded-2xl bg-white ring-1 ring-black/5 shadow-card p-4 space-y-3">
                 <div className="flex items-center justify-between gap-2">
@@ -387,14 +378,8 @@ export default function AdDetail({ ad }) {
               </div>
             )}
 
-            {ad.description && (
-              <div className="rounded-2xl bg-white ring-1 ring-black/5 shadow-card p-4">
-                <h2 className="text-base font-bold text-ink-900 mb-1.5">Описание</h2>
-                <p className="text-[15px] text-ink-800 leading-relaxed whitespace-pre-line break-words">
-                  {ad.description}
-                </p>
-              </div>
-            )}
+            {/* Описание: на телефоне — здесь, на компьютере — под фото слева */}
+            {descriptionBlock && <div className="md:hidden">{descriptionBlock}</div>}
 
             {/* Продавец */}
             <div className="rounded-2xl bg-white ring-1 ring-black/5 shadow-card p-4">
@@ -442,6 +427,23 @@ export default function AdDetail({ ad }) {
                 </div>
               )}
             </div>
+
+            {/* Связь — на компьютере, после продавца; на телефоне те же кнопки в панели снизу */}
+            {showActionBar && (
+              <div className="hidden md:block rounded-2xl bg-white ring-1 ring-black/5 shadow-card p-4 space-y-2">
+                <div className="flex gap-2">
+                  {writeBtn}
+                  {phoneBtn}
+                </div>
+                {ready && (!acceptsPhone || !authed) && (
+                  <div className="text-[12px] text-ink-500">
+                    {acceptsPhone
+                      ? 'Телефон и сообщения доступны после входа — это защищает продавцов от спама.'
+                      : 'Продавец отвечает только в сообщениях на сайте.'}
+                  </div>
+                )}
+              </div>
+            )}
 
             {safeAvitoUrl(ad.avitoUrl) && (
               <a

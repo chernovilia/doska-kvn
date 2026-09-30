@@ -48,8 +48,9 @@
 | GET | `/notifications/unread-count` | Непрочитанные (auth; опрос раз в минуту) |
 | POST | `/notifications/read-all` · `/notifications/:id/read` | Прочитать все / одно (auth) |
 | GET | `/support` | Мои обращения с перепиской (auth) |
-| POST | `/support` | Новое обращение `{ topic: question \| problem \| complaint \| idea, text 5–2000 }` — админам уведомление (auth; 10/сутки; можно и заблокированным) |
-| POST | `/support/:id/messages` | Написать в своё обращение `{ text }` — возвращает его в очередь (auth) |
+| POST | `/support` | Новое обращение `{ topic: question \| problem \| complaint \| idea, text 5–2000 }` — админам уведомление (auth; 10/сутки; можно и заблокированным). Пока есть обращение без ответа — 409 |
+| POST | `/support/:id/messages` | Дописать в своё обращение `{ text }` — только после ответа поддержки (`answered`), иначе 409; возвращает обращение в очередь (auth) |
+| GET | `/site` | Публичные настройки из админки: `{ neighbors: { cityId: [cityId…] }, contacts: { email, phone, telegram, vk } }` |
 | POST | `/ads` | Создать (auth; 5/час, 20/сутки; `photoUrls[]` до 10; `attributes` — плоский объект характеристик, до 20 полей; `eventDate` — у афиши) |
 | POST | `/ads/:id/bump` | Бесплатно поднять своё опубликованное (auth; пауза `ranking.bump_cooldown_days`, по умолчанию 10 дней) |
 | PUT | `/ads/:id` | Правка своего объявления: тело как у `POST /ads`. Модерация как при подаче (автопубликация → сразу в ленте, иначе `pending` и уведомление админам); отклонённое и скрытое — всегда `pending`. Дата публикации и срок показа сохраняются; убранные фото удаляются из S3 (auth; 30/час) |
@@ -92,6 +93,8 @@
 | POST | `/admin/support/:id/reply` | Ответ `{ text }` → статус answered, пользователю уведомление и письмо |
 | PATCH | `/admin/support/:id` | `{ status: open \| answered \| closed }` |
 | GET, PATCH | `/admin/moderation` | Автопубликация вкл/выкл (`Setting['moderation.autoApprove']`) |
+| PUT | `/admin/neighbors` | `{ cityId, neighbors: [cityId…] \| null }` — соседи города для блока «В соседних городах»; `null` — по умолчанию (остальные города региона и запущенные соседние регионы) |
+| PUT | `/admin/contacts` | `{ email?, phone?, telegram?, vk? }` — контакты в подвале, пустые не показываются |
 | POST | `/admin/wipe?confirm=WIPE_ALL` | Стереть всех пользователей и объявления |
 
 ## Жизненный цикл объявления
@@ -105,7 +108,13 @@
 
 ## Rate-limit
 
-`AppThrottlerGuard` (ключ — `userId` из access-токена, для гостей `CF-Connecting-IP`): глобально 300 запросов/мин, 5000/час, 50 000/сутки. Строгие лимиты — точечные, на эндпоинтах из таблиц выше. Счётчики в памяти процесса.
+`AppThrottlerGuard`: глобально 300 запросов/мин, 5000/час, 50 000/сутки на ключ. Строгие лимиты — точечные, на эндпоинтах из таблиц выше. Счётчики в памяти процесса.
+
+**Ключ лимита — не IP.** Настоящий адрес клиента до API не доходит: перед ингрессом Amvera ещё один прокси, и во всех заголовках (`X-Forwarded-For`, `X-Real-IP`) — его адрес 10.128.x. Поэтому ключ:
+- вошедший — `user:<id>`;
+- `/auth/email/request` и `/verify` — `email:<почта>` (лимит на почту), плюс общий потолок кодов на сайт `EMAIL_CODES_PER_HOUR` (500/час);
+- гость — `guest:<gid>`: httpOnly-cookie `gid` ставится при первом запросе (`src/guest-id.ts`);
+- запрос без `gid` (первый заход, боты без cookie) — общий ключ `new-guest` с лимитом ×10.
 
 ## Деплой на Amvera
 

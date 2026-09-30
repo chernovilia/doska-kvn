@@ -215,15 +215,15 @@ export default function PostAdModal({ open, onClose, editAd = null, onSaved }) {
     setStep((s) => Math.max(0, s - 1));
   }
 
+  // Пока фото грузятся, между шагами ходить можно — ждёт загрузки только публикация.
   const canNext =
-    uploading === 0 &&
-    ((stepId === 'city' && form.city) ||
-      (stepId === 'section' && form.section) ||
-      (stepId === 'category' && form.category) ||
-      (stepId === 'details' && !Object.keys(attrErrors).length && (!isEvent || form.eventDate)) ||
-      (stepId === 'text' && form.title.trim().length > 3) ||
-      stepId === 'photos' ||
-      stepId === 'review');
+    (stepId === 'city' && form.city) ||
+    (stepId === 'section' && form.section) ||
+    (stepId === 'category' && form.category) ||
+    (stepId === 'details' && !Object.keys(attrErrors).length && (!isEvent || form.eventDate)) ||
+    (stepId === 'text' && form.title.trim().length > 3) ||
+    stepId === 'photos' ||
+    (stepId === 'review' && uploading === 0);
 
   return (
     <Modal
@@ -254,7 +254,7 @@ export default function PostAdModal({ open, onClose, editAd = null, onSaved }) {
                 {/* При правке всё уже заполнено — к любому шагу можно перейти тапом по номеру */}
                 <button
                   type="button"
-                  disabled={!editing || done || checking || uploading > 0}
+                  disabled={!editing || done || checking}
                   onClick={() => setStep(i)}
                   aria-label={`Шаг ${i + 1}: ${STEP_LABELS[s]}`}
                   className={`w-6 h-6 md:w-7 md:h-7 grid place-items-center rounded-full text-[11px] md:text-xs font-bold shrink-0 disabled:cursor-default ${
@@ -538,6 +538,12 @@ export default function PostAdModal({ open, onClose, editAd = null, onSaved }) {
                       </div>
                     )}
                 </div>
+                {uploading > 0 && (
+                  <div className="flex items-center gap-2 rounded-xl bg-amber-50 ring-1 ring-amber-200 px-3 py-2 text-[13px] text-amber-900">
+                    <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+                    Догружаем фото ({uploading}) — {editing ? 'сохранить' : 'опубликовать'} можно после загрузки
+                  </div>
+                )}
                 <p className="text-[12px] text-ink-500">
                   {editing
                     ? 'После сохранения объявление может снова уйти на проверку модератору — как при подаче.'

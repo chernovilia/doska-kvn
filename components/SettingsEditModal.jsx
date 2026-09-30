@@ -19,7 +19,7 @@ const HOME_CITIES = CITIES.filter((c) => c.regionId === 'kvn');
 const TITLES = {
   personal: 'Личные данные',
   phone: 'Телефон и связь',
-  city: 'Домашний город',
+  city: 'Ваш город',
   notifications: 'Уведомления'
 };
 
@@ -27,13 +27,21 @@ export default function SettingsEditModal({ open, kind, me, onClose }) {
   const { updateMe } = useAuth();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
-  const [form, setForm] = useState(() => initialFor(kind, me));
+  const [state, setState] = useState(() => ({ kind, form: initialFor(kind, me) }));
+  // Форма всегда от текущего kind: окно из «Настроек» монтируется с kind=null и в первый
+  // рендер после открытия ещё держит пустую форму — поля падали на form.bio.length.
+  const form = state.kind === kind ? state.form : initialFor(kind, me);
+  const setForm = (next) =>
+    setState((st) => {
+      const base = st.kind === kind ? st.form : initialFor(kind, me);
+      return { kind, form: typeof next === 'function' ? next(base) : next };
+    });
 
   // Заполняем при открытии, а не при каждом обновлении `me`: иначе выбранный аватар
   // сбрасывался бы, если данные профиля обновятся, пока окно открыто.
   useEffect(() => {
     if (open) {
-      setForm(initialFor(kind, me));
+      setState({ kind, form: initialFor(kind, me) });
       setError(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -158,7 +166,7 @@ function PersonalFields({ form, setForm, onError }) {
         <div className="text-xs font-semibold text-ink-700 mb-1">Имя</div>
         <input
           type="text"
-          value={form.name}
+          value={form.name || ''}
           onChange={(e) => setForm((f) => ({ ...f, name: e.target.value.slice(0, 80) }))}
           className="w-full rounded-2xl bg-white ring-1 ring-black/10 focus:ring-accent-400 outline-none px-4 py-3 text-base"
         />
@@ -168,12 +176,12 @@ function PersonalFields({ form, setForm, onError }) {
           О себе <span className="font-normal text-ink-500">— не обязательно</span>
         </div>
         <textarea
-          value={form.bio}
+          value={form.bio || ''}
           onChange={(e) => setForm((f) => ({ ...f, bio: e.target.value.slice(0, 200) }))}
           rows={3}
           className="w-full rounded-2xl bg-white ring-1 ring-black/10 focus:ring-accent-400 outline-none px-4 py-3 text-base resize-none"
         />
-        <div className="text-[11px] text-ink-500 mt-1 text-right">{form.bio.length}/200</div>
+        <div className="text-[11px] text-ink-500 mt-1 text-right">{(form.bio || '').length}/200</div>
       </div>
     </>
   );

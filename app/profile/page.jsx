@@ -41,7 +41,7 @@ import { formatRelative, formatTimeLeft, thumbUrl, fallbackToFull } from '@/lib/
 
 const TABS = [
   { id: 'ads', name: 'Объявления', icon: ShoppingBag },
-  { id: 'promo', name: 'Продвижение', icon: Rocket, highlight: true },
+  { id: 'promo', name: 'Продвижение', icon: Rocket },
   { id: 'reviews', name: 'Отзывы', icon: Star },
   { id: 'settings', name: 'Настройки', icon: Settings }
 ];
@@ -213,7 +213,7 @@ function ProfileContent() {
                   key={t.id}
                   onClick={() => setTab(t.id)}
                   className={`chip relative shrink-0 ${
-                    active ? 'chip-on' : t.highlight ? '!bg-white !text-accent-700 !border-accent-200' : ''
+                    active ? 'chip-on' : ''
                   }`}
                 >
                   <Icon className="w-4 h-4" />
@@ -481,7 +481,7 @@ function SettingsTab({ me }) {
   const rows = [
     { kind: 'personal', label: 'Личные данные', hint: me.name || 'Не заполнено' },
     { kind: 'phone', label: 'Телефон и способ связи', hint: phoneHint },
-    { kind: 'city', label: 'Домашний город', hint: getCity(me.homeCityId)?.name || 'Не указан' },
+    { kind: 'city', label: 'Ваш город', hint: getCity(me.homeCityId)?.name || 'Не указан' },
     { kind: null, label: 'Тип аккаунта', hint: 'Личный (приватный)', disabled: true },
     { kind: null, label: 'Способы оплаты', hint: 'Не подключены', disabled: true },
     { kind: 'notifications', label: 'Уведомления', hint: me.notifyEmail ? 'E-mail включён' : 'Отключены' },

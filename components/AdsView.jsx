@@ -4,7 +4,6 @@ import { Suspense, useEffect, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 import Header from '@/components/Header';
-import HeroBanner from '@/components/HeroBanner';
 import CategoryStrip from '@/components/CategoryStrip';
 import CatalogSheet from '@/components/CatalogSheet';
 import AdCard from '@/components/AdCard';
@@ -13,7 +12,7 @@ import Modal from '@/components/Modal';
 import PostAdModal from '@/components/PostAdModal';
 import Footer from '@/components/Footer';
 import BottomNav from '@/components/BottomNav';
-import { ChevronDown, ListFilter, MapPin, SlidersHorizontal, Sparkles, X } from 'lucide-react';
+import { ChevronDown, LayoutGrid, ListFilter, MapPin, SlidersHorizontal, X } from 'lucide-react';
 import {
   DEFAULT_REGION_ID,
   FREE_SECTION,
@@ -197,6 +196,7 @@ function Feed({ place, params }) {
         search={q || ''}
         onSearchSubmit={(text) => setFilters({ q: text || null })}
         onSearchSelect={onSearchSelect}
+        onPost={openPost}
       />
 
       <CategoryStrip
@@ -208,15 +208,7 @@ function Feed({ place, params }) {
       />
 
       <main className="max-w-6xl mx-auto px-4 md:px-6 pt-4 pb-4 md:py-6 space-y-4 md:space-y-6">
-        {!hasFilters && (
-          <div className="hidden md:block">
-            <HeroBanner
-              place={place}
-              onPostAd={openPost}
-            />
-          </div>
-        )}
-
+        {/* Баннеры-карусель на компьютере убраны до настройки через админку (components/HeroBanner.jsx) */}
         <section className="space-y-3">
           <div className="flex items-baseline justify-between gap-3 px-0.5">
             <div className="min-w-0">
@@ -366,12 +358,7 @@ function Feed({ place, params }) {
 
           {/* «В соседних городах» — только когда выбран конкретный город */}
           {isCity && nearby.length > 0 && (
-            <NearbyBlock
-              cityName={resolved.city.name}
-              nearby={nearby}
-              onExpand={() => onPlaceChange(resolved.region.id)}
-              regionName={resolved.region.shortName}
-            />
+            <NearbyBlock nearby={nearby} onExpand={() => onPlaceChange(resolved.region.id)} />
           )}
         </section>
       </main>
@@ -603,36 +590,33 @@ function PriceModal({ open, onClose, min, max, onApply }) {
   );
 }
 
-function NearbyBlock({ cityName, nearby, onExpand, regionName }) {
+// Витрина соседних городов: карточки только для вида — тап по любому месту блока
+// (или по кнопке) открывает все объявления региона.
+function NearbyBlock({ nearby, onExpand }) {
   return (
-    <div className="mt-6 rounded-2xl bg-slate-50/70 ring-1 ring-black/5 p-3 md:p-4 relative">
+    <div className="mt-6 rounded-2xl bg-slate-50/70 ring-1 ring-black/5 p-3 md:p-4">
       <div className="flex items-center gap-2 mb-3 px-0.5">
         <MapPin className="w-4 h-4 text-accent-600" />
-        <div className="min-w-0">
-          <div className="text-sm font-bold text-ink-900">В соседних городах</div>
-          <div className="text-[11px] text-ink-500">
-            Помимо {cityName} — из региона {regionName} и рядом
-          </div>
-        </div>
-        <button
-          onClick={onExpand}
-          className="ml-auto btn-outline h-9 px-3 text-xs"
-        >
-          <Sparkles className="w-3.5 h-3.5 text-accent-600" />
-          Показать все
-        </button>
+        <div className="text-sm font-bold text-ink-900">В соседних городах</div>
       </div>
-      {/* Обёртка с градиентом-затуханием снизу — намёк «есть ещё, кликните «Показать все» */}
-      <div className="relative max-h-[520px] overflow-hidden">
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 auto-rows-fr">
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={onExpand}
+        onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onExpand()}
+        aria-label="Показать все объявления соседних городов"
+        className="relative max-h-[520px] overflow-hidden cursor-pointer"
+      >
+        {/* Карточки не кликаются: блок — превью, переход — к полной ленте */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 auto-rows-fr pointer-events-none select-none" aria-hidden>
           {nearby.map((ad) => (
-            <div key={ad.id} className="h-full opacity-70 hover:opacity-100 transition">
+            <div key={ad.id} className="h-full opacity-70">
               <AdCard ad={ad} />
             </div>
           ))}
         </div>
         <div
-          className="pointer-events-none absolute inset-x-0 bottom-0 h-32"
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-40"
           style={{
             background:
               'linear-gradient(180deg, rgba(246,247,251,0) 0%, rgba(246,247,251,0.85) 60%, rgba(246,247,251,1) 100%)'
@@ -640,11 +624,9 @@ function NearbyBlock({ cityName, nearby, onExpand, regionName }) {
         />
       </div>
       <div className="mt-2 flex justify-center relative z-10">
-        <button
-          onClick={onExpand}
-          className="rounded-full btn-primary text-sm px-4 py-2 shadow-card"
-        >
-          Показать все объявления региона
+        <button onClick={onExpand} className="rounded-full btn-primary text-sm px-4 py-2 shadow-card">
+          <LayoutGrid className="w-4 h-4" />
+          Показать все объявления
         </button>
       </div>
     </div>

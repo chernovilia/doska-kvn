@@ -47,8 +47,12 @@ import {
   adminListReviews,
   adminDeleteReview,
   cityName,
-  getSection
+  getSection,
+  getSiteSettings,
+  adminSetNeighbors,
+  adminSetContacts
 } from '@/lib/api';
+import { CITIES } from '@/data/regions';
 import { formatPrice, formatRelative, pluralRu, thumbUrl, fallbackToFull } from '@/lib/format';
 import ModerationModal from '@/components/admin/ModerationModal';
 import { Empty, ErrorBox, ListSkeleton, REPORT_REASONS, ReasonForm, StatusBadge } from '@/components/admin/ui';
@@ -1005,7 +1009,165 @@ function SettingsTab({ onChanged }) {
           })}
         </div>
       </section>
+
+      <NeighborsSettings />
+      <ContactsSettings />
     </div>
+  );
+}
+
+// Соседи города для блока «В соседних городах» в ленте. Не задано — по умолчанию:
+// остальные города того же региона и запущенные соседние регионы.
+function NeighborsSettings() {
+  const [neighbors, setNeighbors] = useState(null);
+  const [cityId, setCityId] = useState(CITIES[0]?.id);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    getSiteSettings().then((s) => setNeighbors(s.neighbors));
+  }, []);
+
+  async function save(list) {
+    setBusy(true);
+    setError(null);
+    try {
+      setNeighbors(await adminSetNeighbors(cityId, list));
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const custom = neighbors?.[cityId];
+  const city = CITIES.find((c) => c.id === cityId);
+  const defaults = CITIES.filter((c) => c.regionId === city?.regionId && c.id !== cityId).map((c) => c.name);
+
+  return (
+    <section className="rounded-2xl bg-white ring-1 ring-black/5 shadow-card p-4 space-y-3">
+      <div>
+        <h3 className="font-bold text-ink-900">Соседние города</h3>
+        <p className="text-[13px] text-ink-500 mt-0.5">
+          Чьи объявления показывать в блоке «В соседних городах», когда в ленте выбран город.
+        </p>
+      </div>
+      <ErrorBox message={error} />
+      <div className="flex flex-wrap gap-1.5">
+        {CITIES.map((c) => (
+          <button key={c.id} onClick={() => setCityId(c.id)} className={`chip chip-sm ${c.id === cityId ? 'chip-on' : ''}`}>
+            {c.name}
+            {neighbors?.[c.id] && <span className="text-accent-700">•</span>}
+          </button>
+        ))}
+      </div>
+      {neighbors === null ? (
+        <div className="h-16 rounded-xl bg-slate-50 animate-pulse" />
+      ) : (
+        <div className="rounded-xl bg-slate-50 p-3 space-y-2">
+          <div className="text-[13px] text-ink-700">
+            Соседи города <b>{city?.name}</b>:{' '}
+            {custom ? (
+              custom.length ? 'выбраны вручную' : 'не показывать блок'
+            ) : (
+              <>по умолчанию — {defaults.length ? defaults.join(', ') : 'нет'}</>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {CITIES.filter((c) => c.id !== cityId).map((c) => {
+              const list = custom || [];
+              const on = list.includes(c.id);
+              return (
+                <button
+                  key={c.id}
+                  disabled={busy}
+                  onClick={() => save(on ? list.filter((x) => x !== c.id) : [...list, c.id])}
+                  className={`chip chip-sm ${on ? 'chip-on' : ''}`}
+                >
+                  {c.name}
+                </button>
+              );
+            })}
+          </div>
+          {custom && (
+            <button disabled={busy} onClick={() => save(null)} className="text-[13px] font-semibold text-accent-700 hover:underline">
+              Вернуть по умолчанию
+            </button>
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
+
+// Контакты в подвале сайта. Пустое поле не показывается.
+const CONTACT_INPUTS = [
+  ['email', 'Почта', 'hello@доска-квн.рф'],
+  ['phone', 'Телефон', '+7 999 123-45-67'],
+  ['telegram', 'Telegram', '@doska_kvn'],
+  ['vk', 'VK', 'vk.com/doska_kvn']
+];
+
+function ContactsSettings() {
+  const [form, setForm] = useState(null);
+  const [saved, setSaved] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    getSiteSettings().then((s) => {
+      const c = Object.fromEntries(CONTACT_INPUTS.map(([k]) => [k, s.contacts[k] || '']));
+      setForm(c);
+      setSaved(c);
+    });
+  }, []);
+
+  async function submit(e) {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    try {
+      const c = await adminSetContacts(form);
+      const next = Object.fromEntries(CONTACT_INPUTS.map(([k]) => [k, c[k] || '']));
+      setForm(next);
+      setSaved(next);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const changed = form && saved && CONTACT_INPUTS.some(([k]) => form[k] !== saved[k]);
+
+  return (
+    <form onSubmit={submit} className="rounded-2xl bg-white ring-1 ring-black/5 shadow-card p-4 space-y-3">
+      <div>
+        <h3 className="font-bold text-ink-900">Контакты в подвале сайта</h3>
+        <p className="text-[13px] text-ink-500 mt-0.5">Пустое поле не показывается. «Написать в поддержку» есть всегда.</p>
+      </div>
+      <ErrorBox message={error} />
+      {!form ? (
+        <div className="h-24 rounded-xl bg-slate-50 animate-pulse" />
+      ) : (
+        <div className="grid gap-2 sm:grid-cols-2">
+          {CONTACT_INPUTS.map(([k, label, ph]) => (
+            <label key={k} className="block">
+              <div className="text-[12px] font-semibold text-ink-700 mb-1">{label}</div>
+              <input
+                value={form[k]}
+                onChange={(e) => setForm((f) => ({ ...f, [k]: e.target.value.slice(0, 200) }))}
+                placeholder={ph}
+                className="w-full h-10 rounded-xl bg-white ring-1 ring-black/10 focus:ring-accent-400 outline-none px-3 text-base"
+              />
+            </label>
+          ))}
+        </div>
+      )}
+      <button type="submit" disabled={!changed || busy} className="h-10 px-4 rounded-xl btn-primary text-sm">
+        {busy ? 'Сохраняем…' : 'Сохранить контакты'}
+      </button>
+    </form>
   );
 }
 

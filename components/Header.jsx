@@ -4,7 +4,7 @@ import PlacePicker from './PlacePicker';
 import SearchBar from './SearchBar';
 import NotificationsButton from './NotificationsButton';
 import Link from 'next/link';
-import { Heart, MessageCircle } from 'lucide-react';
+import { Heart, MessageCircle, Plus } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { useUnreadCount } from '@/lib/chats';
 import UnreadBadge from './UnreadBadge';
@@ -12,7 +12,7 @@ import Avatar from './Avatar';
 
 // Шапка ленты: логотип, место, уведомления, вход/профиль и поиск.
 // Лента разделов идёт сразу под ней (AdsView) на том же белом фоне.
-export default function Header({ place, onPlaceChange, search, onSearchSubmit, onSearchSelect }) {
+export default function Header({ place, onPlaceChange, search, onSearchSubmit, onSearchSelect, onPost }) {
   const { user, ready } = useAuth();
   const unread = useUnreadCount(!!user);
 
@@ -52,6 +52,13 @@ export default function Header({ place, onPlaceChange, search, onSearchSubmit, o
               </Link>
             )}
 
+            {/* На компьютере «Подать объявление» — в шапке; на телефоне это «+» в нижнем меню */}
+            {onPost && (
+              <button onClick={onPost} className="hidden md:inline-flex btn-primary h-10 px-4 rounded-full text-[15px] shrink-0">
+                <Plus className="w-4 h-4" />
+                Подать объявление
+              </button>
+            )}
             {!ready ? (
               // Пока не знаем, вошёл ли пользователь, — место под кнопку, чтобы шапка не прыгала
               <div className="w-9 h-9 rounded-full bg-slate-100 shrink-0" />

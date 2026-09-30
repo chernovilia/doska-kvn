@@ -11,7 +11,6 @@ import {
   MonitorDown,
   Plus,
   Share,
-  Smartphone,
   Sparkles,
   SquarePlus
 } from 'lucide-react';
@@ -59,21 +58,24 @@ export default function InstallGuide({ open, onClose, onDismiss, reason }) {
 
   return (
     <Modal open={open} onClose={later} size="sm">
-      <div className="p-5 pb-6 space-y-3.5">
-        <div className="flex items-center gap-3 pr-10">
-          <img src="/icons/icon-192.png" alt="" className="w-12 h-12 rounded-2xl ring-1 ring-black/10 shadow-card shrink-0" />
-          <div className="min-w-0">
-            <div className="font-extrabold text-lg text-ink-900 leading-tight">Доска/КВН на экране телефона</div>
-            <div className="text-[13px] text-ink-500">
-              {reason === 'push'
-                ? 'На iPhone уведомления приходят только в приложение'
-                : 'Бесплатно, без App Store и Google Play'}
-            </div>
-          </div>
+      {/* Шапка с логотипом закреплена — прокручивается только инструкция.
+          z-[5] — ниже крестика окна (z-10), чтобы он оставался кликабельным */}
+      <div className="sticky top-0 z-[5] bg-white border-b border-slate-100 px-5 pt-5 pb-3 pr-14 flex items-center gap-3">
+        <img src="/icons/icon-192.png" alt="" className="w-12 h-12 rounded-2xl ring-1 ring-black/10 shadow-card shrink-0" />
+        <div className="min-w-0">
+          <div className="font-extrabold text-lg text-ink-900 leading-tight">Установите приложение!</div>
+          <div className="text-[13px] text-ink-500">Бесплатно, без App Store и Google Play</div>
         </div>
+      </div>
+
+      <div className="px-5 pt-4 pb-6 space-y-3.5">
+        {reason === 'push' && (
+          <div className="rounded-xl bg-amber-50 ring-1 ring-amber-200 px-3 py-2 text-[13px] text-amber-900">
+            На iPhone уведомления приходят только в установленное приложение
+          </div>
+        )}
 
         <ul className="space-y-1.5">
-          <Benefit icon={Smartphone} title="Всегда под рукой">открывается с иконки, как приложение</Benefit>
           <Benefit icon={BellRing} title="Ничего не пропустите">ответы продавцов и покупателей сразу приходят уведомлением</Benefit>
           <Benefit icon={Sparkles} title="Скоро">уведомления о новых объявлениях в любимых категориях</Benefit>
         </ul>
@@ -155,14 +157,13 @@ function MockToolbarButton({ icon: Icon, label }) {
   );
 }
 
-// Пункт тёмного меню iOS «Поделиться»: русская подпись и английская — телефон может быть на любом языке
-function MockIosRow({ icon: Icon, ru, en }) {
+// Пункт тёмного меню iOS «Поделиться»
+function MockIosRow({ icon: Icon, ru }) {
   return (
     <div className="flex items-center gap-3 rounded-2xl bg-[#3a3a3c] text-white px-4 py-2.5 max-w-[280px]">
       <Icon className="w-5 h-5 shrink-0" strokeWidth={1.8} />
       <div className="min-w-0 leading-tight">
         <div className="text-[14px]">{ru}</div>
-        {en && <div className="text-[11px] text-white/60">{en}</div>}
       </div>
     </div>
   );
@@ -198,10 +199,10 @@ function CopyLink() {
 
 // ── Инструкции по платформам ──────────────────────────────────────
 
-const ADD_TO_HOME = <MockIosRow icon={SquarePlus} ru="На экран «Домой»" en="Add to Home Screen" />;
+const ADD_TO_HOME = <MockIosRow icon={SquarePlus} ru="На экран «Домой»" />;
 const IOS_ADD_BUTTON = (
   <span className="inline-block rounded-lg bg-white ring-1 ring-black/10 px-3 py-1 text-[14px] font-semibold text-[#0a84ff]">
-    Добавить <span className="text-[11px] font-normal text-ink-500">/ Add</span>
+    Добавить
   </span>
 );
 
@@ -211,7 +212,7 @@ function guideFor({ os, browser, inApp }, canPrompt) {
   if (os === 'ios') {
     if (browser === 'chrome') {
       return {
-        title: 'Как установить в Chrome',
+        title: 'Как установить на iOS',
         steps: [
           { text: 'Нажмите «Поделиться» в адресной строке — вверху справа', visual: <MockToolbarButton icon={Share} /> },
           { text: 'Выберите пункт', visual: ADD_TO_HOME, hint: 'Нет в списке — пролистайте меню вниз' },
@@ -231,7 +232,7 @@ function guideFor({ os, browser, inApp }, canPrompt) {
     }
     // Safari и встроенный браузер ВК — одинаково, через «Поделиться» на нижней панели
     return {
-      title: browser === 'vk' ? 'Как установить из ВКонтакте' : 'Как установить в Safari',
+      title: 'Как установить на iOS',
       pointDown: true,
       steps: [
         browser === 'vk'
@@ -244,7 +245,7 @@ function guideFor({ os, browser, inApp }, canPrompt) {
         {
           text: 'Выберите пункт',
           visual: ADD_TO_HOME,
-          hint: 'Не видно? Нажмите «Ещё» (View More) — пункт появится в списке'
+          hint: 'Не видно? Нажмите «Ещё» — пункт появится в списке'
         },
         { text: 'Нажмите «Добавить» в правом верхнем углу', visual: IOS_ADD_BUTTON }
       ]

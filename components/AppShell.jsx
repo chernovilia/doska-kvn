@@ -26,6 +26,7 @@ import {
 
 const AppContext = createContext({
   openInstallGuide: () => {},
+  afterAdPublished: () => {},
   afterUsefulAction: () => {}
 });
 
@@ -41,9 +42,10 @@ const QUIET_PATHS = /^\/(login|onboarding|admin|terms|privacy)/;
  * - регистрирует service worker (пуши, счётчик на иконке);
  * - открытие с иконки — метрика «установлено/пользуется»;
  * - счётчик непрочитанных на иконке;
- * - когда предложить установку: со второго визита или после полезного действия
- *   (опубликовал объявление, написал), «Не сейчас» — пауза 14 дней;
- * - после полезного действия — предложение включить уведомления (раз в 14 дней).
+ * - окно установки: после каждого опубликованного (или отправленного на проверку) объявления
+ *   и на каждый второй заход на сайт — если сайт ещё не установлен как приложение;
+ * - после первого сообщения за заход — предложение включить уведомления (не чаще раза в 14 дней),
+ *   на iPhone в браузере вместо него — окно установки (уведомления там только у приложения).
  */
 export default function AppShell({ children }) {
   const pathname = usePathname();
@@ -80,17 +82,17 @@ export default function AppShell({ children }) {
 
   const openInstallGuide = useCallback((reason = null) => setGuide({ open: true, reason }), []);
 
-  // Со второго визита, через несколько секунд после загрузки — не мешая первому впечатлению
+  // Каждый второй заход (2-й, 4-й, 6-й…), через несколько секунд после загрузки — не мешая первому впечатлению
   useEffect(() => {
     if (autoTried.current || QUIET_PATHS.test(pathname || '')) return;
     autoTried.current = true;
     const visits = countVisit();
-    if (visits < 2 || installDismissedRecently() || !installSupported()) return;
+    if (visits % 2 !== 0 || !installSupported()) return;
     const t = setTimeout(() => setGuide((g) => (g.open ? g : { open: true, reason: null })), 8000);
     return () => clearTimeout(t);
   }, [pathname]);
 
-  // После полезного действия: сначала уведомления (если можно), иначе — установка
+  // После сообщения: сначала уведомления (если можно), иначе — установка
   const afterUsefulAction = useCallback(async () => {
     const state = await pushState();
     if (state === 'off' && user && !pushAskedRecently()) {
@@ -104,6 +106,13 @@ export default function AppShell({ children }) {
     }
   }, [user]);
 
+  // После публикации объявления (или отправки на проверку) — окно установки каждый раз.
+  // Уже установлено — вместо него предложение уведомлений.
+  const afterAdPublished = useCallback(() => {
+    if (installSupported()) setGuide({ open: true, reason: null });
+    else afterUsefulAction();
+  }, [afterUsefulAction]);
+
   async function turnOnPush() {
     setPushAsk(false);
     const state = await enablePush().catch(() => 'off');
@@ -112,7 +121,7 @@ export default function AppShell({ children }) {
   }
 
   return (
-    <AppContext.Provider value={{ openInstallGuide, afterUsefulAction }}>
+    <AppContext.Provider value={{ openInstallGuide, afterAdPublished, afterUsefulAction }}>
       {children}
       <InstallGuide
         open={guide.open}

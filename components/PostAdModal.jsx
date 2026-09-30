@@ -110,7 +110,7 @@ export default function PostAdModal({ open, onClose, editAd = null, onSaved }) {
   const [publishedStatus, setPublishedStatus] = useState(null);
   const [error, setError] = useState(null);
   const headerRef = useRef(null);
-  const { afterUsefulAction } = useApp();
+  const { afterAdPublished } = useApp();
   // Опубликовали — после закрытия окна предложим уведомления или установку приложения
   const publishedRef = useRef(false);
   function closeModal() {
@@ -118,7 +118,7 @@ export default function PostAdModal({ open, onClose, editAd = null, onSaved }) {
     setTimeout(reset, 300);
     if (publishedRef.current) {
       publishedRef.current = false;
-      setTimeout(afterUsefulAction, 600);
+      setTimeout(afterAdPublished, 600);
     }
   }
 

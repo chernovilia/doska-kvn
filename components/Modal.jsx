@@ -3,19 +3,16 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { X } from 'lucide-react';
 import { useEffect } from 'react';
+import { useScrollLock } from '@/lib/scrollLock';
 
 // onBackdrop — если задан, тап мимо окна и Escape зовут его вместо onClose (крестик — всегда onClose).
 export default function Modal({ open, onClose, onBackdrop, children, size = 'lg' }) {
+  useScrollLock(open); // страница под окном не прокручивается
   useEffect(() => {
     if (!open) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
     const onKey = (e) => e.key === 'Escape' && (onBackdrop || onClose)?.();
     window.addEventListener('keydown', onKey);
-    return () => {
-      document.body.style.overflow = prev;
-      window.removeEventListener('keydown', onKey);
-    };
+    return () => window.removeEventListener('keydown', onKey);
   }, [open, onClose, onBackdrop]);
 
   const width =
@@ -48,7 +45,7 @@ export default function Modal({ open, onClose, onBackdrop, children, size = 'lg'
             >
               <X className="w-5 h-5 text-ink-700" />
             </button>
-            <div className="overflow-y-auto">
+            <div className="overflow-y-auto overscroll-contain">
               {children}
               {/* Запас снизу: во встроенных браузерах (ВК, iOS 26) панель перекрывает низ окна */}
               <div className="h-16 md:hidden" aria-hidden />

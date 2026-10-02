@@ -6,6 +6,7 @@
  * в /admin → Объявления.
  */
 
+import { useScrollLock } from '@/lib/scrollLock';
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import Link from 'next/link';
@@ -46,16 +47,12 @@ export default function ModerationModal({ open, adId, onClose, onChanged }) {
     return () => { cancelled = true; };
   }, [open, adId]);
 
+  useScrollLock(open); // страница под окном не прокручивается
   useEffect(() => {
     if (!open) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
     const onKey = (e) => e.key === 'Escape' && onClose?.();
     window.addEventListener('keydown', onKey);
-    return () => {
-      document.body.style.overflow = prev;
-      window.removeEventListener('keydown', onKey);
-    };
+    return () => window.removeEventListener('keydown', onKey);
   }, [open, onClose]);
 
   async function setStatus(status, note) {
@@ -125,7 +122,7 @@ export default function ModerationModal({ open, adId, onClose, onChanged }) {
               </h2>
             </div>
 
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto overscroll-contain">
               {error && (
                 <div className="m-5 flex items-start gap-2 rounded-xl bg-rose-50 ring-1 ring-rose-200 px-3 py-2 text-[13px] text-rose-800">
                   <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />

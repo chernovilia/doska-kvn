@@ -48,6 +48,21 @@ function priceConfig(form) {
   return { label: 'Цена, ₽', hint: 'Без цены — «Договорная».' };
 }
 
+// Пример заголовка под раздел — чтобы было понятно, что писать.
+const TITLE_HINTS = {
+  auto: 'Например: Lada Vesta 2019, один хозяин',
+  realty: 'Например: Сдам 2-к квартиру в центре Выксы',
+  jobs: 'Например: Продавец-консультант в магазин одежды',
+  services: 'Например: Электрик с выездом, работаю без выходных',
+  electronics: 'Например: iPhone 13, 128 ГБ, отличное состояние',
+  home: 'Например: Диван угловой, раскладной',
+  clothes: 'Например: Зимняя куртка женская, размер 46',
+  kids: 'Например: Коляска 2 в 1, после одного ребёнка',
+  pets: 'Например: Котята в добрые руки',
+  hobby: 'Например: Горный велосипед Stels, 21 скорость',
+  events: 'Например: Концерт в ДК, 12 октября'
+};
+
 function emptyForm(user) {
   return {
     city: defaultCity(user),
@@ -492,7 +507,7 @@ export default function PostAdModal({ open, onClose, editAd = null, onSaved, adm
                   <input
                     value={form.title}
                     onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-                    placeholder="Например: Сдам 2-к квартиру в центре Выксы"
+                    placeholder={TITLE_HINTS[form.section] || 'Коротко: что продаёте или предлагаете'}
                     className="mt-1 w-full rounded-2xl bg-white ring-1 ring-black/10 focus:ring-accent-400 outline-none px-4 py-3 text-base"
                   />
                 </div>

@@ -117,7 +117,7 @@
 - **Иконки** — только lucide-react: `w-4 h-4` в кнопках, `w-5 h-5` в шапках и блоках.
 
 ### Баннер установки
-`InstallBanner`: полоса `h-11 bg-accent-50 border-b border-accent-200` над страницей — иконка приложения, заголовок `text-[12px] font-bold`, кнопка `.btn-primary h-8 rounded-full`, крестик. Не закреплён: уходит вверх при прокрутке, закреплённые шапки остаются.
+`InstallBanner`: полоса `h-11 bg-accent-50 border-b border-accent-200` над страницей — иконка приложения, заголовок `text-[12px] font-bold`, кнопка `.btn-primary h-8 rounded-full`, крестик. Закреплён (`sticky top-0 z-[45]`); шапки страниц закрепляются под ним: `top-[var(--banner-h,0px)]`. Новые закреплённые шапки делать так же.
 
 ### Чат
 - Свои сообщения — `bg-accent-100 text-ink-900`, чужие и ответы поддержки — `bg-white ring-1 ring-black/5`.

@@ -14,6 +14,7 @@ import BottomNav from './BottomNav';
 import Footer from './Footer';
 import PostAdModal from './PostAdModal';
 import { RatingSummary, ReviewsList } from './Reviews';
+import { goBack } from '@/lib/nav';
 
 /**
  * Публичная страница продавца. Связаться — через конкретное объявление
@@ -40,10 +41,10 @@ export default function SellerProfile({ user, ads, reviews = [] }) {
 
   return (
     <div className="min-h-screen bg-slate-50 pb-24 md:pb-0">
-      <div className="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-slate-100">
+      <div className="sticky top-[var(--banner-h,0px)] z-30 bg-white/95 backdrop-blur border-b border-slate-100">
         <div className="max-w-5xl mx-auto px-2 md:px-6 h-14 flex items-center gap-1">
           <button
-            onClick={() => router.back()}
+            onClick={() => goBack(router)}
             aria-label="Назад"
             className="w-10 h-10 grid place-items-center rounded-full text-ink-800 hover:bg-slate-100"
           >
@@ -52,9 +53,9 @@ export default function SellerProfile({ user, ads, reviews = [] }) {
           <div className="font-bold text-ink-900 truncate">Продавец</div>
           <button
             onClick={onShare}
-            aria-label="Поделиться"
-            className="ml-auto w-10 h-10 grid place-items-center rounded-full text-ink-800 hover:bg-slate-100"
+            className="ml-auto h-10 px-2.5 inline-flex items-center gap-1.5 rounded-full text-[14px] font-semibold text-ink-800 hover:bg-slate-100 shrink-0"
           >
+            Поделиться
             <Share2 className="w-5 h-5" />
           </button>
         </div>

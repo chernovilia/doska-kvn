@@ -81,7 +81,7 @@ function Onboarding() {
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Шапка закреплена: логотип, заголовок и подпись видны, пока заполняешь форму */}
-      <div className="sticky top-0 z-30 bg-slate-50/95 backdrop-blur border-b border-slate-100">
+      <div className="sticky top-[var(--banner-h,0px)] z-30 bg-slate-50/95 backdrop-blur border-b border-slate-100">
         <div className="max-w-xl mx-auto px-4 pt-3 pb-3">
           <div className="font-black tracking-tight text-lg text-ink-900">
             Доска<span className="brand-slash">/</span>КВН

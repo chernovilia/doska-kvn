@@ -2,6 +2,7 @@ import { formatPrice } from '@/lib/format';
 import { notFound } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { getAd } from '@/lib/api';
+import { API_URL } from '@/lib/site';
 import AdDetail from '@/components/AdDetail';
 
 // Server Component: делает SSR-fetch, генерит правильные Open Graph теги
@@ -28,7 +29,8 @@ export async function generateMetadata({ params }) {
   const title = `${ad.title} · ${priceText}`;
   const description =
     (ad.description || `${ad.title}. ${ad.address}. Объявление на Доска/КВН.`).slice(0, 180);
-  const image = ad.image || ad.gallery?.[0];
+  // Превью — JPEG через API: фото хранятся в WebP, а ВКонтакте WebP в превью ссылок не показывает
+  const image = ad.image || ad.gallery?.[0] ? `${API_URL}/ads/${ad.id}/og.jpg` : null;
 
   return {
     title,
@@ -37,6 +39,7 @@ export async function generateMetadata({ params }) {
       title,
       description,
       images: image ? [{ url: image, width: 1200, height: 630 }] : [],
+      url: `/ad/${ad.id}`,
       type: 'article',
       locale: 'ru_RU',
       siteName: 'Доска/КВН'

@@ -17,7 +17,7 @@ export default function Header({ place, onPlaceChange, search, onSearchSubmit, o
   const unread = useUnreadCount(!!user);
 
   return (
-    <header className="sticky top-0 z-40 bg-white shadow-[0_1px_0_rgba(15,23,42,0.06)]">
+    <header className="sticky top-[var(--banner-h,0px)] z-40 bg-white shadow-[0_1px_0_rgba(15,23,42,0.06)]">
       <div className="max-w-6xl mx-auto px-4 md:px-6 pt-2 md:pt-3 pb-3">
         <div className="flex items-center gap-2 h-12">
           <Link

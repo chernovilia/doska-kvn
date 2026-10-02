@@ -17,7 +17,7 @@ import {
 const HIDDEN_PATHS = /^\/(login|onboarding|admin|terms|privacy|messages|app-status)/;
 
 /**
- * Узкий баннер «Установите приложение» над страницей: иконка, заголовок, «Установить», крестик.
+ * Узкий закреплённый баннер «Установите приложение» над страницей: иконка, заголовок, «Установить», крестик.
  * Виден, пока сайт не установлен; крестик прячет на срок паузы из админки (как «Не показывать»
  * в окне). «Установить»: системное окно, где оно есть (Android, Chrome), иначе — окно-инструкция.
  * ready — настройки из админки загружены (до этого не рисуем, чтобы баннер не мигал).
@@ -32,7 +32,14 @@ export default function InstallBanner({ ready, onOpenGuide }) {
     setVisible(cfg['app.banner.enabled'] && installSupported() && bannerPausedUntil() <= Date.now());
   }, [ready]);
 
-  if (!visible || HIDDEN_PATHS.test(pathname || '')) return null;
+  const shown = visible && !HIDDEN_PATHS.test(pathname || '');
+  // Высота баннера — в CSS-переменной: закреплённые шапки страниц встают под него, а не под край экрана
+  useEffect(() => {
+    document.documentElement.style.setProperty('--banner-h', shown ? '45px' : '0px');
+    return () => document.documentElement.style.setProperty('--banner-h', '0px');
+  }, [shown]);
+
+  if (!shown) return null;
   const texts = getAppConfig().texts || {};
 
   async function install() {
@@ -52,7 +59,7 @@ export default function InstallBanner({ ready, onOpenGuide }) {
   }
 
   return (
-    <div className="bg-accent-50 border-b border-accent-200">
+    <div className="sticky top-0 z-[45] bg-accent-50 border-b border-accent-200">
       <div className="max-w-6xl mx-auto px-3 md:px-6 h-11 flex items-center gap-2">
         <img src="/icons/icon-192.png" alt="" className="w-7 h-7 rounded-lg ring-1 ring-black/10 shrink-0" />
         <div className="min-w-0 flex-1 text-[12px] leading-tight font-bold text-ink-900 line-clamp-2">

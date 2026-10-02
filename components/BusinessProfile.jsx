@@ -25,6 +25,7 @@ import AdCard from './AdCard';
 import BottomNav from './BottomNav';
 import Footer from './Footer';
 import PostAdModal from './PostAdModal';
+import { goBack } from '@/lib/nav';
 
 /**
  * Публичный профиль бизнес-аккаунта (Мастер / Магазин).
@@ -73,7 +74,7 @@ export default function BusinessProfile({ biz, ads = [] }) {
       <div className="bg-white border-b border-slate-100">
         <div className="max-w-5xl mx-auto px-4 md:px-6 pt-4 pb-3 flex items-center gap-3">
           <button
-            onClick={() => router.back()}
+            onClick={() => goBack(router)}
             className="btn-outline w-10 h-10 shrink-0"
             aria-label="Назад"
           >

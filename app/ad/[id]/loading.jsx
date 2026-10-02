@@ -4,6 +4,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { peekAd, cityName } from '@/lib/api';
 import { formatPrice, thumbUrl, fallbackToFull } from '@/lib/format';
+import { goBack } from '@/lib/nav';
 
 // Показывается сразу по нажатию на карточку, пока сервер отдаёт страницу.
 // Раскладка повторяет AdDetail, чтобы переход выглядел как в приложении, без мигания.
@@ -14,10 +15,10 @@ export default function AdLoading() {
 
   return (
     <div className="min-h-screen bg-slate-50 pb-28 md:pb-0">
-      <div className="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-slate-100">
+      <div className="sticky top-[var(--banner-h,0px)] z-30 bg-white/95 backdrop-blur border-b border-slate-100">
         <div className="max-w-5xl mx-auto px-2 md:px-6 h-14 flex items-center">
           <button
-            onClick={() => router.back()}
+            onClick={() => goBack(router)}
             className="w-10 h-10 grid place-items-center rounded-full text-ink-800 hover:bg-slate-100"
             aria-label="Назад"
           >

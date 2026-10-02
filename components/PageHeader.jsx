@@ -2,22 +2,22 @@
 
 import { useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
+import { goBack } from '@/lib/nav';
 
 /**
  * Закреплённая шапка внутренних страниц: «назад», заголовок, действия справа.
  * Одна на все страницы, чтобы шапки не прокручивались и выглядели одинаково.
- * backHref — куда вести, если истории нет (открыли по ссылке); иначе router.back().
+ * backHref — куда вести, если по сайту ещё не ходили (открыли по ссылке); иначе router.back().
  */
 export default function PageHeader({ title, right, backHref = '/', maxWidth = 'max-w-5xl' }) {
   const router = useRouter();
 
   function onBack() {
-    if (typeof window !== 'undefined' && window.history.length > 1) router.back();
-    else router.push(backHref);
+    goBack(router, backHref);
   }
 
   return (
-    <div className="sticky top-0 z-30 bg-white border-b border-slate-100">
+    <div className="sticky top-[var(--banner-h,0px)] z-30 bg-white border-b border-slate-100">
       <div className={`${maxWidth} mx-auto px-2 md:px-6 h-14 flex items-center gap-1`}>
         <button
           onClick={onBack}

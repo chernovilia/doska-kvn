@@ -48,6 +48,7 @@ import Footer from './Footer';
 import PostAdModal from './PostAdModal';
 import OwnerAdActions, { SoldButton } from './OwnerAdActions';
 import ReportModal from './ReportModal';
+import { goBack } from '@/lib/nav';
 
 export default function AdDetail({ ad }) {
   const router = useRouter();
@@ -209,9 +210,9 @@ export default function AdDetail({ ad }) {
   return (
     <div className={`min-h-screen bg-slate-50 md:pb-0 ${showActionBar ? 'pb-28' : 'pb-24'}`}>
       {/* Верхняя панель */}
-      <div className="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-slate-100">
+      <div className="sticky top-[var(--banner-h,0px)] z-30 bg-white/95 backdrop-blur border-b border-slate-100">
         <div className="max-w-5xl mx-auto px-2 md:px-6 h-14 flex items-center gap-1">
-          <IconBtn label="Назад" onClick={() => router.back()}>
+          <IconBtn label="Назад" onClick={() => goBack(router)}>
             <ArrowLeft className="w-[22px] h-[22px]" />
           </IconBtn>
 
@@ -237,9 +238,14 @@ export default function AdDetail({ ad }) {
           <div className="ml-auto flex items-center gap-0.5">
             {/* Неопубликованное по ссылке никто, кроме автора, не откроет — делиться нечем */}
             {ad.status === 'approved' && (
-              <IconBtn label="Поделиться" onClick={onShare}>
+              // С подписью: по одной иконке непонятно, что это «Поделиться»
+              <button
+                onClick={onShare}
+                className="h-10 px-2.5 inline-flex items-center gap-1.5 rounded-full text-[14px] font-semibold text-ink-800 hover:bg-slate-100"
+              >
+                Поделиться
                 <Share2 className="w-5 h-5" />
-              </IconBtn>
+              </button>
             )}
             {!isOwner && (
               <IconBtn label={liked ? 'Убрать из избранного' : 'В избранное'} onClick={onToggleFavorite}>

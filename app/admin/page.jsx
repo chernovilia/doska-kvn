@@ -148,7 +148,7 @@ function AdminContent() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-slate-100">
+      <header className="sticky top-[var(--banner-h,0px)] z-30 bg-white/95 backdrop-blur border-b border-slate-100">
         <div className="max-w-6xl mx-auto px-2 md:px-6 h-14 flex items-center gap-1">
           <Link href="/" className="w-10 h-10 grid place-items-center rounded-full text-ink-800 hover:bg-slate-100" aria-label="На главную">
             <ArrowLeft className="w-[22px] h-[22px]" />

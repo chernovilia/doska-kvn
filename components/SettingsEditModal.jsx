@@ -7,6 +7,7 @@
  * kind: 'personal' | 'phone' | 'city' | 'notifications'
  */
 
+import { useScrollLock } from '@/lib/scrollLock';
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, AlertCircle, BellRing, MapPin, MessageCircle, Phone as PhoneIcon, CheckCircle2 } from 'lucide-react';
@@ -50,16 +51,12 @@ export default function SettingsEditModal({ open, kind, me, onClose }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, kind]);
 
+  useScrollLock(open); // страница под окном не прокручивается
   useEffect(() => {
     if (!open) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
     const onKey = (e) => e.key === 'Escape' && onClose?.();
     window.addEventListener('keydown', onKey);
-    return () => {
-      document.body.style.overflow = prev;
-      window.removeEventListener('keydown', onKey);
-    };
+    return () => window.removeEventListener('keydown', onKey);
   }, [open, onClose]);
 
   async function submit() {
@@ -113,7 +110,7 @@ export default function SettingsEditModal({ open, kind, me, onClose }) {
               </h3>
             </div>
 
-            <div className="px-5 md:px-6 pb-20 md:pb-6 overflow-y-auto">
+            <div className="px-5 md:px-6 pb-20 md:pb-6 overflow-y-auto overscroll-contain">
               <div className="mt-4 space-y-4">
                 {kind === 'personal' && <PersonalFields form={form} setForm={setForm} onError={setError} />}
                 {kind === 'phone' && <PhoneFields form={form} setForm={setForm} />}
@@ -366,12 +363,7 @@ function CityFields({ form, setForm }) {
             }`}
           >
             <MapPin className="w-5 h-5 text-accent-700" />
-            <div className="flex-1">
-              <div className="font-bold text-ink-900">{c.name}</div>
-              <div className="text-[11px] text-ink-500">
-                {c.population.toLocaleString('ru-RU')} жителей
-              </div>
-            </div>
+            <div className="flex-1 font-bold text-ink-900">{c.name}</div>
             {active && <CheckCircle2 className="w-5 h-5 text-accent-600" />}
           </button>
         );

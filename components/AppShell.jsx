@@ -9,6 +9,8 @@ import InstallBanner from './InstallBanner';
 import { useToast } from './Toast';
 import { useAuth } from '@/lib/auth';
 import { useUnreadCount } from '@/lib/chats';
+import { isScrollLocked } from '@/lib/scrollLock';
+import { markInAppNavigation } from '@/lib/nav';
 import {
   countVisit,
   getAppConfig,
@@ -92,7 +94,11 @@ export default function AppShell({ children }) {
   // Заход начинается и при возвращении в давно открытую вкладку (через 30+ минут).
   // Переходы по сайту таймер не сбрасывают; если в этот момент открыто другое окно — ждём.
   const pathRef = useRef(pathname);
-  pathRef.current = pathname;
+  // Переход между страницами сайта — значит, у «Назад» есть куда возвращаться (lib/nav.js)
+  useEffect(() => {
+    if (pathRef.current !== pathname) markInAppNavigation();
+    pathRef.current = pathname;
+  }, [pathname]);
   const autoTimer = useRef(null);
   const scheduleAuto = useCallback(() => {
     let tries = 0;
@@ -100,7 +106,7 @@ export default function AppShell({ children }) {
       const cfg = getAppConfig();
       if (!cfg['app.install.enabled'] || QUIET_PATHS.test(pathRef.current || '') || !installSupported() || installDismissedRecently()) return;
       // Открыто другое окно (Modal блокирует прокрутку страницы) — повторим позже, до 6 раз
-      if (document.body.style.overflow === 'hidden') {
+      if (isScrollLocked()) {
         if (tries++ < 6) autoTimer.current = setTimeout(attempt, 5000);
         return;
       }

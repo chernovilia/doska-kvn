@@ -7,6 +7,7 @@ import { useAuth } from '@/lib/auth';
 import FavoritesList from '@/components/FavoritesList';
 import BottomNav from '@/components/BottomNav';
 import PostAdModal from '@/components/PostAdModal';
+import { goBack } from '@/lib/nav';
 
 export default function FavoritesPage() {
   const router = useRouter();
@@ -19,10 +20,10 @@ export default function FavoritesPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 pb-24 md:pb-0">
-      <div className="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-slate-100">
+      <div className="sticky top-[var(--banner-h,0px)] z-30 bg-white/95 backdrop-blur border-b border-slate-100">
         <div className="max-w-6xl mx-auto px-2 md:px-6 h-14 flex items-center gap-1">
           <button
-            onClick={() => router.back()}
+            onClick={() => goBack(router)}
             aria-label="Назад"
             className="w-10 h-10 grid place-items-center rounded-full text-ink-800 hover:bg-slate-100"
           >

@@ -48,6 +48,7 @@ export default function InstallGuide({ open, onClose, onDismiss, reason }) {
     }
   }
 
+  // «Не показывать» и крестик — пауза (срок из админки). Тап мимо окна — просто закрыть, без паузы.
   function later() {
     trackAppEvent('install_dismissed');
     onDismiss?.();
@@ -59,7 +60,7 @@ export default function InstallGuide({ open, onClose, onDismiss, reason }) {
   const texts = getAppConfig().texts || {};
 
   return (
-    <Modal open={open} onClose={later} size="sm">
+    <Modal open={open} onClose={later} onBackdrop={onClose} size="sm">
       {/* Шапка с логотипом закреплена — прокручивается только инструкция.
           z-[5] — ниже крестика окна (z-10), чтобы он оставался кликабельным */}
       <div className="sticky top-0 z-[5] bg-white border-b border-slate-100 px-5 pt-5 pb-3 pr-14 flex items-center gap-3">
@@ -128,7 +129,7 @@ export default function InstallGuide({ open, onClose, onDismiss, reason }) {
         )}
 
         <button onClick={later} className="w-full h-10 text-sm font-semibold text-ink-500 hover:text-ink-800">
-          Не сейчас
+          Не показывать
         </button>
       </div>
     </Modal>

@@ -103,14 +103,17 @@ export default function SettingsEditModal({ open, kind, me, onClose }) {
               <X className="w-5 h-5 text-ink-700" />
             </button>
 
-            <div className="p-5 pb-20 md:p-6 overflow-y-auto">
+            {/* Шапка до заголовка закреплена, прокручиваются только поля */}
+            <div className="shrink-0 px-5 md:px-6 pt-5 md:pt-6 pb-3 pr-14 border-b border-slate-100">
               <div className="text-xs uppercase tracking-wide text-accent-700 font-bold">
                 Настройки
               </div>
               <h3 className="text-xl font-extrabold text-ink-900 mt-1">
                 {TITLES[kind]}
               </h3>
+            </div>
 
+            <div className="px-5 md:px-6 pb-20 md:pb-6 overflow-y-auto">
               <div className="mt-4 space-y-4">
                 {kind === 'personal' && <PersonalFields form={form} setForm={setForm} onError={setError} />}
                 {kind === 'phone' && <PhoneFields form={form} setForm={setForm} />}

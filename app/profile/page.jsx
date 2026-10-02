@@ -532,6 +532,9 @@ function SettingsTab({ me }) {
         </ul>
       </div>
 
+      {/* Версия приложения — из package.json, поднимается с каждым обновлением */}
+      <div className="mt-4 text-center text-[12px] text-ink-400">Версия {process.env.NEXT_PUBLIC_APP_VERSION}</div>
+
       <SettingsEditModal
         open={!!editKind}
         kind={editKind}

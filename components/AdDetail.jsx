@@ -16,7 +16,6 @@ import {
   Flag,
   Flame,
   Heart,
-  Home,
   Lock,
   MapPin,
   MessageCircle,
@@ -218,9 +217,8 @@ export default function AdDetail({ ad }) {
 
           {/* Хлебные крошки — только на десктопе */}
           <nav className="hidden md:flex items-center gap-1.5 text-[13px] text-ink-500 min-w-0 ml-2">
-            <Link href="/" className="hover:text-accent-700 inline-flex items-center gap-1">
-              <Home className="w-3.5 h-3.5" />
-              Доска/КВН
+            <Link href="/" className="font-black tracking-tight text-[15px] text-ink-900 hover:opacity-80 shrink-0">
+              Доска<span className="brand-slash">/</span>КВН
             </Link>
             <span>›</span>
             <Link href={`/${ad.city}`} className="hover:text-accent-700 truncate">

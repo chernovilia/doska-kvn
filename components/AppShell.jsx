@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { BellRing } from 'lucide-react';
 import Modal from './Modal';
 import InstallGuide from './InstallGuide';
+import InstallBanner from './InstallBanner';
 import { useToast } from './Toast';
 import { useAuth } from '@/lib/auth';
 import { useUnreadCount } from '@/lib/chats';
@@ -58,6 +59,7 @@ export default function AppShell({ children }) {
   const unread = useUnreadCount(!!user);
   const [guide, setGuide] = useState({ open: false, reason: null });
   const [pushAsk, setPushAsk] = useState(false);
+  const [configReady, setConfigReady] = useState(false);
 
   // Service worker и «открыто с иконки» — один раз за запуск
   useEffect(() => {
@@ -116,7 +118,11 @@ export default function AppShell({ children }) {
       const n = getAppConfig()['app.install.every_nth_visit'];
       if (isNew && n > 0 && visits % n === 0) scheduleAuto();
     };
-    loadAppConfig().then(() => alive && check());
+    loadAppConfig().then(() => {
+      if (!alive) return;
+      setConfigReady(true);
+      check();
+    });
     const onVisibility = () => (document.visibilityState === 'visible' ? check() : touchVisit());
     document.addEventListener('visibilitychange', onVisibility);
     const keepAlive = setInterval(() => document.visibilityState === 'visible' && touchVisit(), 60_000);
@@ -167,6 +173,7 @@ export default function AppShell({ children }) {
 
   return (
     <AppContext.Provider value={{ openInstallGuide, afterAdPublished, afterUsefulAction }}>
+      <InstallBanner ready={configReady} onOpenGuide={() => openInstallGuide()} />
       {children}
       <InstallGuide
         open={guide.open}

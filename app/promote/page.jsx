@@ -5,11 +5,11 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { RefreshCw } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
-import { getOwnAd, renewAd } from '@/lib/api';
-import { fallbackToFull, formatDayMonth, formatPrice, thumbUrl } from '@/lib/format';
+import { getOwnAd, getSiteSettings, renewAd, setAdAutoBump } from '@/lib/api';
+import { fallbackToFull, formatDayMonth, formatPrice, pluralRu, thumbUrl } from '@/lib/format';
 import PageHeader from '@/components/PageHeader';
 import BottomNav from '@/components/BottomNav';
-import PostAdModal from '@/components/PostAdModal';
+import PostAdModal, { Switch } from '@/components/PostAdModal';
 import BumpButton from '@/components/BumpButton';
 import { PROMO_OPTIONS } from '@/components/PromoOptions';
 import { useToast } from '@/components/Toast';
@@ -31,6 +31,11 @@ function PromoteContent() {
   const { toast } = useToast();
   const [ad, setAd] = useState(undefined); // undefined — грузим, null — нет или не своё
   const [renewing, setRenewing] = useState(false);
+  const [autoBusy, setAutoBusy] = useState(false);
+  const [features, setFeatures] = useState({ autoBump: false, bumpCooldownDays: 10 });
+  useEffect(() => {
+    getSiteSettings().then((s) => setFeatures((f) => ({ ...f, ...s.features })));
+  }, []);
   const [postOpen, setPostOpen] = useState(false);
 
   useEffect(() => {
@@ -46,6 +51,19 @@ function PromoteContent() {
   useEffect(() => {
     if (user) load();
   }, [user, load]);
+
+  async function onAutoBump(enabled) {
+    setAutoBusy(true);
+    try {
+      const res = await setAdAutoBump(ad.id, enabled);
+      setAd((a) => ({ ...a, autoBump: res.autoBump }));
+      toast(res.autoBump ? 'Автоподнятие включено' : 'Автоподнятие выключено');
+    } catch (err) {
+      toast(err.message || 'Не получилось', { kind: 'error' });
+    } finally {
+      setAutoBusy(false);
+    }
+  }
 
   async function onRenew() {
     setRenewing(true);
@@ -166,8 +184,22 @@ function PromoteContent() {
                         </div>
                       </div>
                       {o.id === 'bump' && (
-                        <div className="mt-3">
+                        <div className="mt-3 space-y-3">
                           <BumpButton ad={ad} />
+                          {/* Автоподнятие: само, когда наступает срок подъёма (срок — из админки) */}
+                          {features.autoBump && (
+                            <label className="flex items-start gap-3 rounded-2xl bg-slate-50 ring-1 ring-black/5 p-3 cursor-pointer">
+                              <div className="min-w-0 flex-1">
+                                <div className="text-sm font-semibold text-ink-900">Поднимать автоматически</div>
+                                <div className="text-[12px] text-ink-500">
+                                  Раз в {features.bumpCooldownDays}{' '}
+                                  {pluralRu(features.bumpCooldownDays, ['день', 'дня', 'дней'])} объявление само поднимается в
+                                  ленте — бесплатно
+                                </div>
+                              </div>
+                              <Switch checked={!!ad.autoBump} disabled={autoBusy} onChange={onAutoBump} label="Поднимать автоматически" />
+                            </label>
+                          )}
                         </div>
                       )}
                     </section>

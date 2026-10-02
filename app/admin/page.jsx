@@ -18,6 +18,7 @@ import {
   Flag,
   Heart,
   MessageCircle,
+  Plus,
   RefreshCw,
   Search,
   ShieldCheck,
@@ -35,7 +36,6 @@ import {
   adminDeleteAd,
   adminWipeAll,
   adminGetSettings,
-  adminWhoami,
   adminSetSetting,
   adminListSupport,
   adminReplySupport,
@@ -52,8 +52,11 @@ import {
   adminSetNeighbors,
   adminSetContacts,
   adminAppStats,
-  adminSetAppTexts
+  adminSetAppTexts,
+  adminResetAppStats
 } from '@/lib/api';
+import Modal from '@/components/Modal';
+import PostAdModal from '@/components/PostAdModal';
 import { useApp } from '@/components/AppShell';
 import { loadAppConfig } from '@/lib/pwa';
 import { CITIES } from '@/data/regions';
@@ -216,10 +219,6 @@ function useAdminChanged(fn) {
 
 function OverviewTab({ stats, onReload, go }) {
   const [wiping, setWiping] = useState(false);
-  const [whoami, setWhoami] = useState(null);
-  useEffect(() => {
-    adminWhoami().then(setWhoami).catch(() => {});
-  }, []);
   const [error, setError] = useState(null);
 
   async function wipe() {
@@ -336,21 +335,7 @@ function OverviewTab({ stats, onReload, go }) {
 
       <p className="text-[12px] text-ink-500">
         Техническое: фото {stats.tech.adPhotos}, активных сессий {stats.tech.refreshTokens}, кодов входа {stats.tech.emailCodes}.
-        {whoami && (
-          <>
-            {' '}Ваш IP глазами сервера: <b className="text-ink-700">{whoami.ip}</b> — должен совпадать с вашим настоящим
-            адресом, иначе лимиты запросов общие для всех.
-          </>
-        )}
       </p>
-      {whoami && (
-        <details className="text-[12px] text-ink-500">
-          <summary className="cursor-pointer">Диагностика IP (заголовки прокси)</summary>
-          <pre className="mt-1 whitespace-pre-wrap break-all rounded-xl bg-white ring-1 ring-black/5 p-3 select-all">
-            {JSON.stringify({ ip: whoami.ip, ips: whoami.ips, socket: whoami.socket, headers: whoami.ipHeaders }, null, 2)}
-          </pre>
-        </details>
-      )}
 
       <ErrorBox message={error} />
       {/* Полный сброс — только если разрешён на сервере (ADMIN_WIPE_ENABLED); на проде выключен */}
@@ -459,6 +444,7 @@ function AdsTab({ preset, onOpen, onChanged }) {
   const [error, setError] = useState(null);
   const [asking, setAsking] = useState(null); // { id, action: 'reject' | 'delete' }
   const [busy, setBusy] = useState(false);
+  const [placing, setPlacing] = useState(false);
 
   const load = useCallback(async () => {
     setError(null);
@@ -492,7 +478,19 @@ function AdsTab({ preset, onOpen, onChanged }) {
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
         <SearchBox value={q} onChange={(v) => { setOffset(0); setQ(v); }} placeholder="Заголовок, описание или ID" />
+        <button onClick={() => setPlacing(true)} className="btn-primary h-10 px-4 rounded-full text-sm shrink-0">
+          <Plus className="w-4 h-4" />
+          Разместить за пользователя
+        </button>
       </div>
+      <PlaceForUser
+        open={placing}
+        onClose={() => setPlacing(false)}
+        onPlaced={() => {
+          load();
+          onChanged();
+        }}
+      />
       <div className="-mx-4 md:mx-0 overflow-x-auto no-scrollbar">
         <div className="flex gap-1.5 px-4 md:px-0 w-max">
           {STATUS_FILTERS.map((f) => (
@@ -531,6 +529,11 @@ function AdsTab({ preset, onOpen, onChanged }) {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start gap-2">
                     <div className="font-semibold text-ink-900 line-clamp-2 flex-1">{a.title}</div>
+                    {a.placedByAdmin && (
+                      <span className="text-[11px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap bg-accent-100 text-accent-800" title="Размещено администратором за пользователя">
+                        за пользователя
+                      </span>
+                    )}
                     <StatusBadge status={a.status} />
                   </div>
                   <div className="text-[13px] text-ink-900 font-bold">{formatPrice(a, { compact: true })}</div>
@@ -596,6 +599,109 @@ function AdsTab({ preset, onOpen, onChanged }) {
       )}
       {data && <Pager total={data.total} offset={offset} onOffset={setOffset} />}
     </div>
+  );
+}
+
+// Разместить объявление за пользователя: сначала кто продавец, потом обычная форма подачи.
+// Объявление публикуется от имени продавца сразу, ему уходит письмо со ссылкой.
+function PlaceForUser({ open, onClose, onPlaced }) {
+  const empty = { email: '', name: '', phone: '', contactMethod: 'chat' };
+  const [seller, setSeller] = useState(empty);
+  const [formOpen, setFormOpen] = useState(false);
+  const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(seller.email.trim()) && seller.name.trim().length >= 2;
+  const phoneOk = seller.contactMethod !== 'phone' || seller.phone.replace(/\D/g, '').length >= 10;
+
+  function close() {
+    onClose();
+    setSeller(empty);
+  }
+
+  return (
+    <>
+      <Modal open={open && !formOpen} onClose={close} size="sm">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (valid && phoneOk) setFormOpen(true);
+          }}
+          className="p-5 pb-6 space-y-3"
+        >
+          <div className="pr-10">
+            <div className="text-xs uppercase tracking-wide text-accent-700 font-bold">Разместить за пользователя</div>
+            <h3 className="text-xl font-extrabold text-ink-900 mt-1">Кто продавец?</h3>
+          </div>
+          <div className="rounded-xl bg-amber-50 ring-1 ring-amber-200 px-3 py-2 text-[13px] text-amber-900">
+            Только с согласия человека. На его почту придёт письмо со ссылкой на объявление; управлять им он сможет,
+            войдя на сайт по коду на эту почту.
+          </div>
+          <label className="block">
+            <div className="text-[12px] font-semibold text-ink-700 mb-1">Почта продавца</div>
+            <input
+              type="email"
+              value={seller.email}
+              onChange={(e) => setSeller((f) => ({ ...f, email: e.target.value }))}
+              placeholder="seller@mail.ru"
+              className="w-full h-11 rounded-2xl bg-white ring-1 ring-black/10 focus:ring-accent-400 outline-none px-4 text-base"
+            />
+          </label>
+          <label className="block">
+            <div className="text-[12px] font-semibold text-ink-700 mb-1">Имя</div>
+            <input
+              value={seller.name}
+              onChange={(e) => setSeller((f) => ({ ...f, name: e.target.value.slice(0, 80) }))}
+              placeholder="Как подписать продавца"
+              className="w-full h-11 rounded-2xl bg-white ring-1 ring-black/10 focus:ring-accent-400 outline-none px-4 text-base"
+            />
+          </label>
+          <label className="block">
+            <div className="text-[12px] font-semibold text-ink-700 mb-1">Телефон — если продавец хочет звонки</div>
+            <input
+              type="tel"
+              value={seller.phone}
+              onChange={(e) => setSeller((f) => ({ ...f, phone: e.target.value }))}
+              placeholder="+7 999 123-45-67"
+              className="w-full h-11 rounded-2xl bg-white ring-1 ring-black/10 focus:ring-accent-400 outline-none px-4 text-base"
+            />
+          </label>
+          <div className="flex gap-1.5">
+            {[
+              ['chat', 'Только сообщения'],
+              ['phone', 'Показывать телефон']
+            ].map(([id, label]) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setSeller((f) => ({ ...f, contactMethod: id }))}
+                className={`chip chip-sm ${seller.contactMethod === id ? 'chip-on' : ''}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <p className="text-[12px] text-ink-500">
+            Если аккаунт с такой почтой уже есть — объявление добавится к нему, имя и телефон в профиле не изменятся.
+            Продавцу без входа на сайт сообщения в чате видны не будут — лучше указать телефон.
+          </p>
+          <button type="submit" disabled={!valid || !phoneOk} className="w-full btn-primary h-11 rounded-2xl text-sm">
+            Дальше — объявление
+          </button>
+        </form>
+      </Modal>
+      <PostAdModal
+        open={open && formOpen}
+        adminFor={{
+          email: seller.email.trim(),
+          name: seller.name.trim(),
+          phone: seller.phone.trim() || undefined,
+          contactMethod: seller.contactMethod
+        }}
+        onSaved={onPlaced}
+        onClose={() => {
+          setFormOpen(false);
+          close();
+        }}
+      />
+    </>
   );
 }
 
@@ -1079,7 +1185,7 @@ function AppPromptsSettings({ items, draft, setDraft, save, saving }) {
       <div>
         <h3 className="font-bold text-ink-900">Приложение и уведомления</h3>
         <p className="text-[13px] text-ink-500 mt-0.5">
-          Когда само появляется окно «Установите приложение!» и предложение включить уведомления. Уже установленным окно
+          Когда сами появляются окно и баннер «Установите приложение!» и предложение включить уведомления. Уже установленным окно
           установки не показывается. Изменения доходят до телефонов в течение 5 минут.
         </p>
       </div>
@@ -1139,6 +1245,29 @@ function AppPromptsSettings({ items, draft, setDraft, save, saving }) {
         })}
       </div>
 
+      {/* Диагностика на телефоне: почему окно показывается или нет именно на этом устройстве */}
+      <div className="rounded-2xl bg-slate-50 ring-1 ring-black/5 p-3 space-y-2">
+        <div className="text-sm font-bold text-ink-900">Проверка на телефоне — страница диагностики</div>
+        <p className="text-[13px] text-ink-700">
+          Откройте на нужном телефоне <b>доска-квн.рф/app-status</b>. Страница покажет, появится ли окно установки
+          на этом устройстве и почему нет (пауза, уже установлено, выключено здесь), номер захода, состояние
+          уведомлений. Там же кнопки «Показать окно», «Включить уведомления» и «Сбросить показы» — чтобы проверить
+          правила заново. Ссылки на неё на сайте нет, в поиске она закрыта; данных пользователей не показывает.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <Link href="/app-status" target="_blank" className="h-9 px-3.5 rounded-xl btn-primary text-[13px]">
+            Открыть диагностику
+          </Link>
+          <button
+            type="button"
+            onClick={() => navigator.clipboard?.writeText(`${window.location.origin}/app-status`)}
+            className="h-9 px-3.5 rounded-xl btn-outline text-[13px]"
+          >
+            Скопировать ссылку
+          </button>
+        </div>
+      </div>
+
       <form onSubmit={saveTexts} className="space-y-2 pt-1">
         <div className="text-sm font-bold text-ink-900">Тексты окна установки</div>
         <div className="text-[12px] text-ink-500">Пустое поле — текст по умолчанию (виден серым).</div>
@@ -1167,9 +1296,6 @@ function AppPromptsSettings({ items, draft, setDraft, save, saving }) {
           <button type="button" onClick={() => openInstallGuide()} className="h-10 px-4 rounded-xl btn-outline text-sm">
             Показать окно сейчас
           </button>
-          <Link href="/app-status" target="_blank" className="h-10 px-4 rounded-xl btn-outline text-sm">
-            Диагностика устройства
-          </Link>
         </div>
       </form>
     </section>
@@ -1338,7 +1464,9 @@ const FUNNEL = [
   ['install_prompt_shown', 'Показали окно установки'],
   ['install_clicked', 'Нажали «Установить» (Android/ПК)'],
   ['install_accepted', 'Установили через системное окно'],
-  ['install_dismissed', 'Нажали «Не сейчас»'],
+  ['install_dismissed', 'Окно: «Не показывать» или крестик'],
+  ['banner_clicked', 'Баннер: нажали «Установить»'],
+  ['banner_closed', 'Баннер: закрыли крестиком'],
   ['push_prompt_shown', 'Предложили уведомления'],
   ['push_enabled', 'Включили уведомления']
 ];
@@ -1346,9 +1474,19 @@ const FUNNEL = [
 function AppStats() {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
+  const load = useCallback(() => adminAppStats().then(setData).catch((err) => setError(err.message)), []);
   useEffect(() => {
-    adminAppStats().then(setData).catch((err) => setError(err.message));
-  }, []);
+    load();
+  }, [load]);
+  async function reset() {
+    if (!window.confirm('Обнулить метрики приложения: установки, открытия и воронку? Подписки на уведомления останутся.')) return;
+    try {
+      await adminResetAppStats();
+      load();
+    } catch (err) {
+      setError(err.message);
+    }
+  }
   if (error) return <ErrorBox message={error} />;
   if (!data) return <div className="h-32 rounded-2xl bg-white ring-1 ring-black/5 animate-pulse" />;
   const platforms = Object.entries(data.byPlatform);
@@ -1411,6 +1549,9 @@ function AppStats() {
           {!data.devices.length && <li className="py-2 text-ink-500">Пока никто не установил</li>}
         </ul>
       </details>
+      <button onClick={reset} className="text-[12px] font-semibold text-ink-500 hover:text-rose-700">
+        Обнулить метрики (перед запуском — в них тестовые данные)
+      </button>
     </section>
   );
 }

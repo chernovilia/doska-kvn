@@ -66,7 +66,7 @@ export default function AppStatusPage() {
       : !cfg['app.install.enabled']
         ? 'Показ окна выключен в админке'
         : paused
-          ? `Пауза после «Не сейчас» до ${fmt(local.installPausedUntil)}`
+          ? `Пауза после «Не показывать» до ${fmt(local.installPausedUntil)}`
           : null;
   const nextVisit = n > 0 ? Math.floor(local.visits / n) * n + n : null;
 
@@ -103,7 +103,11 @@ export default function AppStatusPage() {
           <Row k="Окно установки само" v={cfg['app.install.enabled'] ? 'включено' : 'выключено'} />
           <Row k="После публикации" v={cfg['app.install.after_publish'] ? 'да' : 'нет'} />
           <Row k="Каждый N-й заход" v={n > 0 ? `каждый ${n}-й` : 'выключено'} />
-          <Row k="Пауза после «Не сейчас»" v={`${cfg['app.install.dismiss_days']} дн.${paused ? ` — идёт до ${fmt(local.installPausedUntil)}` : ''}`} />
+          <Row k="Пауза после «Не показывать»" v={`${cfg['app.install.dismiss_days']} дн.${paused ? ` — идёт до ${fmt(local.installPausedUntil)}` : ''}`} />
+          <Row
+            k="Баннер вверху страниц"
+            v={!cfg['app.banner.enabled'] ? 'выключен' : local.bannerPausedUntil > Date.now() ? `закрыт до ${fmt(local.bannerPausedUntil)}` : 'показывается'}
+          />
           <Row k="Уведомления после сообщения / публикации" v={`${cfg['app.push.after_message'] ? 'да' : 'нет'} / ${cfg['app.push.after_publish'] ? 'да' : 'нет'}`} />
           <Row k="Предлагать уведомления не чаще" v={`раз в ${cfg['app.push.ask_every_days']} дн.`} />
         </Card>

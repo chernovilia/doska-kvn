@@ -54,12 +54,13 @@
 | POST | `/push/subscribe` | Подписка браузера `{ endpoint, keys: { p256dh, auth }, platform?, deviceId? }` (auth). Пуш уходит на каждое уведомление (колокольчик) и на каждое сообщение в чате (`tag` — одно уведомление на диалог), в пуше — число непрочитанных для иконки; подписки с ответом 404/410 удаляются |
 | DELETE | `/push/subscribe` | `{ endpoint }` — отписать этот браузер (auth) |
 | POST | `/app/open` | Приложение открыто с иконки или установлено `{ deviceId, platform: ios\|android\|desktop, browser, source: standalone\|appinstalled }` (гостям тоже; вошедшему — привязка к аккаунту) |
-| POST | `/app/event` | Воронка: `install_prompt_shown`, `install_clicked`, `install_dismissed`, `push_prompt_shown`, `push_enabled` — счётчик по дням |
+| POST | `/app/event` | Воронка: `install_prompt_shown`, `install_clicked`, `install_dismissed`, `banner_clicked`, `banner_closed`, `push_prompt_shown`, `push_enabled` — счётчик по дням |
 | GET | `/users/username-available?u=` | Свободен ли адрес `/u/<u>`: `{ available, reason? }` (свой текущий — свободен) |
 | GET | `/users/by-username/:username` | Публичная страница по своему адресу (как `/users/:id`) |
-| GET | `/site` | Публичные настройки из админки: `{ neighbors: { cityId: [cityId…] }, contacts: { email, phone, telegram, vk }, app: { 'app.install.*', 'app.push.*', texts } }` — правила и тексты окон приложения |
+| GET | `/site` | Публичные настройки из админки: `{ neighbors, contacts, app: { 'app.install.*', 'app.banner.enabled', 'app.push.*', texts }, features: { autoBump, bumpCooldownDays } }` — соседи, контакты, правила и тексты окон приложения, что доступно авторам |
 | POST | `/ads` | Создать (auth; 5/час, 20/сутки; `photoUrls[]` до 10; `attributes` — плоский объект характеристик, до 20 полей; `eventDate` — у афиши) |
 | POST | `/ads/:id/bump` | Бесплатно поднять своё опубликованное (auth; пауза `ranking.bump_cooldown_days`, по умолчанию 10 дней) |
+| POST | `/ads/:id/auto-bump` | `{ enabled }` — автоподнятие своего объявления: поднимается само, когда наступает срок подъёма (раз в час проверяет `AdLifecycleService`). То же поле `autoBump` — в `POST /ads` и `PUT /ads/:id`. Выключено в админке (`ranking.auto_bump_enabled`) — включить нельзя (auth) |
 | PUT | `/ads/:id` | Правка своего объявления: тело как у `POST /ads`. Модерация как при подаче (автопубликация → сразу в ленте, иначе `pending` и уведомление админам); отклонённое и скрытое — всегда `pending`. Дата публикации и срок показа сохраняются; убранные фото удаляются из S3 (auth; 30/час) |
 | POST | `/ads/:id/archive` | «Продано / неактуально»: своё опубликованное → `archived` (auth) |
 | POST | `/ads/:id/renew` | Продлить своё опубликованное или вернуть из архива → `approved`, `expiresAt = сейчас + ads.lifetime_days` (auth) |
@@ -83,7 +84,6 @@
 | Метод | URL | |
 |---|---|---|
 | GET | `/admin/stats` | Счётчики таблиц |
-| GET | `/admin/whoami` | Какой IP сервер видит у админа — проверка, что лимиты считаются по настоящим адресам. `ipHeaders` — все заголовки прокси с адресом (диагностика) |
 | GET | `/admin/users?limit&offset&q&blocked=1` | Пользователи |
 | DELETE | `/admin/users/:id` | Удалить пользователя с его данными |
 | GET | `/admin/ads?limit&offset&status&q&authorId` | Объявления с фильтром статуса |
@@ -99,7 +99,8 @@
 | GET | `/admin/support?status=open` | Обращения в поддержку с перепиской и автором |
 | POST | `/admin/support/:id/reply` | Ответ `{ text }` → статус answered, пользователю уведомление и письмо |
 | PATCH | `/admin/support/:id` | `{ status: open \| answered \| closed }` |
-| GET, PATCH | `/admin/moderation` | Автопубликация вкл/выкл (`Setting['moderation.autoApprove']`) |
+| POST | `/admin/ads/for-user` | Разместить за пользователя `{ email, name, phone?, contactMethod?, ad: {…как POST /ads} }`: аккаунт по почте находится или создаётся, объявление публикуется сразу от имени продавца (`placedByAdmin`), ему уведомление и письмо |
+| DELETE | `/admin/app` | Обнулить метрики приложения (устройства и воронку; подписки на пуши остаются) |
 | GET | `/admin/app` | Приложение: установили (всего, за 7 дней), пользуются за 7 дней, платформы, с пушами, воронка за 30 дней, последние 100 устройств |
 | PUT | `/admin/neighbors` | `{ cityId, neighbors: [cityId…] \| null }` — соседи города для блока «В соседних городах»; `null` — по умолчанию (остальные города региона и запущенные соседние регионы) |
 | PUT | `/admin/app-texts` | Тексты окна установки `{ title, subtitle, benefit1Title, benefit1Text, benefit2Title, benefit2Text }`; пустые — по умолчанию |

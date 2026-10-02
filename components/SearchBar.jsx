@@ -69,8 +69,8 @@ export default function SearchBar({ value = '', onSubmit, onSelect }) {
         }}
         className="flex h-12"
       >
-        <div className="flex-1 min-w-0 flex items-center gap-2 pl-3.5 pr-1 rounded-l-2xl border-2 border-r-0 border-slate-200 bg-white focus-within:border-accent-400 transition-colors">
-          <Search className="w-5 h-5 text-ink-500 shrink-0" />
+        <div className="flex-1 min-w-0 flex items-center gap-1.5 pl-3 pr-1 rounded-l-2xl border-2 border-r-0 border-slate-200 bg-white focus-within:border-accent-400 transition-colors">
+          <Search className="w-[18px] h-[18px] text-ink-500 shrink-0" />
           <input
             ref={inputRef}
             type="search"
@@ -79,8 +79,9 @@ export default function SearchBar({ value = '', onSubmit, onSelect }) {
             onChange={(e) => setQ(e.target.value)}
             onFocus={() => setFocused(true)}
             onBlur={() => setTimeout(() => setFocused(false), 120)}
-            placeholder="Поиск товаров и услуг…"
-            className="w-full min-w-0 bg-transparent outline-none text-ink-900 placeholder:text-ink-500 text-base [&::-webkit-search-cancel-button]:hidden"
+            placeholder="Поиск в Кулебаках, Выксе и Навашино"
+            // Текст ввода — 16 px (иначе iPhone увеличивает страницу), подсказка мельче
+            className="w-full min-w-0 bg-transparent outline-none text-ink-900 placeholder:text-ink-500 placeholder:text-[11.5px] text-base [&::-webkit-search-cancel-button]:hidden"
           />
           {q && (
             <button
@@ -95,7 +96,7 @@ export default function SearchBar({ value = '', onSubmit, onSelect }) {
         </div>
         <button
           type="submit"
-          className="px-5 rounded-r-2xl btn-primary text-[15px] font-bold shrink-0"
+          className="px-3.5 rounded-r-2xl btn-primary text-[15px] font-bold shrink-0"
         >
           Найти
         </button>

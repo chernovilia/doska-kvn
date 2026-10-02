@@ -4,18 +4,19 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { X } from 'lucide-react';
 import { useEffect } from 'react';
 
-export default function Modal({ open, onClose, children, size = 'lg' }) {
+// onBackdrop — если задан, тап мимо окна и Escape зовут его вместо onClose (крестик — всегда onClose).
+export default function Modal({ open, onClose, onBackdrop, children, size = 'lg' }) {
   useEffect(() => {
     if (!open) return;
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
-    const onKey = (e) => e.key === 'Escape' && onClose?.();
+    const onKey = (e) => e.key === 'Escape' && (onBackdrop || onClose)?.();
     window.addEventListener('keydown', onKey);
     return () => {
       document.body.style.overflow = prev;
       window.removeEventListener('keydown', onKey);
     };
-  }, [open, onClose]);
+  }, [open, onClose, onBackdrop]);
 
   const width =
     size === 'sm' ? 'max-w-md' : size === 'md' ? 'max-w-xl' : size === 'xl' ? 'max-w-4xl' : 'max-w-2xl';
@@ -31,7 +32,7 @@ export default function Modal({ open, onClose, children, size = 'lg' }) {
         >
           <div
             className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"
-            onClick={onClose}
+            onClick={onBackdrop || onClose}
           />
           <motion.div
             initial={{ y: 40, scale: 0.98, opacity: 0 }}

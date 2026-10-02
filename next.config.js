@@ -13,6 +13,9 @@ const securityHeaders = [
 
 const nextConfig = {
   reactStrictMode: true,
+  // Версия приложения (package.json) — показывается внизу настроек профиля.
+  // Поднимаем при каждом обновлении.
+  env: { NEXT_PUBLIC_APP_VERSION: require('./package.json').version },
   // Оптимизатор картинок Next не используем (обычные <img>), внешних источников ему не даём:
   // через remotePatterns работала DoS-уязвимость Next 14 (GHSA-9g9p-9gw9-jx7f).
   async headers() {

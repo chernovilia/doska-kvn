@@ -1,9 +1,9 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { CITIES, REGIONS, SECTIONS, getCategoryGroups, getSection, createAd, updateAd, uploadAdPhoto } from '@/lib/api';
+import { CITIES, REGIONS, SECTIONS, getCategoryGroups, getSection, createAd, updateAd, uploadAdPhoto, getSiteSettings, adminCreateAdForUser } from '@/lib/api';
 import { FREE_FROM_SECTIONS } from '@/data/categories';
-import { formatPrice, formatEventDate, thumbUrl, fallbackToFull } from '@/lib/format';
+import { formatPrice, formatEventDate, thumbUrl, fallbackToFull, pluralRu } from '@/lib/format';
 import { getAttributeFields, describeAttributes, parseAttributeInput } from '@/data/attributes';
 import { CheckCircle2, Clock, Sparkles, ArrowLeft, ArrowRight, ChevronRight, AlertCircle, X, ImagePlus, Loader2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
@@ -61,6 +61,7 @@ function emptyForm(user) {
     eventDate: '', // datetime-local у афиши
     address: '',
     description: '',
+    autoBump: false, // поднимать автоматически, когда наступает срок подъёма
     photos: [] // { key, url?, local?, status: 'uploading' | 'done' } — порядок = порядок в объявлении
   };
 }
@@ -82,6 +83,7 @@ function formFromAd(ad) {
     eventDate: ad.eventDate ? moscowLocalInput(ad.eventDate) : '',
     address: ad.address && ad.address !== CITIES.find((c) => c.id === (ad.cityId || ad.city))?.name ? ad.address : '',
     description: ad.description || '',
+    autoBump: !!ad.autoBump,
     photos: (ad.photos?.map((p) => p.url) || ad.gallery || []).map((url, i) => ({ key: `old-${i}-${url}`, url, status: 'done' }))
   };
 }
@@ -98,10 +100,17 @@ function defaultCity(user) {
 
 // editAd — объявление для правки: форма заполнена, шаги можно открыть тапом по номеру,
 // «Сохранить» отправляет PUT /ads/:id (модерация — как при подаче). onSaved(ad) — после сохранения.
-export default function PostAdModal({ open, onClose, editAd = null, onSaved }) {
+// adminFor — { email, name, phone, contactMethod }: админ размещает объявление за этого продавца
+// (POST /admin/ads/for-user): публикуется сразу от его имени, продавцу уходит письмо.
+export default function PostAdModal({ open, onClose, editAd = null, onSaved, adminFor = null }) {
   const router = useRouter();
   const { user } = useAuth();
   const editing = !!editAd;
+  // Что доступно авторам (из админки): автоподнятие и его срок
+  const [features, setFeatures] = useState({ autoBump: false, bumpCooldownDays: 10 });
+  useEffect(() => {
+    if (open) getSiteSettings().then((s) => setFeatures((f) => ({ ...f, ...s.features })));
+  }, [open]);
   const [step, setStep] = useState(0);
   const [form, setForm] = useState(() => emptyForm(user));
   const [checking, setChecking] = useState(false);
@@ -205,13 +214,18 @@ export default function PostAdModal({ open, onClose, editAd = null, onSaved }) {
         eventDate: isEvent && form.eventDate ? `${form.eventDate}:00+03:00` : undefined,
         address: askAddress ? form.address.trim() || undefined : undefined,
         description: form.description?.trim() || undefined,
-        photoUrls: form.photos.filter((p) => p.status === 'done').map((p) => p.url)
+        photoUrls: form.photos.filter((p) => p.status === 'done').map((p) => p.url),
+        autoBump: features.autoBump ? !!form.autoBump : undefined
       };
-      const ad = editing ? await updateAd(editAd.id, payload) : await createAd(payload);
+      const ad = adminFor
+        ? { ...(await adminCreateAdForUser({ ...adminFor, ad: payload })), status: 'approved' }
+        : editing
+          ? await updateAd(editAd.id, payload)
+          : await createAd(payload);
       setPublishedAdId(ad.id);
       setPublishedStatus(ad.status);
       setDone(true);
-      if (editing) onSaved?.(ad);
+      if (editing || adminFor) onSaved?.(ad);
       else publishedRef.current = true;
     } catch (err) {
       setError(err.message || (editing ? 'Не удалось сохранить' : 'Не удалось опубликовать'));
@@ -261,7 +275,7 @@ export default function PostAdModal({ open, onClose, editAd = null, onSaved }) {
           className="sticky top-0 z-[5] -mx-5 md:-mx-6 px-5 md:px-6 pt-5 md:pt-6 pb-3 pr-14 bg-white border-b border-slate-100"
         >
           <div className="text-xs uppercase tracking-wide text-accent-700 font-bold">
-            {editing ? 'Редактирование' : 'Подать объявление'}{!done && ` · шаг ${step + 1} из ${steps.length}`}
+            {editing ? 'Редактирование' : adminFor ? `За продавца: ${adminFor.name}` : 'Подать объявление'}{!done && ` · шаг ${step + 1} из ${steps.length}`}
           </div>
           <h3 className="text-xl md:text-2xl font-extrabold text-ink-900 mt-1">
             {done ? 'Готово' : STEP_LABELS[stepId]}
@@ -317,7 +331,9 @@ export default function PostAdModal({ open, onClose, editAd = null, onSaved }) {
                     ? 'Отправлено на проверку'
                     : editing
                       ? 'Изменения сохранены'
-                      : 'Объявление опубликовано!'}
+                      : adminFor
+                        ? 'Объявление размещено'
+                        : 'Объявление опубликовано!'}
                 </div>
                 <div className="mt-1 text-sm text-ink-500">
                   {publishedStatus === 'pending'
@@ -326,7 +342,9 @@ export default function PostAdModal({ open, onClose, editAd = null, onSaved }) {
                       : 'Модератор посмотрит его в ближайшее время — пришлём уведомление, когда оно появится в ленте.'
                     : editing
                       ? 'Объявление в ленте с новыми данными.'
-                      : 'Оно уже видно всем в вашем городе.'}
+                      : adminFor
+                        ? `Опубликовано от имени продавца. Письмо со ссылкой отправлено на ${adminFor.email}.`
+                        : 'Оно уже видно всем в вашем городе.'}
                 </div>
               </div>
             ) : checking ? (
@@ -557,6 +575,19 @@ export default function PostAdModal({ open, onClose, editAd = null, onSaved }) {
                       </div>
                     )}
                 </div>
+                {/* Автоподнятие: объявление само поднимается, когда наступает срок подъёма (из админки) */}
+                {features.autoBump && (
+                  <label className="flex items-start gap-3 rounded-2xl bg-white ring-1 ring-black/10 p-3 cursor-pointer">
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-semibold text-ink-900">Поднимать автоматически</div>
+                      <div className="text-[12px] text-ink-500">
+                        Раз в {features.bumpCooldownDays} {pluralRu(features.bumpCooldownDays, ['день', 'дня', 'дней'])} объявление
+                        само поднимается в ленте — бесплатно
+                      </div>
+                    </div>
+                    <Switch checked={!!form.autoBump} onChange={(v) => setForm((f) => ({ ...f, autoBump: v }))} label="Поднимать автоматически" />
+                  </label>
+                )}
                 {uploading > 0 && (
                   <div className="flex items-center gap-2 rounded-xl bg-amber-50 ring-1 ring-amber-200 px-3 py-2 text-[13px] text-amber-900">
                     <Loader2 className="w-4 h-4 animate-spin shrink-0" />
@@ -625,6 +656,26 @@ export default function PostAdModal({ open, onClose, editAd = null, onSaved }) {
         )}
       </div>
     </Modal>
+  );
+}
+
+// Переключатель (как в настройках): зелёный — включено.
+export function Switch({ checked, onChange, label, disabled }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
+      disabled={disabled}
+      onClick={(e) => {
+        e.preventDefault();
+        onChange(!checked);
+      }}
+      className={`relative w-12 h-7 rounded-full transition-colors shrink-0 disabled:opacity-50 ${checked ? 'bg-emerald-500' : 'bg-slate-300'}`}
+    >
+      <span className={`absolute top-0.5 w-6 h-6 rounded-full bg-white shadow transition-all ${checked ? 'left-[22px]' : 'left-0.5'}`} />
+    </button>
   );
 }
 

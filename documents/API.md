@@ -31,7 +31,7 @@
 
 | Метод | URL | |
 |---|---|---|
-| GET | `/ads?place&section&group&authorId&attr&chip&search&priceMin&priceMax&limit&offset&sort` | Лента. `attr` — JSON фильтров по характеристикам: `{"rooms":"2","area":{"gte":40}}` (до 10 полей). `section=free` — «Отдам даром» (цена 0 в товарных разделах), `sort`: top (ранкинг — `computeScore`) / recent / cheap / expensive |
+| GET | `/ads?place&section&group&authorId&attr&chip&search&priceMin&priceMax&limit&offset&sort` | Лента. `attr` — JSON фильтров по характеристикам: `{"rooms":"2","area":{"gte":40}}` (до 10 полей). `section=free` — «Отдам даром» (цена 0 в товарных разделах), `sort`: top (ранкинг — `computeScore`) / recent / cheap / expensive. Ответ `{ items, hasMore }` — общего числа нет (его подсчёт на большой базе дороже самой выборки); `hasMore` — есть ли следующая страница (`offset` + `limit`; `offset` не больше 3000). У top ранжируется окно из 200 самых свежих плюс поднятые за сутки, дальше — по дате публикации. Сайт берёт по 60 |
 | GET | `/ads/counts?place` | Счётчики по разделам |
 | GET | `/ads/sitemap` | id и дата всех одобренных — для sitemap.xml фронта |
 | GET | `/ads/:id` | Объявление с автором и фото. Неопубликованные (pending, rejected, hidden) — только автору и админам, причину модерации видят только они; `nextBumpAt` — когда можно поднять |

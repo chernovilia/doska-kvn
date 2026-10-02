@@ -1,6 +1,7 @@
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
+import { useToast } from '@/components/Toast';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 import Header from '@/components/Header';
@@ -17,12 +18,17 @@ import {
   DEFAULT_REGION_ID,
   FREE_SECTION,
   getAds,
+  getMoreAds,
   getSection,
   resolvePlace
 } from '@/lib/api';
 import { pluralRu, adPath } from '@/lib/format';
 import { useAuth } from '@/lib/auth';
 import { getAttributeFields, parseAttributeInput } from '@/data/attributes';
+
+// Лента после «Показать ещё» — чтобы «Назад» из объявления вернул к тому же месту, а не к первой странице.
+let feedMemo = null;
+const FEED_MEMO_MS = 3 * 60_000;
 
 const SORTS = [
   { id: 'top', name: 'Рекомендуемые' },
@@ -95,6 +101,9 @@ function Feed({ place, params }) {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
+  const { toast } = useToast();
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   const [postOpen, setPostOpen] = useState(false);
   const [priceOpen, setPriceOpen] = useState(false);
@@ -105,9 +114,47 @@ function Feed({ place, params }) {
   const isCity = resolved?.kind === 'city';
   const ready = params !== null;
 
+  // Одна лента = место + все фильтры
+  const feedKey = JSON.stringify([place, section, group, q, sort, priceMin, priceMax, attrKey]);
+
+  const showMore = async () => {
+    if (loadingMore) return;
+    setLoadingMore(true);
+    const key = feedKey;
+    try {
+      const r = await getMoreAds({ place, section, group, search: q, sort, priceMin, priceMax, attr: attrKey, offset: primary.length });
+      // Пока грузили, лента могла смениться (другой раздел, город)
+      if (key !== feedKeyRef.current) return;
+      // Между запросами порядок мог сдвинуться — повторы не показываем
+      const seen = new Set(primary.map((a) => a.id));
+      const next = [...primary, ...r.items.filter((a) => !seen.has(a.id))];
+      setPrimary(next);
+      setHasMore(r.hasMore);
+      feedMemo = { key, reloadKey, primary: next, nearby, hasMore: r.hasMore, at: Date.now() };
+    } catch {
+      toast('Не удалось загрузить. Попробуйте ещё раз');
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+  const feedKeyRef = useRef(feedKey);
+  feedKeyRef.current = feedKey;
+
   useEffect(() => {
     if (!ready) return;
     let cancelled = false;
+    // Вернулись «Назад» из объявления после «Показать ещё» — показываем то, что уже было загружено
+    if (feedMemo && feedMemo.key === feedKey && reloadKey === feedMemo.reloadKey && Date.now() - feedMemo.at < FEED_MEMO_MS) {
+      setPrimary(feedMemo.primary);
+      setNearby(feedMemo.nearby);
+      setHasMore(feedMemo.hasMore);
+      setLoadError(false);
+      setLoading(false);
+      // …и к тому же месту ленты
+      const y = feedMemo.scrollY;
+      if (y) requestAnimationFrame(() => requestAnimationFrame(() => window.scrollTo(0, y)));
+      return;
+    }
     setLoading(true);
     setLoadError(false);
     getAds({
@@ -123,18 +170,16 @@ function Feed({ place, params }) {
     })
       .then((r) => {
         if (cancelled) return;
-        if (isCity) {
-          setPrimary(r.primary);
-          setNearby(r.nearby);
-        } else {
-          setPrimary(r);
-          setNearby([]);
-        }
+        setPrimary(r.primary);
+        setNearby(r.nearby);
+        setHasMore(r.hasMore);
+        feedMemo = null;
       })
       .catch(() => {
         if (cancelled) return;
         setPrimary([]);
         setNearby([]);
+        setHasMore(false);
         setLoadError(true);
       })
       .finally(() => {
@@ -275,7 +320,13 @@ function Feed({ place, params }) {
           </div>
 
           {/* Сетка без layout-анимации: она масштабировала всё содержимое, и плашка «пусто» растягивалась */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 auto-rows-fr">
+          <div
+            className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 auto-rows-fr"
+            onClickCapture={() => {
+              // Уходим в объявление — запоминаем место, чтобы «Назад» вернул сюда же
+              if (feedMemo && feedMemo.key === feedKey) feedMemo.scrollY = window.scrollY;
+            }}
+          >
             <AnimatePresence mode="popLayout">
               {loading || !ready
                 ? Array.from({ length: 8 }).map((_, i) => (
@@ -355,6 +406,14 @@ function Feed({ place, params }) {
               </motion.div>
             )}
           </div>
+
+          {ready && !loading && !loadError && hasMore && (
+            <div className="mt-4 flex justify-center">
+              <button onClick={showMore} disabled={loadingMore} className="btn-outline h-11 px-6 text-sm disabled:opacity-60">
+                {loadingMore ? 'Загружаем…' : 'Показать ещё'}
+              </button>
+            </div>
+          )}
 
           {/* «В соседних городах» — только когда выбран конкретный город */}
           {isCity && nearby.length > 0 && (

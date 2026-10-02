@@ -30,7 +30,7 @@ export default function BumpButton({ ad, compact = false }) {
     try {
       const res = await bumpAd(ad.id);
       setNextBumpAt(res.nextBumpAt);
-      toast('Объявление поднято — сутки будет выше в ленте');
+      toast('Объявление поднято — оно снова наверху ленты, как новое');
     } catch (err) {
       if (err.nextBumpAt) setNextBumpAt(err.nextBumpAt);
       toast(err.message || 'Не удалось поднять', { kind: 'error' });
@@ -60,7 +60,7 @@ export default function BumpButton({ ad, compact = false }) {
       type="button"
       onClick={onClick}
       disabled={busy}
-      title="Бесплатно: сутки объявление будет выше в ленте"
+      title="Бесплатно: объявление встанет наверх ленты, как новое"
       className={`w-full inline-flex items-center justify-center gap-1.5 btn-primary disabled:opacity-60 ${
         compact ? 'rounded-xl px-2 py-1.5 text-[12px]' : 'rounded-2xl px-4 py-3'
       }`}

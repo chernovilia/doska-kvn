@@ -1,4 +1,4 @@
-import { formatPrice } from '@/lib/format';
+import { formatPrice, adPath } from '@/lib/format';
 import { notFound } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { getAd } from '@/lib/api';
@@ -20,7 +20,9 @@ export async function generateMetadata({ params }) {
   if (!ad) {
     return {
       title: 'Объявление не найдено',
-      description: 'Такого объявления нет или оно было удалено.'
+      description: 'Такого объявления нет или оно было удалено.',
+      // Страница отдаётся с кодом 200 (экран загрузки уже ушёл в браузер) — закрываем от поисковиков
+      robots: { index: false, follow: false }
     };
   }
 
@@ -39,7 +41,7 @@ export async function generateMetadata({ params }) {
       title,
       description,
       images: image ? [{ url: image, width: 1200, height: 630 }] : [],
-      url: `/ad/${ad.id}`,
+      url: adPath(ad.id),
       type: 'article',
       locale: 'ru_RU',
       siteName: 'Доска/КВН'
@@ -51,7 +53,7 @@ export async function generateMetadata({ params }) {
       images: image ? [image] : []
     },
     alternates: {
-      canonical: `/ad/${ad.id}`
+      canonical: adPath(ad.id)
     }
   };
 }

@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { RefreshCw } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { getOwnAd, getSiteSettings, renewAd, setAdAutoBump } from '@/lib/api';
-import { fallbackToFull, formatDayMonth, formatPrice, pluralRu, thumbUrl } from '@/lib/format';
+import { fallbackToFull, formatDayMonth, formatPrice, pluralRu, thumbUrl, adPath } from '@/lib/format';
 import PageHeader from '@/components/PageHeader';
 import BottomNav from '@/components/BottomNav';
 import PostAdModal, { Switch } from '@/components/PostAdModal';
@@ -98,7 +98,7 @@ function PromoteContent() {
           </div>
         ) : (
           <>
-            <Link href={`/ad/${ad.id}`} className="flex items-center gap-3 rounded-2xl bg-white ring-1 ring-black/5 p-3">
+            <Link href={adPath(ad.id)} className="flex items-center gap-3 rounded-2xl bg-white ring-1 ring-black/5 p-3">
               {ad.image ? (
                 <img
                   src={thumbUrl(ad.image)}

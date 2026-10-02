@@ -1,5 +1,6 @@
 import { CITIES, REGIONS } from '@/data/regions';
 import { API_URL, SITE_URL } from '@/lib/site';
+import { adPath } from '@/lib/format';
 
 export const revalidate = 3600;
 
@@ -27,7 +28,7 @@ export default async function sitemap() {
     if (res.ok) {
       const data = await res.json();
       ads = (data.items || []).map((a) => ({
-        url: `${SITE_URL}/ad/${a.id}`,
+        url: `${SITE_URL}${adPath(a.id)}`,
         lastModified: new Date(a.createdAt),
         changeFrequency: 'weekly',
         priority: 0.6

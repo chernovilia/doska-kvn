@@ -60,7 +60,7 @@ import PostAdModal from '@/components/PostAdModal';
 import { useApp } from '@/components/AppShell';
 import { loadAppConfig } from '@/lib/pwa';
 import { CITIES } from '@/data/regions';
-import { formatPrice, formatRelative, pluralRu, thumbUrl, fallbackToFull } from '@/lib/format';
+import { formatPrice, formatRelative, pluralRu, thumbUrl, fallbackToFull, adPath } from '@/lib/format';
 import ModerationModal from '@/components/admin/ModerationModal';
 import { Empty, ErrorBox, ListSkeleton, REPORT_REASONS, ReasonForm, StatusBadge } from '@/components/admin/ui';
 import { Stars } from '@/components/Reviews';
@@ -585,7 +585,7 @@ function AdsTab({ preset, onOpen, onChanged }) {
                       Скрыть
                     </button>
                   )}
-                  <Link href={`/ad/${a.id}`} target="_blank" className="h-8 px-3 rounded-lg ring-1 ring-black/10 text-ink-700 hover:bg-slate-50 text-[13px] font-semibold inline-flex items-center">
+                  <Link href={adPath(a.id)} target="_blank" className="h-8 px-3 rounded-lg ring-1 ring-black/10 text-ink-700 hover:bg-slate-50 text-[13px] font-semibold inline-flex items-center">
                     На сайте
                   </Link>
                   <button onClick={() => setAsking({ id: a.id, action: 'delete' })} className="ml-auto h-8 w-8 grid place-items-center rounded-lg text-rose-600 hover:bg-rose-50" aria-label="Удалить">

@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { BadgeCheck, Calendar, Camera, Crown, ExternalLink, Flame, Heart, Link as LinkIcon, Pencil, Trash2 } from 'lucide-react';
 import { cityName, getSection } from '@/lib/api';
-import { formatPrice, formatRelative, formatEventDate, safeAvitoUrl, thumbUrl, fallbackToFull } from '@/lib/format';
+import { formatPrice, formatRelative, formatEventDate, safeAvitoUrl, thumbUrl, fallbackToFull, adPath } from '@/lib/format';
 import { accountTypeLabel, accountTypeEmoji, accountTypeBadgeClass, isBusiness } from '@/lib/accountType';
 import { shareOrCopy } from '@/lib/share';
 import { attributesSummary } from '@/data/attributes';
@@ -46,7 +46,7 @@ export default function AdCard({ ad, showShare = false, onDelete, onEdit, showSt
 
   async function onCopyLink() {
     const status = await shareOrCopy({
-      url: `/ad/${ad.id}`,
+      url: adPath(ad.id),
       title: ad.title,
       text: `${ad.title} — ${formatPrice(ad)}`
     });
@@ -61,7 +61,7 @@ export default function AdCard({ ad, showShare = false, onDelete, onEdit, showSt
         ad.top ? 'ring-amber-300' : 'ring-black/5'
       }`}
     >
-      <Link href={`/ad/${ad.id}`} className="flex flex-1 flex-col text-left">
+      <Link href={adPath(ad.id)} className="flex flex-1 flex-col text-left">
         <div className="relative aspect-square w-full overflow-hidden bg-slate-100">
           {ad.image ? (
             <img

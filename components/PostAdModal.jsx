@@ -3,7 +3,7 @@
 import { motion } from 'framer-motion';
 import { CITIES, REGIONS, SECTIONS, getCategoryGroups, getSection, createAd, updateAd, uploadAdPhoto, getSiteSettings, adminCreateAdForUser } from '@/lib/api';
 import { FREE_FROM_SECTIONS } from '@/data/categories';
-import { formatPrice, formatEventDate, thumbUrl, fallbackToFull, pluralRu } from '@/lib/format';
+import { formatPrice, formatEventDate, thumbUrl, fallbackToFull, pluralRu, adPath } from '@/lib/format';
 import { getAttributeFields, describeAttributes, parseAttributeInput } from '@/data/attributes';
 import { CheckCircle2, Clock, Sparkles, ArrowLeft, ArrowRight, ChevronRight, AlertCircle, X, ImagePlus, Loader2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
@@ -659,7 +659,7 @@ export default function PostAdModal({ open, onClose, editAd = null, onSaved, adm
               <button
                 onClick={() => {
                   closeModal();
-                  router.push(`/ad/${publishedAdId}`);
+                  router.push(adPath(publishedAdId));
                 }}
                 className="ml-auto inline-flex items-center gap-1.5 rounded-2xl btn-primary px-4 py-3 text-sm"
               >

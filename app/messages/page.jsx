@@ -8,7 +8,7 @@ import { ArrowLeft, Search, Info, Send, MessageCircle, Star, X } from 'lucide-re
 import { listConversations, getConversationMessages, sendChatMessage, getReviewEligibility } from '@/lib/api';
 import { ReviewModal } from '@/components/Reviews';
 import { useApp } from '@/components/AppShell';
-import { formatRelative } from '@/lib/format';
+import { formatRelative, adPath } from '@/lib/format';
 import { useAuth } from '@/lib/auth';
 import { refreshUnread } from '@/lib/chats';
 
@@ -642,7 +642,7 @@ function ListingHeader({ ad }) {
   );
   const cls = 'mx-3 md:mx-5 mb-3 flex items-center gap-3 rounded-xl bg-slate-50 ring-1 ring-black/5 p-2';
   return ad.available && ad.id ? (
-    <Link href={`/ad/${ad.id}`} className={`${cls} hover:bg-slate-100 transition`}>
+    <Link href={adPath(ad.id)} className={`${cls} hover:bg-slate-100 transition`}>
       {body}
     </Link>
   ) : (

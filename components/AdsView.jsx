@@ -20,7 +20,7 @@ import {
   getSection,
   resolvePlace
 } from '@/lib/api';
-import { pluralRu } from '@/lib/format';
+import { pluralRu, adPath } from '@/lib/format';
 import { useAuth } from '@/lib/auth';
 import { getAttributeFields, parseAttributeInput } from '@/data/attributes';
 
@@ -176,7 +176,7 @@ function Feed({ place, params }) {
   }
 
   function onSearchSelect(sel) {
-    if (sel.kind === 'ad') router.push(`/ad/${sel.id}`);
+    if (sel.kind === 'ad') router.push(adPath(sel.id));
     else if (sel.kind === 'section') setFilters({ section: sel.id, group: null, q: null });
   }
 

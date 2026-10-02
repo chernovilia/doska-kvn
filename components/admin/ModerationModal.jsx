@@ -15,7 +15,7 @@ import {
   MapPin, Calendar, ShieldCheck, AlertCircle, ExternalLink
 } from 'lucide-react';
 import { adminGetAd, adminSetAdStatus, adminDeleteAd, cityName, getSection } from '@/lib/api';
-import { formatPrice, safeAvitoUrl, thumbUrl, fallbackToFull } from '@/lib/format';
+import { formatPrice, safeAvitoUrl, thumbUrl, fallbackToFull, adPath } from '@/lib/format';
 import { describeAttributes } from '@/data/attributes';
 import { ReasonForm, StatusBadge } from './ui';
 
@@ -281,7 +281,7 @@ export default function ModerationModal({ open, adId, onClose, onChanged }) {
                   </div>
                   <div className="mt-3 text-xs text-ink-500">
                     <Link
-                      href={`/ad/${ad.id}`}
+                      href={adPath(ad.id)}
                       target="_blank"
                       className="text-accent-700 hover:underline inline-flex items-center gap-1"
                     >

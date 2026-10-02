@@ -16,8 +16,10 @@ const nextConfig = {
   // Версия приложения (package.json) — показывается внизу настроек профиля.
   // Поднимаем при каждом обновлении.
   env: { NEXT_PUBLIC_APP_VERSION: require('./package.json').version },
-  // Оптимизатор картинок Next не используем (обычные <img>), внешних источников ему не даём:
-  // через remotePatterns работала DoS-уязвимость Next 14 (GHSA-9g9p-9gw9-jx7f).
+  // Оптимизатор картинок Next не используем (обычные <img>) и выключаем совсем: адрес /_next/image
+  // отвечает 404. В нём находили уязвимости Next 14 (DoS, выполнение кода через AVIF), а исправления
+  // выходят только для Next 15+.
+  images: { unoptimized: true },
   async headers() {
     return [
       { source: '/:path*', headers: securityHeaders },

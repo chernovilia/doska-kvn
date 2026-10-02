@@ -35,7 +35,7 @@ import {
   registerView,
   userPath
 } from '@/lib/api';
-import { formatPrice, formatRelative, formatEventDate, formatMonthYear, pluralRu, safeAvitoUrl, thumbUrl, fallbackToFull, formatDayMonth } from '@/lib/format';
+import { formatPrice, formatRelative, formatEventDate, formatMonthYear, pluralRu, safeAvitoUrl, thumbUrl, fallbackToFull, formatDayMonth, adPath } from '@/lib/format';
 import { accountTypeLabel, accountTypeEmoji, accountTypeBadgeClass, isBusiness } from '@/lib/accountType';
 import { useAuth } from '@/lib/auth';
 import { describeAttributes } from '@/data/attributes';
@@ -109,7 +109,7 @@ export default function AdDetail({ ad }) {
   const authorTypeIsBiz = isBusiness(authorType);
 
   function loginRedirect() {
-    router.push(`/login?returnTo=/ad/${ad.id}`);
+    router.push(`/login?returnTo=${adPath(ad.id)}`);
   }
 
   async function onWrite() {
@@ -152,7 +152,7 @@ export default function AdDetail({ ad }) {
 
   async function onShare() {
     const status = await shareOrCopy({
-      url: `/ad/${ad.id}`,
+      url: adPath(ad.id),
       title: ad.title,
       text: `${ad.title} — ${formatPrice(ad)}`
     });

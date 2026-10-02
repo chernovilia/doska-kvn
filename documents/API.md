@@ -23,6 +23,7 @@
 | POST | `/auth/email/verify` | Проверить код, выставить cookies |
 | POST | `/auth/refresh` | Ротация refresh-токена |
 | POST | `/auth/logout` | Отзыв refresh, очистка cookies |
+| POST | `/auth/logout-others` | «Выйти на других устройствах»: отзывает все refresh, кроме текущего, и отвязывает пуши от всех устройств → `{ ok, closed }`. Чужие устройства теряют доступ в пределах срока access (до 15 мин) (auth; 10/час) |
 | GET | `/me` | Текущий пользователь (+ `isAdmin`) |
 | PATCH | `/me` | Профиль и онбординг (`markOnboarded`, `agreeTerms`) |
 

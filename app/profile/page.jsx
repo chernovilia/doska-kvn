@@ -31,13 +31,13 @@ import PostAdModal from '@/components/PostAdModal';
 import SettingsEditModal from '@/components/SettingsEditModal';
 import OwnerAdActions from '@/components/OwnerAdActions';
 import { useApp } from '@/components/AppShell';
-import { installSupported } from '@/lib/pwa';
+import { installSupported, resyncPush } from '@/lib/pwa';
 import { PROMO_OPTIONS } from '@/components/PromoOptions';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/lib/auth';
 import { getCity } from '@/data/regions';
 
-import { getMyAds, getUserReviews, deleteAd, userPath } from '@/lib/api';
+import { getMyAds, getUserReviews, deleteAd, userPath, logoutOtherDevices } from '@/lib/api';
 import { RatingSummary, ReviewsList } from '@/components/Reviews';
 import { formatRelative, formatTimeLeft, thumbUrl, fallbackToFull } from '@/lib/format';
 
@@ -477,6 +477,20 @@ function SettingsTab({ me }) {
   const router = useRouter();
   const [editKind, setEditKind] = useState(null);
 
+  const { toast } = useToast();
+  // Потеряли телефон или входили на чужом компьютере — закрыть все сессии, кроме этой
+  const logoutOthers = async () => {
+    if (!window.confirm('Выйти из аккаунта на всех других устройствах? Здесь вы останетесь в аккаунте.')) return;
+    try {
+      const { closed } = await logoutOtherDevices();
+      // Пуши отвязаны от всех устройств — это возвращаем
+      await resyncPush().catch(() => {});
+      toast(closed ? 'Готово: на других устройствах вы вышли из аккаунта' : 'Других устройств с входом нет');
+    } catch {
+      toast('Не получилось. Попробуйте ещё раз');
+    }
+  };
+
   const phoneHint = (() => {
     if (me.contactMethod === 'phone' && me.phone) return `${me.phone} · показываем`;
     if (me.contactMethod === 'phone') return 'Показываем — но номер не указан';
@@ -492,6 +506,7 @@ function SettingsTab({ me }) {
     { kind: 'notifications', label: 'Уведомления', hint: me.notifyEmail ? 'E-mail включён' : 'Отключены' },
     // Уже открыто как приложение — пункт не нужен
     ...(canInstall ? [{ action: () => openInstallGuide(), label: 'Установить приложение', hint: 'Иконка на экране и мгновенные уведомления' }] : []),
+    { action: logoutOthers, label: 'Выйти на других устройствах', hint: 'Здесь вы останетесь в аккаунте' },
     { href: '/terms', label: 'Правила и политика', hint: 'Условия использования и обработка данных' }
   ];
 

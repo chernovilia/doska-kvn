@@ -24,7 +24,8 @@ import {
 } from '@/lib/api';
 import { pluralRu, adPath } from '@/lib/format';
 import { useAuth } from '@/lib/auth';
-import { getAttributeFields, parseAttributeInput } from '@/data/attributes';
+import { getAttributeFields, parseAttributeInput, fieldOptions } from '@/data/attributes';
+import ComboField from '@/components/ComboField';
 
 // Лента после «Показать ещё» — чтобы «Назад» из объявления вернул к тому же месту, а не к первой странице.
 let feedMemo = null;
@@ -505,7 +506,8 @@ function AttrFiltersModal({ open, onClose, fields, value, onApply }) {
           if (lte != null) out[f.key].lte = lte;
         }
       } else if (v) {
-        out[f.key] = v;
+        // Список с поиском: «киа» → «Kia», чтобы фильтр совпал со значением в объявлениях
+        out[f.key] = f.type === 'combo' ? parseAttributeInput(f, v, draft) : v;
       }
     }
     return out;
@@ -543,6 +545,23 @@ function AttrFiltersModal({ open, onClose, fields, value, onApply }) {
                       {o}
                     </button>
                   ))}
+                </div>
+              ) : f.type === 'combo' ? (
+                <div className="mt-1.5">
+                  <ComboField
+                    value={draft[f.key] ?? ''}
+                    onChange={(v) =>
+                      setDraft((d) => {
+                        const next = { ...d, [f.key]: v };
+                        for (const dep of fields) if (dep.dependsOn === f.key && d[f.key] !== v) next[dep.key] = '';
+                        return next;
+                      })
+                    }
+                    options={fieldOptions(f, draft)}
+                    placeholder="Любая"
+                    ariaLabel={f.label}
+                    inputClass={input}
+                  />
                 </div>
               ) : (
                 <div className="mt-1.5 grid grid-cols-2 gap-2">

@@ -4,7 +4,8 @@ import { motion } from 'framer-motion';
 import { CITIES, REGIONS, SECTIONS, getCategoryGroups, getSection, createAd, updateAd, uploadAdPhoto, getSiteSettings, adminCreateAdForUser } from '@/lib/api';
 import { FREE_FROM_SECTIONS } from '@/data/categories';
 import { formatPrice, formatEventDate, thumbUrl, fallbackToFull, pluralRu, adPath } from '@/lib/format';
-import { getAttributeFields, describeAttributes, parseAttributeInput } from '@/data/attributes';
+import { getAttributeFields, describeAttributes, parseAttributeInput, fieldOptions } from '@/data/attributes';
+import ComboField from '@/components/ComboField';
 import { CheckCircle2, Clock, Sparkles, ArrowLeft, ArrowRight, ChevronRight, AlertCircle, X, ImagePlus, Loader2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -23,7 +24,7 @@ const STEP_LABELS = {
 };
 
 // Адрес спрашиваем там, где он важен для покупателя.
-const ADDRESS_SECTIONS = ['realty', 'events'];
+const ADDRESS_SECTIONS = ['realty', 'events', 'lost'];
 
 // Публикуем только в запущенные регионы.
 const LAUNCHED = REGIONS.filter((r) => r.launched).map((r) => r.id);
@@ -45,6 +46,8 @@ function priceConfig(form) {
     return { label: 'Цена, ₽', hint: 'Без цены объявление попадёт в «Отдам даром».' };
   }
   if (form.section === 'events') return { label: 'Цена билета, ₽', hint: 'Без цены — «Бесплатно».' };
+  if (form.section === 'lost') return { label: 'Вознаграждение, ₽', hint: 'Необязательно. Оставьте пустым, если вознаграждения нет.' };
+  if (form.section === 'food') return { label: 'Цена, ₽', hint: 'За что цена (кг, литр, штука) — выберите на следующем шаге.' };
   return { label: 'Цена, ₽', hint: 'Без цены — «Договорная».' };
 }
 
@@ -60,6 +63,9 @@ const TITLE_HINTS = {
   kids: 'Например: Коляска 2 в 1, после одного ребёнка',
   pets: 'Например: Котята в добрые руки',
   hobby: 'Например: Горный велосипед Stels, 21 скорость',
+  food: 'Например: Мёд липовый, свой, 3 литра',
+  business: 'Например: Холодильная витрина, 1,5 м',
+  lost: 'Например: Найдены ключи у магазина на Ленина',
   events: 'Например: Концерт в ДК, 12 октября'
 };
 
@@ -158,7 +164,7 @@ export default function PostAdModal({ open, onClose, editAd = null, onSaved, adm
   const uploading = form.photos.filter((p) => p.status === 'uploading').length;
   const groups = getCategoryGroups(form.section);
   const priceCfg = priceConfig(form);
-  const attrFields = getAttributeFields(form.section, form.group);
+  const attrFields = getAttributeFields(form.section, form.group, form.category);
   const isEvent = form.section === 'events';
   const askAddress = ADDRESS_SECTIONS.includes(form.section);
   const steps = [
@@ -492,7 +498,14 @@ export default function PostAdModal({ open, onClose, editAd = null, onSaved, adm
                 fields={attrFields}
                 values={form.attrs}
                 errors={attrErrors}
-                onChange={(key, value) => setForm((f) => ({ ...f, attrs: { ...f.attrs, [key]: value } }))}
+                onChange={(key, value) =>
+                  setForm((f) => {
+                    const attrs = { ...f.attrs, [key]: value };
+                    // Сменили марку — модель от прежней марки больше не подходит
+                    for (const d of attrFields) if (d.dependsOn === key && f.attrs[key] !== value) attrs[d.key] = '';
+                    return { ...f, attrs };
+                  })
+                }
                 isEvent={isEvent}
                 eventDate={form.eventDate}
                 onEventDate={(v) => setForm((f) => ({ ...f, eventDate: v }))}
@@ -709,7 +722,7 @@ function previewAd(form, cfg) {
 function buildAttributes(fields, raw) {
   const out = {};
   for (const f of fields) {
-    const v = parseAttributeInput(f, raw[f.key]);
+    const v = parseAttributeInput(f, raw[f.key], raw);
     if (v !== undefined) out[f.key] = v;
   }
   return Object.keys(out).length ? out : undefined;
@@ -720,7 +733,7 @@ function attributeErrors(fields, raw) {
   const errors = {};
   for (const f of fields) {
     if (f.type !== 'number' || !String(raw[f.key] ?? '').trim()) continue;
-    const v = parseAttributeInput(f, raw[f.key]);
+    const v = parseAttributeInput(f, raw[f.key], raw);
     if (v === undefined) errors[f.key] = 'Введите число';
     else if ((f.min != null && v < f.min) || (f.max != null && v > f.max)) {
       errors[f.key] = `От ${f.min} до ${new Intl.NumberFormat('ru-RU').format(f.max)}`;
@@ -778,6 +791,17 @@ function DetailsStep({ fields, values, errors, onChange, isEvent, eventDate, onE
                   {o}
                 </button>
               ))}
+            </div>
+          ) : f.type === 'combo' ? (
+            <div className="mt-1">
+              <ComboField
+                value={values[f.key] ?? ''}
+                onChange={(v) => onChange(f.key, v)}
+                options={fieldOptions(f, values)}
+                placeholder={f.placeholder}
+                inputClass={INPUT}
+                invalid={!!errors[f.key]}
+              />
             </div>
           ) : (
             <input

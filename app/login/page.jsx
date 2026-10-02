@@ -140,7 +140,7 @@ function LoginContent() {
         <div className="mt-4 text-center text-[12px] text-ink-500">
           Входя на сайт, вы соглашаетесь с{' '}
           <Link href="/terms" className="underline hover:text-ink-800">
-            условиями
+            правилами сервиса
           </Link>{' '}
           и{' '}
           <Link href="/privacy" className="underline hover:text-ink-800">

@@ -58,6 +58,7 @@
 | POST | `/app/event` | Воронка: `install_prompt_shown`, `install_clicked`, `install_dismissed`, `banner_clicked`, `banner_closed`, `push_prompt_shown`, `push_enabled` — счётчик по дням |
 | GET | `/users/username-available?u=` | Свободен ли адрес `/u/<u>`: `{ available, reason? }` (свой текущий — свободен) |
 | GET | `/users/by-username/:username` | Публичная страница по своему адресу (как `/users/:id`) |
+| GET | `/legal/:doc` | Правила (`terms`) или политика (`privacy`) из админки: `{ doc, custom, text, date }`; `custom: false` — в админке не меняли, сайт показывает текст по умолчанию из `lib/legal/` |
 | GET | `/site` | Публичные настройки из админки: `{ neighbors, contacts, app: { 'app.install.*', 'app.banner.enabled', 'app.push.*', texts }, features: { autoBump, bumpCooldownDays } }` — соседи, контакты, правила и тексты окон приложения, что доступно авторам |
 | POST | `/ads` | Создать (auth; 5/час, 20/сутки; `photoUrls[]` до 10; `attributes` — плоский объект характеристик, до 20 полей; `eventDate` — у афиши) |
 | POST | `/ads/:id/bump` | Бесплатно поднять своё опубликованное (auth; пауза `ranking.bump_cooldown_days`, по умолчанию 10 дней) |
@@ -107,6 +108,8 @@
 | GET | `/admin/app` | Приложение: установили (всего, за 7 дней), пользуются за 7 дней, платформы, с пушами, воронка за 30 дней, последние 100 устройств |
 | PUT | `/admin/neighbors` | `{ cityId, neighbors: [cityId…] \| null }` — соседи города для блока «В соседних городах»; `null` — по умолчанию (остальные города региона и запущенные соседние регионы) |
 | PUT | `/admin/app-texts` | Тексты окна установки `{ title, subtitle, benefit1Title, benefit1Text, benefit2Title, benefit2Text }`; пустые — по умолчанию |
+| PUT | `/admin/legal/:doc` | `doc`: `terms` \| `privacy`. `{ text, date? }` — текст в простой разметке (200–120 000 знаков) и дата редакции `ГГГГ-ММ-ДД` (по умолчанию сегодня) |
+| DELETE | `/admin/legal/:doc` | Вернуть текст по умолчанию |
 | PUT | `/admin/contacts` | `{ email?, phone?, telegram?, vk? }` — контакты в подвале, пустые не показываются |
 | POST | `/admin/wipe?confirm=WIPE_ALL` | Стереть всех пользователей и объявления — только при `ADMIN_WIPE_ENABLED=true` (на проде выключено, 403) |
 

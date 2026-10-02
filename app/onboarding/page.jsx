@@ -217,9 +217,9 @@ function Onboarding() {
           </button>
 
           <p className="text-[11px] text-ink-500 text-center leading-relaxed">
-            Создавая аккаунт, вы соглашаетесь с{' '}
+            Создавая аккаунт, вы подтверждаете, что вам есть 18 лет, и соглашаетесь с{' '}
             <Link href="/terms" target="_blank" className="underline hover:text-ink-800">
-              условиями использования
+              правилами сервиса
             </Link>{' '}
             и{' '}
             <Link href="/privacy" target="_blank" className="underline hover:text-ink-800">

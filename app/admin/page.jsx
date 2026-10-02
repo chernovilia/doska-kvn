@@ -53,8 +53,13 @@ import {
   adminSetContacts,
   adminAppStats,
   adminSetAppTexts,
-  adminResetAppStats
+  adminResetAppStats,
+  adminGetLegal,
+  adminSetLegal,
+  adminResetLegal
 } from '@/lib/api';
+import { LegalBody } from '@/components/LegalDoc';
+import { LEGAL_DEFAULTS } from '@/lib/legal';
 import Modal from '@/components/Modal';
 import PostAdModal from '@/components/PostAdModal';
 import { useApp } from '@/components/AppShell';
@@ -1131,6 +1136,7 @@ function SettingsTab({ onChanged }) {
       <AppPromptsSettings items={appItems} draft={draft} setDraft={setDraft} save={save} saving={saving} />
       <NeighborsSettings />
       <ContactsSettings />
+      <LegalSettings />
     </div>
   );
 }
@@ -1393,6 +1399,153 @@ const CONTACT_INPUTS = [
   ['telegram', 'Telegram', '@doska_kvn'],
   ['vk', 'VK', 'vk.com/doska_kvn']
 ];
+
+const LEGAL_TABS = [
+  ['terms', 'Правила сервиса', '/terms'],
+  ['privacy', 'Политика конфиденциальности', '/privacy']
+];
+
+// Правила и политика конфиденциальности: правка текста, дата редакции, предпросмотр.
+function LegalSettings() {
+  const [doc, setDoc] = useState('terms');
+  const [form, setForm] = useState(null); // { text, date }
+  const [saved, setSaved] = useState(null);
+  const [custom, setCustom] = useState(false);
+  const [preview, setPreview] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
+  const [done, setDone] = useState(false);
+
+  const apply = (data) => {
+    const d = LEGAL_DEFAULTS[doc];
+    const next = data?.custom ? { text: data.text, date: data.date || d.date } : { text: d.text, date: d.date };
+    setForm(next);
+    setSaved(next);
+    setCustom(!!data?.custom);
+  };
+
+  useEffect(() => {
+    setForm(null);
+    setError(null);
+    setDone(false);
+    setPreview(false);
+    adminGetLegal(doc)
+      .then(apply)
+      .catch((err) => setError(err.message));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [doc]);
+
+  const changed = form && saved && (form.text !== saved.text || form.date !== saved.date);
+  const page = LEGAL_TABS.find(([k]) => k === doc)[2];
+
+  async function save() {
+    setBusy(true);
+    setError(null);
+    setDone(false);
+    try {
+      apply(await adminSetLegal(doc, form));
+      setDone(true);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function reset() {
+    if (!window.confirm('Вернуть исходный текст? Ваши правки этого документа будут удалены.')) return;
+    setBusy(true);
+    setError(null);
+    setDone(false);
+    try {
+      apply(await adminResetLegal(doc));
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="rounded-2xl bg-white ring-1 ring-black/5 shadow-card p-4 space-y-3">
+      <div>
+        <h3 className="font-bold text-ink-900">Правила и политика</h3>
+        <p className="text-[13px] text-ink-500 mt-0.5">
+          Текст страниц «Правила сервиса» и «Политика конфиденциальности». На сайте обновляется в течение минуты после
+          сохранения. Разметка: <code>## Заголовок</code>, <code>- пункт списка</code>, <code>**жирный**</code>,{' '}
+          <code>[текст](/адрес)</code>; пустая строка — новый абзац.
+        </p>
+      </div>
+      <div className="flex gap-2 overflow-x-auto no-scrollbar">
+        {LEGAL_TABS.map(([k, label]) => (
+          <button
+            key={k}
+            type="button"
+            onClick={() => {
+              if (k === doc) return;
+              if (changed && !window.confirm('Есть несохранённые правки. Перейти без сохранения?')) return;
+              setDoc(k);
+            }}
+            className={`chip shrink-0 ${k === doc ? 'chip-on' : ''}`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      <ErrorBox message={error} />
+      {!form ? (
+        <div className="h-64 rounded-xl bg-slate-50 animate-pulse" />
+      ) : (
+        <>
+          <div className="flex flex-wrap items-end gap-3">
+            <label className="block">
+              <div className="text-[12px] font-semibold text-ink-700 mb-1">Дата редакции</div>
+              <input
+                type="date"
+                value={form.date}
+                onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
+                className="h-10 rounded-xl bg-white ring-1 ring-black/10 focus:ring-accent-400 outline-none px-3 text-base"
+              />
+            </label>
+            <div className="text-[13px] text-ink-500 pb-2">
+              {custom ? 'Действует ваш текст' : 'Действует исходный текст'} · {form.text.length.toLocaleString('ru-RU')} знаков
+            </div>
+            <button type="button" onClick={() => setPreview((v) => !v)} className="btn-outline h-10 px-4 text-sm ml-auto">
+              {preview ? 'К тексту' : 'Предпросмотр'}
+            </button>
+          </div>
+          {preview ? (
+            <div className="rounded-xl ring-1 ring-black/10 p-4 max-h-[70vh] overflow-y-auto">
+              <LegalBody text={form.text} />
+            </div>
+          ) : (
+            <textarea
+              value={form.text}
+              onChange={(e) => setForm((f) => ({ ...f, text: e.target.value.slice(0, 120000) }))}
+              spellCheck={false}
+              aria-label="Текст документа"
+              className="w-full h-[60vh] rounded-xl bg-white ring-1 ring-black/10 focus:ring-accent-400 outline-none p-3 text-[14px] leading-relaxed font-mono"
+            />
+          )}
+          <div className="flex flex-wrap items-center gap-2">
+            <button type="button" onClick={save} disabled={!changed || busy} className="h-10 px-4 rounded-xl btn-primary text-sm">
+              {busy ? 'Сохраняем…' : 'Сохранить'}
+            </button>
+            {custom && (
+              <button type="button" onClick={reset} disabled={busy} className="btn-outline h-10 px-4 text-sm">
+                Вернуть исходный текст
+              </button>
+            )}
+            <Link href={page} target="_blank" className="btn-outline h-10 px-4 text-sm">
+              Открыть страницу
+            </Link>
+            {done && !changed && <span className="text-[13px] text-emerald-700">Сохранено</span>}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
 
 function ContactsSettings() {
   const [form, setForm] = useState(null);

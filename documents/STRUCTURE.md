@@ -41,7 +41,7 @@
 | `/help` | `help/page.jsx` | Обращения в поддержку |
 | `/admin` | `admin/page.jsx` | Админка, вкладки через `?tab=` |
 | `/login`, `/onboarding` | | Вход по коду, заполнение профиля |
-| `/terms`, `/privacy` | | Правила и политика |
+| `/terms`, `/privacy` | | Правила и политика: `components/LegalDoc.jsx` (простая разметка без HTML), тексты по умолчанию в `lib/legal/`, правка в админке |
 | `/app-status` | `app-status/page.jsx` | Диагностика окна установки и уведомлений на этом устройстве (ссылка — в админке) |
 | — | `layout.jsx`, `globals.css`, `sitemap.js`, `robots.js` | Общая обёртка (AuthProvider, Toast, `AppShell`, онбординг-гейт), стили и общие классы, SEO |
 | — | `manifest.js`, `icon.png`, `apple-icon.png`; `public/sw.js`, `public/icons/` | Приложение (PWA): манифест, иконки, service worker (пуши и счётчик на иконке, без кэша страниц) |

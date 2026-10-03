@@ -4,13 +4,16 @@ import Avatar from '@/components/Avatar';
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ArrowLeft, Search, Info, Send, MessageCircle, Star, X } from 'lucide-react';
+import { ArrowLeft, Search, Info, Send, MessageCircle, Star, X, BellRing } from 'lucide-react';
 import { listConversations, getConversationMessages, sendChatMessage, getReviewEligibility } from '@/lib/api';
 import { ReviewModal } from '@/components/Reviews';
 import { useApp } from '@/components/AppShell';
 import { formatRelative, adPath } from '@/lib/format';
 import { useAuth } from '@/lib/auth';
 import { refreshUnread } from '@/lib/chats';
+import { enablePush, pushState } from '@/lib/pwa';
+import { preventPagePan } from '@/lib/scrollLock';
+import { useToast } from '@/components/Toast';
 
 const CHAT_POLL_MS = 5_000;
 const LIST_POLL_MS = 15_000;
@@ -33,7 +36,9 @@ function useFitToVisualViewport(ref, enabled) {
     if (!enabled || !vv || !el) return;
     const update = () => {
       el.style.height = `${vv.height}px`;
-      el.style.transform = `translateY(${vv.offsetTop}px)`;
+      // Сдвиг ставим, только когда экран действительно уехал: постоянный transform на iPhone
+      // сбивает область касаний у прокручиваемого списка внутри.
+      el.style.transform = vv.offsetTop ? `translateY(${vv.offsetTop}px)` : '';
     };
     // iOS сдвигает экран, пока выезжает клавиатура, а resize/scroll приходят только в конце —
     // из-за этого экран на мгновение уезжал вверх. Пока клавиатура едет, подстраиваемся каждый кадр.
@@ -59,6 +64,9 @@ function useFitToVisualViewport(ref, enabled) {
     window.addEventListener('scroll', pinScroll);
     el.addEventListener('focusin', track);
     el.addEventListener('focusout', track);
+    // При открытой клавиатуре телефон двигает жестом сам экран, а мы этот сдвиг гасим — в итоге
+    // не прокручивалось ничего. Жест оставляем только прокручиваемым спискам.
+    el.addEventListener('touchmove', preventPagePan, { passive: false });
     const prevOverflow = document.documentElement.style.overflow;
     document.documentElement.style.overflow = 'hidden';
     return () => {
@@ -69,6 +77,7 @@ function useFitToVisualViewport(ref, enabled) {
       window.removeEventListener('scroll', pinScroll);
       el.removeEventListener('focusin', track);
       el.removeEventListener('focusout', track);
+      el.removeEventListener('touchmove', preventPagePan);
       document.documentElement.style.overflow = prevOverflow;
     };
   }, [ref, enabled]);
@@ -201,6 +210,8 @@ function MessagesContent() {
             </div>
           )}
 
+          <PushHint />
+
           <ul className="flex-1 overflow-y-auto">
             {chatsState === 'loading' && (
               <li className="p-6 text-center text-sm text-ink-500">Загружаем…</li>
@@ -283,6 +294,66 @@ function MessagesContent() {
           )}
         </section>
       </div>
+    </div>
+  );
+}
+
+// Полоса над списком переписок, пока уведомления выключены: тем, кто переписывается, они нужнее всего.
+// Крестик прячет её до следующего захода. На iPhone в браузере уведомления работают только в
+// установленном приложении — тогда кнопка ведёт к установке.
+function PushHint() {
+  const { openInstallGuide } = useApp();
+  const { toast } = useToast();
+  const [state, setState] = useState(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    let hidden = false;
+    try {
+      hidden = sessionStorage.getItem('app.pushHintHidden') === '1';
+    } catch {}
+    if (!hidden) pushState().then(setState);
+  }, []);
+
+  if (state !== 'off' && state !== 'needs-install') return null;
+
+  async function turnOn() {
+    if (state === 'needs-install') {
+      openInstallGuide('push');
+      return;
+    }
+    setBusy(true);
+    try {
+      const next = await enablePush().catch(() => 'off');
+      setState(next);
+      if (next === 'on') toast('Уведомления включены');
+      else if (next === 'denied') toast('Уведомления запрещены в настройках браузера', { kind: 'error' });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function hide() {
+    try {
+      sessionStorage.setItem('app.pushHintHidden', '1');
+    } catch {}
+    setState(null);
+  }
+
+  return (
+    <div className="shrink-0 flex items-center gap-2.5 px-3 py-2.5 bg-accent-50 border-b border-accent-100">
+      <BellRing className="w-5 h-5 text-accent-700 shrink-0" />
+      <div className="flex-1 min-w-0 text-[13px] leading-snug text-ink-800">
+        {state === 'needs-install'
+          ? 'Установите приложение, чтобы получать уведомления об ответах'
+          : 'Включите уведомления, чтобы не пропустить ответ'}
+      </div>
+      <button onClick={turnOn} disabled={busy} className="btn-primary h-9 px-3 rounded-xl text-[13px] shrink-0">
+        {state === 'needs-install' ? 'Установить' : 'Включить'}
+      </button>
+      <button onClick={hide} aria-label="Скрыть" className="w-8 h-8 grid place-items-center rounded-full text-ink-500 hover:bg-white shrink-0">
+        <X className="w-4 h-4" />
+      </button>
     </div>
   );
 }
@@ -371,10 +442,51 @@ function ChatView({ chatId, me, onActivity }) {
   }, [chatId, append, onActivity]);
   useVisiblePolling(poll, CHAT_POLL_MS, state === 'ok');
 
+  // Внизу ли сейчас список. Новые сообщения и открытие клавиатуры прокручивают к концу,
+  // только если человек и так был внизу, — иначе не сбиваем, пока он читает выше.
+  const atBottomRef = useRef(true);
+  useEffect(() => {
+    atBottomRef.current = true;
+  }, [chatId]);
+
   useEffect(() => {
     const el = listRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
+    if (el && atBottomRef.current) el.scrollTop = el.scrollHeight;
   }, [msgs.length]);
+
+  // Прокрутка списка пальцем. У края списка телефон отдаёт жест экрану (а его мы держим на месте),
+  // и список «залипал». Поэтому у края сдвигаем его на 1px — жест остаётся в списке, —
+  // а движение дальше края гасим.
+  useEffect(() => {
+    const el = listRef.current;
+    if (!el) return;
+    const maxScroll = () => el.scrollHeight - el.clientHeight;
+    const onScroll = () => {
+      atBottomRef.current = maxScroll() - el.scrollTop < 80;
+    };
+    let startY = 0;
+    const onTouchStart = (e) => {
+      startY = e.touches[0].clientY;
+      const max = maxScroll();
+      if (max <= 1) return;
+      if (el.scrollTop <= 0) el.scrollTop = 1;
+      else if (el.scrollTop >= max - 1) el.scrollTop = max - 1;
+    };
+    const onTouchMove = (e) => {
+      if (e.touches.length > 1 || !e.cancelable) return;
+      const max = maxScroll();
+      const dy = e.touches[0].clientY - startY;
+      if (max <= 1 || (el.scrollTop <= 0 && dy > 0) || (el.scrollTop >= max && dy < 0)) e.preventDefault();
+    };
+    el.addEventListener('scroll', onScroll, { passive: true });
+    el.addEventListener('touchstart', onTouchStart, { passive: true });
+    el.addEventListener('touchmove', onTouchMove, { passive: false });
+    return () => {
+      el.removeEventListener('scroll', onScroll);
+      el.removeEventListener('touchstart', onTouchStart);
+      el.removeEventListener('touchmove', onTouchMove);
+    };
+  }, [state, chatId]);
 
   // Отзыв открывается, когда каждый написал need.messages сообщений и с первого прошло need.hours.
   // Порог и время знает сервер; перепрашиваем, когда по сообщениям в чате порог достигнут,
@@ -431,9 +543,14 @@ function ChatView({ chatId, me, onActivity }) {
   useEffect(() => {
     const vv = window.visualViewport;
     if (!vv) return;
+    // Только когда экран стал ниже (выехала клавиатура) и человек был у последних сообщений.
+    // Раньше срабатывало на любое изменение размера и возвращало вниз посреди чтения.
+    let prevHeight = vv.height;
     const keepBottom = () => {
+      const shrunk = vv.height < prevHeight - 1;
+      prevHeight = vv.height;
       const el = listRef.current;
-      if (el) el.scrollTop = el.scrollHeight;
+      if (el && shrunk && atBottomRef.current) el.scrollTop = el.scrollHeight;
     };
     vv.addEventListener('resize', keepBottom);
     return () => vv.removeEventListener('resize', keepBottom);
@@ -447,6 +564,7 @@ function ChatView({ chatId, me, onActivity }) {
     setSendError(null);
     try {
       const msg = await sendChatMessage(chatId, text);
+      atBottomRef.current = true; // своё сообщение всегда показываем
       append([msg]);
       setDraft('');
       onActivity();
@@ -521,7 +639,11 @@ function ChatView({ chatId, me, onActivity }) {
         <ListingHeader ad={conv.ad} />
       </div>
 
-      <div ref={listRef} className="flex-1 overflow-y-auto px-3 md:px-5 py-4 space-y-2 bg-slate-50">
+      <div
+        ref={listRef}
+        className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 md:px-5 py-4 space-y-2 bg-slate-50"
+        style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}
+      >
         {msgs.length === 0 ? (
           <div className="text-center text-sm text-ink-500 py-16">
             {conv.role === 'buyer'

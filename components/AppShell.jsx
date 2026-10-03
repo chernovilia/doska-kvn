@@ -22,7 +22,9 @@ import {
   installSupported,
   isStandalone,
   markPushAsked,
+  markPushShownThisSession,
   pushAskedRecently,
+  pushShownThisSession,
   pushState,
   resyncPush,
   setAppBadge,
@@ -140,17 +142,29 @@ export default function AppShell({ children }) {
     };
   }, [scheduleAuto]);
 
-  // После сообщения: сначала уведомления (если можно), иначе — установка
-  const afterUsefulAction = useCallback(async ({ source = 'message' } = {}) => {
+  // Окно «Включить уведомления?». Пауза на N дней ставится только по «Не сейчас»;
+  // закрыли крестиком или тапом мимо — спросим в следующий заход.
+  const askPush = useCallback(() => {
+    markPushShownThisSession();
+    trackAppEvent('push_prompt_shown');
+    setPushAsk(true);
+  }, []);
+  const canAskPush = useCallback(
+    async () => !!user && !pushAskedRecently() && !pushShownThisSession() && (await pushState()) === 'off',
+    [user]
+  );
+
+  // После сообщения: сначала уведомления (если можно), иначе — установка.
+  // noGuide — окно установки только что показывали, второй раз не открываем.
+  const afterUsefulAction = useCallback(async ({ source = 'message', noGuide = false } = {}) => {
     const cfg = getAppConfig();
     const pushAllowed = source === 'publish' ? cfg['app.push.after_publish'] : cfg['app.push.after_message'];
-    const state = await pushState();
-    if (pushAllowed && state === 'off' && user && !pushAskedRecently()) {
-      markPushAsked();
-      trackAppEvent('push_prompt_shown');
-      setPushAsk(true);
+    if (pushAllowed && (await canAskPush())) {
+      askPush();
       return;
     }
+    if (noGuide) return;
+    const state = await pushState();
     if (
       cfg['app.install.enabled'] &&
       (state === 'needs-install' || state === 'unsupported') &&
@@ -159,14 +173,33 @@ export default function AppShell({ children }) {
     ) {
       setGuide({ open: true, reason: state === 'needs-install' ? 'push' : null });
     }
-  }, [user]);
+  }, [canAskPush, askPush]);
+
+  // Установленное приложение открыли (или вошли в нём), а уведомления выключены — спрашиваем
+  // через пару секунд. В браузере так не делаем: там вопрос с порога только раздражает.
+  useEffect(() => {
+    if (!user || !configReady || !isStandalone()) return;
+    if (!getAppConfig()['app.push.on_app_open']) return;
+    let tries = 0;
+    let timer = setTimeout(async function attempt() {
+      if (QUIET_PATHS.test(pathRef.current || '')) return;
+      // Открыто другое окно — подождём
+      if (isScrollLocked()) {
+        if (tries++ < 6) timer = setTimeout(attempt, 5000);
+        return;
+      }
+      if (await canAskPush()) askPush();
+    }, 2500);
+    return () => clearTimeout(timer);
+  }, [user?.id, configReady]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // После публикации объявления (или отправки на проверку) — окно установки каждый раз,
   // кроме 14 дней после «Не сейчас». Уже установлено или отказались — предложение уведомлений.
   const afterAdPublished = useCallback(() => {
     const cfg = getAppConfig();
     if (cfg['app.install.enabled'] && cfg['app.install.after_publish'] && installSupported() && !installDismissedRecently()) {
-      setGuide({ open: true, reason: null });
+      // Сначала окно установки, после его закрытия — уведомления (там, где они работают и без установки)
+      setGuide({ open: true, reason: null, thenPush: true });
     } else afterUsefulAction({ source: 'publish' });
   }, [afterUsefulAction]);
 
@@ -184,7 +217,11 @@ export default function AppShell({ children }) {
       <InstallGuide
         open={guide.open}
         reason={guide.reason}
-        onClose={() => setGuide({ open: false, reason: null })}
+        onClose={() => {
+          const thenPush = guide.thenPush;
+          setGuide({ open: false, reason: null });
+          if (thenPush) setTimeout(() => afterUsefulAction({ source: 'publish', noGuide: true }), 600);
+        }}
         onDismiss={guide.manual ? undefined : dismissInstall}
       />
       <Modal open={pushAsk} onClose={() => setPushAsk(false)} size="sm">
@@ -201,7 +238,13 @@ export default function AppShell({ children }) {
           <button onClick={turnOnPush} className="w-full btn-primary h-12 rounded-2xl text-[15px]">
             Включить
           </button>
-          <button onClick={() => setPushAsk(false)} className="w-full h-10 text-sm font-semibold text-ink-500 hover:text-ink-800">
+          <button
+            onClick={() => {
+              markPushAsked();
+              setPushAsk(false);
+            }}
+            className="w-full h-10 text-sm font-semibold text-ink-500 hover:text-ink-800"
+          >
             Не сейчас
           </button>
         </div>

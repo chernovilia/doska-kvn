@@ -454,37 +454,87 @@ function ChatView({ chatId, me, onActivity }) {
     if (el && atBottomRef.current) el.scrollTop = el.scrollHeight;
   }, [msgs.length]);
 
-  // Прокрутка списка пальцем. У края списка телефон отдаёт жест экрану (а его мы держим на месте),
-  // и список «залипал». Поэтому у края сдвигаем его на 1px — жест остаётся в списке, —
-  // а движение дальше края гасим.
+  // Прокрутка списка пальцем.
+  // Клавиатура закрыта — прокручивает сам браузер; у края списка сдвигаем его на 1px и гасим
+  // движение дальше края, чтобы жест не уходил экрану.
+  // Клавиатура открыта — телефон отдаёт жест не списку, а всему экрану (экран дёргается, список
+  // стоит). Поэтому в этом режиме жест забираем полностью и двигаем список сами, с инерцией.
   useEffect(() => {
     const el = listRef.current;
     if (!el) return;
     const maxScroll = () => el.scrollHeight - el.clientHeight;
+    const keyboardOpen = () => {
+      const vv = window.visualViewport;
+      return !!vv && window.innerHeight - vv.height > 120;
+    };
     const onScroll = () => {
       atBottomRef.current = maxScroll() - el.scrollTop < 80;
     };
     let startY = 0;
+    let lastY = 0;
+    let lastT = 0;
+    let velocity = 0; // px/мс, плюс — к новым сообщениям
+    let manual = false;
+    let raf = 0;
     const onTouchStart = (e) => {
-      startY = e.touches[0].clientY;
+      cancelAnimationFrame(raf);
+      startY = lastY = e.touches[0].clientY;
+      lastT = performance.now();
+      velocity = 0;
+      manual = keyboardOpen();
+      if (manual) return;
       const max = maxScroll();
       if (max <= 1) return;
       if (el.scrollTop <= 0) el.scrollTop = 1;
       else if (el.scrollTop >= max - 1) el.scrollTop = max - 1;
     };
     const onTouchMove = (e) => {
-      if (e.touches.length > 1 || !e.cancelable) return;
+      if (e.touches.length > 1) return;
+      const y = e.touches[0].clientY;
+      if (manual) {
+        if (e.cancelable) e.preventDefault();
+        const now = performance.now();
+        const dy = y - lastY;
+        el.scrollTop -= dy;
+        const dt = now - lastT;
+        if (dt > 0) velocity = 0.7 * (-dy / dt) + 0.3 * velocity;
+        lastY = y;
+        lastT = now;
+        return;
+      }
+      if (!e.cancelable) return;
       const max = maxScroll();
-      const dy = e.touches[0].clientY - startY;
+      const dy = y - startY;
       if (max <= 1 || (el.scrollTop <= 0 && dy > 0) || (el.scrollTop >= max && dy < 0)) e.preventDefault();
+    };
+    const onTouchEnd = () => {
+      if (!manual) return;
+      manual = false;
+      // Палец остановился перед тем, как отпустить, — без инерции
+      if (performance.now() - lastT > 80 || Math.abs(velocity) < 0.1) return;
+      let prev = performance.now();
+      const glide = (t) => {
+        const dt = Math.min(32, t - prev);
+        prev = t;
+        const before = el.scrollTop;
+        el.scrollTop += velocity * dt;
+        velocity *= Math.pow(0.996, dt);
+        if (Math.abs(velocity) > 0.03 && el.scrollTop !== before) raf = requestAnimationFrame(glide);
+      };
+      raf = requestAnimationFrame(glide);
     };
     el.addEventListener('scroll', onScroll, { passive: true });
     el.addEventListener('touchstart', onTouchStart, { passive: true });
     el.addEventListener('touchmove', onTouchMove, { passive: false });
+    el.addEventListener('touchend', onTouchEnd, { passive: true });
+    el.addEventListener('touchcancel', onTouchEnd, { passive: true });
     return () => {
+      cancelAnimationFrame(raf);
       el.removeEventListener('scroll', onScroll);
       el.removeEventListener('touchstart', onTouchStart);
       el.removeEventListener('touchmove', onTouchMove);
+      el.removeEventListener('touchend', onTouchEnd);
+      el.removeEventListener('touchcancel', onTouchEnd);
     };
   }, [state, chatId]);
 

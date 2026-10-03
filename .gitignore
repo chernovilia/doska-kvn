@@ -31,3 +31,6 @@ Thumbs.db
 # claude/tooling
 .claude/
 /private/
+
+# временные файлы сборки рекламных картинок и роликов
+marketing/src/.tmp*

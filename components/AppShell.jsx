@@ -1,5 +1,8 @@
 'use client';
 
+import CookieNotice from '@/components/CookieNotice';
+import { getSiteSettings } from '@/lib/api';
+import { goal, hit, initMetrika } from '@/lib/analytics';
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { BellRing } from 'lucide-react';
@@ -64,6 +67,16 @@ export default function AppShell({ children }) {
   const [guide, setGuide] = useState({ open: false, reason: null });
   const [pushAsk, setPushAsk] = useState(false);
   const [configReady, setConfigReady] = useState(false);
+  const [metrikaOn, setMetrikaOn] = useState(false);
+
+  // Яндекс.Метрика: номер счётчика — из админки; без номера не подключается
+  useEffect(() => {
+    getSiteSettings().then((s) => {
+      if (!s.analytics?.metrikaId) return;
+      initMetrika({ id: s.analytics.metrikaId, webvisor: s.analytics.webvisor });
+      setMetrikaOn(true);
+    });
+  }, []);
 
   // Service worker и «открыто с иконки» — один раз за запуск
   useEffect(() => {
@@ -100,6 +113,9 @@ export default function AppShell({ children }) {
   useEffect(() => {
     if (pathRef.current !== pathname) markInAppNavigation();
     pathRef.current = pathname;
+    // Просмотр страницы в Метрике — чуть позже, когда у страницы уже свой заголовок
+    const t = setTimeout(hit, 400);
+    return () => clearTimeout(t);
   }, [pathname]);
   const autoTimer = useRef(null);
   const scheduleAuto = useCallback(() => {
@@ -196,6 +212,7 @@ export default function AppShell({ children }) {
   // После публикации объявления (или отправки на проверку) — окно установки каждый раз,
   // кроме 14 дней после «Не сейчас». Уже установлено или отказались — предложение уведомлений.
   const afterAdPublished = useCallback(() => {
+    goal('ad_published');
     const cfg = getAppConfig();
     if (cfg['app.install.enabled'] && cfg['app.install.after_publish'] && installSupported() && !installDismissedRecently()) {
       // Сначала окно установки, после его закрытия — уведомления (там, где они работают и без установки)
@@ -213,6 +230,7 @@ export default function AppShell({ children }) {
   return (
     <AppContext.Provider value={{ openInstallGuide, afterAdPublished, afterUsefulAction }}>
       <InstallBanner ready={configReady} onOpenGuide={() => openInstallGuide()} />
+      <CookieNotice enabled={metrikaOn} />
       {children}
       <InstallGuide
         open={guide.open}

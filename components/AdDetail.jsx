@@ -49,6 +49,8 @@ import PostAdModal from './PostAdModal';
 import OwnerAdActions, { SoldButton } from './OwnerAdActions';
 import ReportModal from './ReportModal';
 import { goBack } from '@/lib/nav';
+import { goal } from '@/lib/analytics';
+import PhotoViewer from './PhotoViewer';
 
 export default function AdDetail({ ad }) {
   const router = useRouter();
@@ -129,6 +131,7 @@ export default function AdDetail({ ad }) {
     setPhoneLoading(true);
     try {
       const res = await getAdContact(ad.id);
+      goal('phone_shown');
       setPhone(res.phone);
     } catch (err) {
       toast(err.message || 'Не удалось получить телефон', { kind: 'error' });
@@ -562,6 +565,7 @@ function IconBtn({ label, onClick, children }) {
 function Gallery({ photos, title, section, children }) {
   const trackRef = useRef(null);
   const [idx, setIdx] = useState(0);
+  const [viewer, setViewer] = useState(null); // номер фото, открытого во весь экран
 
   function onScroll() {
     const el = trackRef.current;
@@ -601,7 +605,8 @@ function Gallery({ photos, title, section, children }) {
               src={src}
               alt={i === 0 ? title : ''}
               loading={i === 0 ? 'eager' : 'lazy'}
-              className="w-full h-full shrink-0 snap-center object-contain bg-slate-100"
+              onClick={() => setViewer(i)}
+              className="w-full h-full shrink-0 snap-center object-contain bg-slate-100 cursor-zoom-in"
             />
           ))}
         </div>
@@ -630,6 +635,17 @@ function Gallery({ photos, title, section, children }) {
           </>
         )}
       </div>
+
+      {viewer !== null && (
+        <PhotoViewer
+          photos={photos}
+          start={viewer}
+          title={title}
+          onClose={() => {
+            setViewer(null);
+          }}
+        />
+      )}
 
       {photos.length > 1 && (
         <div className="hidden md:flex mt-2 gap-2 overflow-x-auto no-scrollbar">

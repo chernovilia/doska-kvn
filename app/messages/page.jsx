@@ -13,6 +13,7 @@ import { useAuth } from '@/lib/auth';
 import { refreshUnread } from '@/lib/chats';
 import { enablePush, pushState } from '@/lib/pwa';
 import { preventPagePan } from '@/lib/scrollLock';
+import { goal } from '@/lib/analytics';
 import { useToast } from '@/components/Toast';
 
 const CHAT_POLL_MS = 5_000;
@@ -614,6 +615,7 @@ function ChatView({ chatId, me, onActivity }) {
     setSendError(null);
     try {
       const msg = await sendChatMessage(chatId, text);
+      goal('message_sent');
       atBottomRef.current = true; // своё сообщение всегда показываем
       append([msg]);
       setDraft('');

@@ -59,7 +59,7 @@
 | GET | `/users/username-available?u=` | Свободен ли адрес `/u/<u>`: `{ available, reason? }` (свой текущий — свободен) |
 | GET | `/users/by-username/:username` | Публичная страница по своему адресу (как `/users/:id`) |
 | GET | `/legal/:doc` | Правила (`terms`) или политика (`privacy`) из админки: `{ doc, custom, text, date }`; `custom: false` — в админке не меняли, сайт показывает текст по умолчанию из `lib/legal/` |
-| GET | `/site` | Публичные настройки из админки: `{ neighbors, contacts, app: { 'app.install.*', 'app.banner.enabled', 'app.push.*', texts }, features: { autoBump, bumpCooldownDays } }` — соседи, контакты, правила и тексты окон приложения, что доступно авторам |
+| GET | `/site` | Публичные настройки из админки: `{ neighbors, contacts, app: { 'app.install.*', 'app.banner.enabled', 'app.push.*', texts }, features: { autoBump, bumpCooldownDays } }` — соседи, контакты, правила и тексты окон приложения, что доступно авторам. С 1.2.0 ещё `analytics: { metrikaId, webvisor }` — счётчик Яндекс.Метрики (0 — выключен) |
 | POST | `/ads` | Создать (auth; 5/час, 20/сутки; `photoUrls[]` до 10; `attributes` — плоский объект характеристик, до 20 полей; `eventDate` — у афиши) |
 | POST | `/ads/:id/bump` | Бесплатно поднять своё опубликованное (auth; пауза `ranking.bump_cooldown_days`, по умолчанию 10 дней) |
 | GET | `/ads/:id` | Объявление. `:id` — полный id или короткий (первые 8 символов; сайт ставит в ссылки короткий: `/ad/670a4944`). Неопубликованное видят только автор и администратор |
